@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "github": {
+    "repository": "ViLeo06/lapis-rebuild",
+    "default_branch": "main",
+    "baseline_branch": "codex/m0-baseline"
+  },
+  "google_drive": {
+    "root": {
+      "name": "lapis-rebuild-assets",
+      "folder_id": "1OCjOlmAPCt5pun7EXCRj7NnZaWp37lYo"
+    },
+    "folders": {
+      "inbox": "16a8IWm2D_P95gmSR1JTl6-H3yV7f-juV",
+      "original": "1xYC_yTUiylRzVkB-bTkhiRqNcYOBfbRi",
+      "extracted": "1dVih-pXN_MU9g11_kzf0GC9amSj_BvoE",
+      "parsed": "1TQDJ4Dp2rCrKwzUpmQyrqKT5ABb9dAZB",
+      "previews": "1ijSv-IE0moGv9xgARGfR_y0dUoVE6UXf",
+      "quarantine": "1O8SkTu--d2LD9qB0xX14qv50bWmfGqAh"
+    },
+    "parsed_folders": {
+      "sprites": "1X0TEaqRyLBX0Qx0TeS2wdQXhJtImtfr0",
+      "animations": "18qJ8e37-nNX6dKB7iI0h4W4hug3sygBC",
+      "maps": "1ByEeFWlcUpiTVDkrq7W1NDuKPJvxT-de",
+      "effects": "1uQ_ZfR_GHKuxFz2-3IUw2BQDqoOGJHcX",
+      "tables": "1frX7J4ZG4Ulm1cPBULQiutmsmquo3dZU",
+      "audio": "1sQHTU4grUGX9qjYt5TxtVhJFpQVXkPqI"
+    }
+  }
+}
+
