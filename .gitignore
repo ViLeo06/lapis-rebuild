@@ -1,0 +1,44 @@
+# Build and editor output
+.godot/
+.import/
+builds/
+dist/
+tmp/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Raw clients, archives, extracted trees and bulk derived assets
+downloads/
+assets_raw/
+assets_derived/
+extracted/
+quarantine/
+*.exe
+*.msi
+*.iso
+*.7z
+*.rar
+*.zip
+*.tar
+*.tar.gz
+*.tar.zst
+
+# Original game resource formats are archived in private Drive storage.
+*.spr
+*.ani
+*.sgr
+*.lib
+*.tdg
+
+# OS and IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
