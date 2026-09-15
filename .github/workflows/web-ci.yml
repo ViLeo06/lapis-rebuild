@@ -87,6 +87,13 @@ jobs:
           path: ${{ runner.temp }}/quest-source/
           retention-days: 1
           if-no-files-found: error
+      - name: Publish private NPC350 source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: private-npc350-source
+          path: ${{ runner.temp }}/extracted/client/NRes/NPC350.Tip
+          retention-days: 1
+          if-no-files-found: error
       - name: Build and browser setup
         working-directory: web
         run: |
