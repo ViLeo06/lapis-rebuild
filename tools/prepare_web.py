@@ -44,8 +44,10 @@ def generate(client:Path,out:Path):
     if out.exists():raise FileExistsError(f'Refusing existing output: {out}')
     client=client.resolve();out.parent.mkdir(parents=True,exist_ok=True)
     if not (client/'Char').is_dir() or not (client/'SGRes').is_dir() or not (client/'MagicRes').is_dir():raise ValueError('Expected extracted client/ containing Char, SGRes and MagicRes')
-    baseline=json.loads((ROOT/'manifests/web-source-baseline.json').read_text())
-    for rel,expected in baseline['files'].items():
+    base=json.loads((ROOT/'manifests/web-source-baseline.json').read_text());effects=json.loads((ROOT/'manifests/web-effects-baseline.json').read_text())
+    if base['installer_sha256']!=INSTALLER_SHA or effects['installer_sha256']!=INSTALLER_SHA:raise ValueError('Baseline installer identity mismatch')
+    sources={**base['files'],**effects['files']}
+    for rel,expected in sources.items():
         if digest(client/rel)!=expected:raise ValueError(f'Input differs from verified 2.2 baseline: {rel}')
     with tempfile.TemporaryDirectory(prefix='lapis-web-',dir=out.parent) as tmp:
         stage=Path(tmp)/'pack'
@@ -53,11 +55,9 @@ def generate(client:Path,out:Path):
         manifest=json.loads((stage/'prototype.json').read_text())
         manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets only. Timing, FOCUS placement and training rules are UNVERIFIED.'}
         manifest['map']['render'].pop('output',None)
-        # Rebuild map 0 metadata consistently, then add the first verified city map.
         maps={str(mid):map_payload(client/'SGRes',stage,mid,name) for mid,name in WEB_MAPS.items()}
         manifest['map']=maps['0'];manifest['maps']=maps
         manifest['effects']={str(rid):effect_payload(client/'MagicRes',stage,rid) for rid in WEB_EFFECTS}
-        sources=baseline['files']
         manifest['provenance']['pack_sha256']=hashlib.sha256(json.dumps({'schema':2,'inputs':sources,'maps':sorted(WEB_MAPS),'effects':list(WEB_EFFECTS)},sort_keys=True,separators=(',',':')).encode()).hexdigest()
         for p in stage.rglob('index.json'):
             obj=json.loads(p.read_text());obj['source']=Path(obj['source']).name;p.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
