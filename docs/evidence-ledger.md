@@ -20,16 +20,24 @@
 | WEB-014 | VERIFIED | Map 1 static probe: 2240x1280 render, IMF 69x79, 2292 raw walkable-value-1 cells, 70 object images drawn, 4 optional object images missing | Hash-pinned installer static extraction; first probe PNG SHA-256 `bd7416f0c22128bbcb30bc8725ce13a8ff6c1dc86a88a8dde451933c7e4bc187` |
 | WEB-015 | VERIFIED | Map candidates include names visible in `zone_name.txt`: 对练场, 布日古斯_外城, 布日古斯_城_地下_监狱, 布日古斯_本城_大厅, 西奥_洞穴, 扎魔拉_要塞_入口 | Corrected parser locates localized name relative to the `sz-NNNN` resource token |
 | WEB-016 | VERIFIED | Two-map Web pack + real MagicRes diagnostic player + map/effect save/browser regression pass on synthetic and private-original resources | GitHub Actions run `34960418543`; private-original and synthetic jobs both success |
-| WEB-017 | VERIFIED-ENGINEERING | Data-driven M3 guide loop `0000 → 0001 → 0000 → complete` persists through IndexedDB save/reload on the real 2.2-derived Web pack | Run `34960418543`: Playwright `27 expected / 0 unexpected`; `quest-loop.png` visually checked. This verifies the Web state machine, **not** original NPC/quest semantics |
+| WEB-017 | VERIFIED-ENGINEERING | Data-driven M3 guide loop `0000 → 0001 → 0000 → complete` persists through IndexedDB save/reload on the real 2.2-derived Web pack | Run `34960418543`: Playwright `27 expected / 0 unexpected`; this verifies the Web state machine, **not** original NPC/quest semantics |
 | WEB-018 | VERIFIED | Map 0001 MMF/SMF/IMF and its additional SGR dependencies are individually SHA-256 pinned | `manifests/web-source-baseline.json`; generator refuses changed inputs |
-| WEB-019 | UNVERIFIED | `data/npcs/m3-guide.json` content represents an original quest/NPC | It is deliberately a functional placeholder labelled `UNVERIFIED`; static original-data discovery is the next evidence task |
+| WEB-019 | UNVERIFIED | `data/npcs/m3-guide.json` content represents an original quest/NPC | It is deliberately a functional placeholder labelled `UNVERIFIED` |
+| WEB-020 | VERIFIED | `NRes/Quest.lib` from the hash-pinned 2.2 client uses the same recovered encrypted + PKWARE DCL `.lib` container family as Set.lib and contains 15 extractable members | Quest.lib SHA-256 `23fa524844be0c553c55e66e071e3c9190337d92b19745f242580008a63e7397`; check `0xd3eb5f05`; 15/15 members extracted without executing client code |
+| WEB-021 | VERIFIED | Quest.lib contains source content files including `NPCScript.txt`, `Quest0.txt`…`Quest9.TXT`, `Tutorial.txt`, `HelpScript.txt`, `Neohelp.txt`, and `Prologue.txt` | Member sizes/hashes pinned in `manifests/content-source-baseline.json`; text bodies intentionally excluded from Git |
+| WEB-022 | VERIFIED | `NPCScript.txt` has 39 deterministic NPC blocks, IDs 11–49, 125 active entries and 5 disabled entries; each block's declared count exactly matches active records | `tools/convert/quest_content.py`; numeric record fields are preserved raw rather than assigned guessed semantics |
+| WEB-023 | VERIFIED | Quest0–Quest9 share a deterministic STEP/NAME/action grammar: 10 files, 42 steps, 179 dialogue-line commands, aggregate `CANCEL=161`, `SELECT=9`, `SCRIPT=9` | `tools/convert/quest_content.py` + `tools/validate/validate_quest_content.py`; command names are file tokens, not a claim about runtime implementation |
+| WEB-024 | VERIFIED | The private Web pack can be generated with source-backed Quest/NPC JSON derived at build time from Quest.lib while keeping original dialogue bodies out of Git | `tools/prepare_web.py`; `content-source-baseline.json` pins source hashes; synthetic CI uses non-original fixture content |
+| WEB-025 | UNKNOWN | `NRes/NPC350.Tip` runtime format | File is pinned (`212d...6b38`), begins with `NORMAL LIBRARY.` and is binary/high-entropy; no record layout is claimed yet |
 
 ## Interpretation boundaries
 
 - `Body_` character ANI rules must not be mechanically applied to `FOCUS` MagicRes.
 - Sequential FOCUS SPR playback is a **diagnostic representation of verified file order**. Original playback timing, compositing, location and direction semantics remain `UNVERIFIED`.
 - Rendered maps are flat diagnostic images. Missing optional object layers, foreground occlusion and original runtime z-order remain separate fidelity work.
-- M3 guide completion only proves NPC/dialogue/map/task/save engineering continuity. It does not identify an original NPC, quest, trigger, reward or dialogue.
+- M3 guide completion only proves NPC/dialogue/map/task/save engineering continuity. It does not identify an original NPC, quest trigger, reward or map binding.
+- Recovered Quest/NPC text proves static source content exists. It does **not** by itself prove where each step triggers, how IDs bind to live entities, or which server/runtime conditions gate branches.
+- Full recovered dialogue/story text is generated only inside private derived packs/artifacts and is not committed to Git.
 - Private asset evidence does not grant redistribution rights.
 - Original client binaries are not executed by CI or normal development environments.
 
