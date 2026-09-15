@@ -38,4 +38,8 @@ export function findRoute(c: Collision, start: Cell, end: Cell): Cell[] | null {
   }
   return null;
 }
-export function directionFor(dx: number, dy: number): number { return (Math.round(Math.atan2(dx,dy)/(Math.PI/4))+8)%8; }
+// Visual inspection of real B100/B109 Body_ frames shows ANI rows ordered:
+// 0 S, 1 SW, 2 W, 3 NW, 4 N, 5 NE, 6 E, 7 SE.
+// Screen coordinates use +x right and +y down, so horizontal movement must
+// negate dx before converting the vector angle to the raw ANI row number.
+export function directionFor(dx: number, dy: number): number { return (Math.round(Math.atan2(-dx,dy)/(Math.PI/4))+8)%8; }
