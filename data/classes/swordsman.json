@@ -1,0 +1,12 @@
+[
+  {"class_id":100,"portrait_id":100,"hp":125,"mp":100,"move":5,"hit":160,"magic_hit":160,"range":1,"class_name_raw":"见习剑士","class_description_raw":"步兵系列_第1阶段","stage_entry_skill_id":1101},
+  {"class_id":110,"portrait_id":110,"hp":137,"mp":105,"move":5,"hit":160,"magic_hit":160,"range":1,"class_name_raw":"剑士","class_description_raw":"步兵系列_第2阶段","stage_entry_skill_id":1201},
+  {"class_id":120,"portrait_id":120,"hp":150,"mp":110,"move":5,"hit":170,"magic_hit":170,"range":1,"class_name_raw":"高级剑士","class_description_raw":"步兵系列_第3阶段","stage_entry_skill_id":1301},
+  {"class_id":130,"portrait_id":130,"hp":162,"mp":115,"move":5,"hit":170,"magic_hit":170,"range":1,"class_name_raw":"剑术师范","class_description_raw":"步兵系列_第4阶段","stage_entry_skill_id":1401},
+  {"class_id":140,"portrait_id":140,"hp":175,"mp":120,"move":5,"hit":180,"magic_hit":180,"range":1,"class_name_raw":"皇家剑士","class_description_raw":"步兵系列_第5阶段","stage_entry_skill_id":1501},
+  {"class_id":150,"portrait_id":150,"hp":187,"mp":125,"move":5,"hit":180,"magic_hit":180,"range":1,"class_name_raw":"狂战士","class_description_raw":"步兵系列_第6阶段","stage_entry_skill_id":0},
+  {"class_id":160,"portrait_id":160,"hp":200,"mp":130,"move":5,"hit":190,"magic_hit":190,"range":1,"class_name_raw":"大剑师","class_description_raw":"步兵系列_第7阶段","stage_entry_skill_id":0},
+  {"class_id":170,"portrait_id":170,"hp":212,"mp":135,"move":5,"hit":190,"magic_hit":190,"range":1,"class_name_raw":"英雄","class_description_raw":"步兵系列_第8阶段","stage_entry_skill_id":0},
+  {"class_id":180,"portrait_id":180,"hp":225,"mp":140,"move":5,"hit":200,"magic_hit":200,"range":1,"class_name_raw":"战神","class_description_raw":"步兵系列_第9阶段","stage_entry_skill_id":0},
+  {"class_id":190,"portrait_id":190,"hp":237,"mp":145,"move":5,"hit":200,"magic_hit":200,"range":1,"class_name_raw":"传说战神","class_description_raw":"步兵系列_第10阶段","stage_entry_skill_id":0}
+]

@@ -1,0 +1,70 @@
+import {test,expect} from '@playwright/test';
+import type { Page } from '@playwright/test';
+import {pathToFileURL} from 'node:url';
+const snap=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot());
+async function ready(page:Page){await page.goto('/');await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);}
+async function clickWorld(page:Page,x:number,y:number){const b=await page.locator('canvas').boundingBox();if(!b)throw Error('Missing canvas');const z=Math.min(b.width/1536,b.height/768)*.98;await page.mouse.click(b.x+b.width/2+(x-768)*z,b.y+b.height/2+(y-384)*z);}
+test('loads real-format pack with no JS errors',async({page})=>{const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);await expect(page.locator('#loading')).toBeHidden();await expect(page.locator('canvas')).toBeVisible();await expect(page.locator('#raw-timing')).toHaveText('5');await page.screenshot({path:'test-results/diagnostic.png',fullPage:true});expect(errors).toEqual([]);});
+for(const cid of ['100','109']) for(const slot of ['00','01','02','03','05']) {
+ test(`eight directions and frame stepping B${cid}_${slot}`,async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);
+  await page.selectOption('#character',cid);await page.selectOption('#action',slot);
+  for(let d=0;d<8;d++){await page.selectOption('#direction',String(d));await page.click('#step');const s=await snap(page);expect(s.character).toBe(cid);expect(s.slot).toBe(slot);expect(s.direction).toBe(d);expect(s.cursor).toBeLessThan(s.length);expect(s.frame).toBeGreaterThanOrEqual(0);}
+  expect(errors).toEqual([]);
+ });
+}
+test('pause freezes and step advances exactly one frame',async({page})=>{await ready(page);await page.click('#step');const a=await snap(page);await page.waitForTimeout(250);expect((await snap(page)).cursor).toBe(a.cursor);await page.click('#step');expect((await snap(page)).cursor).toBe((a.cursor+1)%a.length);});
+test('map overlays and hover inspector',async({page})=>{await ready(page);await page.check('#grid');await page.check('#collision');await clickWorld(page,700,400);await expect(page.locator('#resource')).not.toHaveText('--');await page.screenshot({path:'test-results/overlays.png',fullPage:true});});
+test('second map switches and persists through IndexedDB',async({page})=>{await ready(page);await expect(page.locator('#map option')).toHaveCount(2);await page.selectOption('#map','1');await expect.poll(async()=>(await snap(page)).mapId).toBe(1);await expect(page.locator('#map-title')).toContainText('0001');await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');await expect.poll(async()=>(await snap(page)).mapId).toBe(1);await expect(page.locator('#map-title')).toContainText('0001');await page.screenshot({path:'test-results/map-0001.png',fullPage:true});});
+test('MagicRes diagnostic uses sequential SPR frames without direction claims',async({page})=>{await ready(page);expect(await page.locator('#effect option').count()).toBeGreaterThan(0);await page.selectOption('#effect','1');const before=(await snap(page)).effect!;expect(before.id).toBe(1);await page.click('#effect-step');const stepped=(await snap(page)).effect!;expect(stepped.cursor).toBe((before.cursor+1)%stepped.length);expect(stepped.frame).toBe(stepped.cursor);await page.click('#effect-play');await expect.poll(async()=>((await snap(page)).effect?.playing??false),{timeout:2000}).toBe(true);await expect(page.locator('.hint').last()).toContainText('FOCUS');});
+test('click movement reaches a legal route anchor',async({page})=>{await ready(page);const before=await snap(page);await clickWorld(page,before.anchor.x+64,before.anchor.y);await expect.poll(async()=>(await snap(page)).anchor.x,{timeout:10000}).not.toBe(before.anchor.x);await expect.poll(async()=>(await snap(page)).routeLength,{timeout:10000}).toBe(0);});
+test('basic attack, mana cost, cooldown and diagnostic effect reference',async({page})=>{await ready(page);await page.click('#battle');await page.click('#skill-1101');const s=await snap(page);expect(s.phase).toBe('active');expect(s.mp).toBe(75);expect(s.enemies[0].hp).toBe(56);expect(s.effect?.id).toBe(1);await page.click('#attack');expect((await snap(page)).enemies[0].hp).toBe(56);});
+test('wizard skills and explicit temporary semantics',async({page})=>{await ready(page);await page.selectOption('#character','109');await expect(page.locator('#skill-19101')).toBeVisible();await page.click('#battle');await page.click('#skill-19301');expect((await snap(page)).mp).toBe(80);await expect(page.locator('.disclaimer')).toContainText('UNVERIFIED');});
+test('IndexedDB save survives page reload',async({page})=>{await ready(page);await page.selectOption('#character','109');await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');await expect.poll(async()=>(await snap(page)).character).toBe('109');});
+test('foreign save rejected without mutating actor',async({page})=>{await ready(page);const before=await snap(page);await page.locator('#import').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:2,pack:'foreign',character:'199',x:0,y:0,gold:999}))});expect((await snap(page)).character).toBe(before.character);await expect(page.locator('#notice')).toContainText('mismatch');});
+test('missing pack fails closed',async({page})=>{await page.route('**/game-data/prototype.json',route=>route.fulfill({status:404,body:'missing'}));await page.goto('/');await expect(page.locator('#loading')).toContainText('HTTP 404');expect(await page.evaluate(()=>!!window.lapisDiagnostics)).toBe(false);});
+test('responsive layout has no horizontal overflow',async({page})=>{await page.setViewportSize({width:820,height:1180});await ready(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(820);await page.screenshot({path:'test-results/compact.png',fullPage:true});});
+test('offline HTML opens without external requests',async({page})=>{test.skip(!process.env.LAPIS_OFFLINE_PREVIEW,'No offline build supplied');const external:string[]=[];page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});await page.goto(pathToFileURL(process.env.LAPIS_OFFLINE_PREVIEW!).href);await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#character','109');await page.selectOption('#action','05');await page.click('#step');expect((await snap(page)).length).toBe(11);await page.selectOption('#map','1');expect((await snap(page)).mapId).toBe(1);expect(external).toEqual([]);await page.screenshot({path:'test-results/offline.png',fullPage:true});});
+test('training victory, settlement and saved reward survive reload',async({page})=>{
+ await ready(page);await page.click('#battle');
+ for(let i=0;i<5;i++){await expect.poll(async()=>(await snap(page)).cooldown,{timeout:15000}).toBe(0);await page.click('#attack');await page.waitForTimeout(100);}
+ expect((await snap(page)).enemies[0].hp).toBe(0);
+ const state=await snap(page),target=state.enemies[1];
+ await clickWorld(page,state.anchor.x+128,state.anchor.y);
+ await expect.poll(async()=>(await snap(page)).anchor.x,{timeout:10000}).not.toBe(state.anchor.x);
+ await expect.poll(async()=>(await snap(page)).routeLength,{timeout:10000}).toBe(0);
+ await clickWorld(page,target.x,target.y);
+ await expect.poll(async()=>(await snap(page)).target).toBe(target.id);
+ for(let i=0;i<5;i++){await expect.poll(async()=>(await snap(page)).cooldown,{timeout:15000}).toBe(0);await page.click('#attack');await page.waitForTimeout(100);}
+ await expect.poll(async()=>(await snap(page)).phase).toBe('won');
+ await page.click('#return');expect((await snap(page)).gold).toBe(10);
+ await page.click('#return');expect((await snap(page)).gold).toBe(10);
+ await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
+ await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);
+ await page.click('#load');await expect.poll(async()=>(await snap(page)).gold).toBe(10);
+ await page.screenshot({path:'test-results/settlement.png',fullPage:true});
+});
+test('equipment affects only training values and survives save',async({page})=>{
+ await ready(page);await page.selectOption('#equip-weapon','3');
+ expect((await snap(page)).equipment.attack).toBe(7);
+ await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
+ await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');
+ await expect.poll(async()=>(await snap(page)).inventory.weapon).toBe(3);
+ await page.click('#battle');await expect(page.locator('#equip-weapon')).toBeDisabled();await page.click('#attack');
+ expect((await snap(page)).enemies[0].hp).toBe(65);
+ await page.screenshot({path:'test-results/equipment.png',fullPage:true});
+});
+test('class switch unequips incompatible items',async({page})=>{
+ await ready(page);await page.selectOption('#equip-weapon','1');await page.selectOption('#character','109');
+ expect((await snap(page)).inventory.weapon).toBe(null);
+ await page.selectOption('#equip-weapon','12');expect((await snap(page)).equipment.attack).toBe(7);
+});
+test('M3 guide drives NPC -> map -> quest -> save loop',async({page})=>{
+ await ready(page);expect((await snap(page)).quest.guide).toBe('not_started');
+ await page.click('#npc');await expect.poll(async()=>(await snap(page)).mapId).toBe(1);expect((await snap(page)).quest.guide).toBe('city_visit');await expect(page.locator('#quest-status')).toContainText('前往外城');
+ await page.click('#npc');await expect.poll(async()=>(await snap(page)).mapId).toBe(0);expect((await snap(page)).quest.guide).toBe('return_training');
+ await page.click('#npc');expect((await snap(page)).quest.guide).toBe('complete');await expect(page.locator('#quest-status')).toContainText('已完成');
+ await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
+ await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');
+ await expect.poll(async()=>(await snap(page)).quest.guide).toBe('complete');await page.screenshot({path:'test-results/quest-loop.png',fullPage:true});
+});
