@@ -2,7 +2,7 @@ name: Web and parser validation
 on:
   push:
     branches: ['codex/**']
-    paths: ['web/**', 'tools/**', 'tests/**', 'data/**', '.github/workflows/web-ci.yml']
+    paths: ['web/**', 'tools/**', 'tests/**', 'data/**', 'manifests/**', '.github/workflows/web-ci.yml']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -65,6 +65,7 @@ jobs:
           python3 tools/probe_maps.py --client-root "$RUNNER_TEMP/extracted/client" --start 0 --count 12 --out web/test-results/map-probe.json
           python3 tools/probe_npc_quest.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/npc-quest-probe.json
           python3 tools/inspect_quest_resources.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/quest-resource-structure.json
+          python3 tools/validate/validate_quest_content.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --out web/test-results/quest-content-summary.json
       - name: Publish static evidence early
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -74,6 +75,7 @@ jobs:
             web/test-results/map-probe.json
             web/test-results/npc-quest-probe.json
             web/test-results/quest-resource-structure.json
+            web/test-results/quest-content-summary.json
           retention-days: 3
           if-no-files-found: error
       - name: Extract Quest source for private analysis
