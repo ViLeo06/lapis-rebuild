@@ -1,9 +1,10 @@
 import {initialInventory,validateInventory} from './inventory.ts';
 import type {Inventory} from './inventory.ts';
-export type Save = { version:1; pack:string; character:string; x:number;y:number; gold:number; inventory?:Inventory; savedAt:string };
+export type Save = { version:1; pack:string; character:string; mapId?:number; x:number;y:number; gold:number; inventory?:Inventory; savedAt:string };
 export function validateSave(raw:unknown,pack:string,ids:string[],width:number,height:number):Save {
   if(!raw||typeof raw!=='object')throw new Error('Invalid save');const s=raw as Save;
   if(s.version!==1||s.pack!==pack||!ids.includes(s.character))throw new Error('Save version or resource pack mismatch');
+  if(s.mapId!==undefined&&(!Number.isInteger(s.mapId)||s.mapId<0||s.mapId>100000))throw new Error('Invalid save map');
   if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||s.x<0||s.y<0||s.x>width||s.y>height||!Number.isInteger(s.gold)||s.gold<0||s.gold>1000000)throw new Error('Invalid save coordinates or reward');
   if(typeof s.savedAt!=='string'||!Number.isFinite(Date.parse(s.savedAt)))throw new Error('Invalid save timestamp');return {...s,inventory: s.inventory === undefined ? initialInventory() : validateInventory(s.inventory,s.character)};
 }
