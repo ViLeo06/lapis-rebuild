@@ -3,7 +3,8 @@
 
 Set.lib is extracted with tools/extract/lib_archive.py. The localized client
 uses different encodings per table: class/skill display text is GB18030 while
-Magicptn.atr retains Korean CP949 labels. Raw numeric fields are preserved.
+Magicptn.atr retains Korean CP949 labels. Source tables remain the raw evidence;
+generated JSON intentionally keeps only typed fields needed by the rebuild.
 """
 from __future__ import annotations
 import argparse,json
@@ -34,7 +35,6 @@ def parse_classes(root:Path):
             'class_id':cid,'portrait_id':int(r[1]),'hp':int(r[2]),'mp':int(r[3]),
             'move':int(r[17]),'hit':int(r[18]),'magic_hit':int(r[21]),'range':int(r[23]),
             'class_name_raw':r[44],'class_description_raw':r[45],
-            'ability_fields_raw':r,
         }
     first_skill={}
     for r in rows(root/'levelabl.atr','cp949'):
@@ -63,7 +63,7 @@ def parse_magic_patterns(root:Path):
         result[pid]={
             'pattern_id':pid,'pattern_name_ko':r[1],'magic_resources':refs,
             'hit_frame':int(r[20]),'special_motion':int(r[21]),'burst_speed':int(r[22]),
-            'screen_shake':int(r[23]),'sound_id':int(r[24]),'raw_fields':r,
+            'screen_shake':int(r[23]),'sound_id':int(r[24]),
         }
     return result
 
@@ -81,7 +81,7 @@ def parse_skills(root:Path,patterns:dict):
             'mp_cost':int(r[5]),'time_raw':int(r[6]),'team_mask':int(r[7]),'unit_mask':int(r[8]),
             'effect_a':int(r[9]),'effect_b':int(r[10]),'effect_c':int(r[11]),'tick':int(r[12]),
             'skill_level':int(r[13]),'magic_pattern_id':pid,'icon_index':int(r[15]),'iteration':int(r[16]),
-            'explanation':r[17],'magic_pattern':patterns.get(pid),'raw_fields':r,
+            'explanation':r[17],'magic_pattern':patterns.get(pid),
         }
     return result
 
