@@ -18,9 +18,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "convert"))
 sys.path.insert(0, str(ROOT / "tools" / "extract"))
-from map_bundle import parse_imf  # type: ignore
+from map_bundle import parse_imf, parse_mmf, parse_smf  # type: ignore
 from render_map import render  # type: ignore
 from lib_archive import extract  # type: ignore
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def find_ci(root: Path, name: str) -> Path:
@@ -31,11 +35,7 @@ def find_ci(root: Path, name: str) -> Path:
 
 
 def load_zone_names(client: Path) -> dict[int, str]:
-    """Map `sz-NNNN` resource identifiers to the localized zone-name column.
-
-    `zone_name.txt` contains extra numeric/control columns. The map resource token
-    is more reliable than assuming that the first numeric field is the map id.
-    """
+    """Map `sz-NNNN` resource identifiers to the localized zone-name column."""
     archive = client / "NRes" / "Set.lib"
     if not archive.is_file():
         return {}
@@ -83,18 +83,22 @@ def main() -> int:
         for map_id in range(args.start, args.start + args.count):
             row: dict = {"id": map_id, "name": names.get(map_id)}
             try:
-                imf = parse_imf(find_ci(sgres, f"sz-{map_id:04d}.imf"))
+                imf_path=find_ci(sgres,f"sz-{map_id:04d}.imf");mmf_path=find_ci(sgres,f"sz-{map_id:04d}.mmf");smf_path=find_ci(sgres,f"sz-{map_id:04d}.smf")
+                imf=parse_imf(imf_path);mmf=parse_mmf(mmf_path);smf=parse_smf(smf_path)
+                sgr_ids=sorted({c['resource_id'] for c in mmf['cells']}|{r['kind'] for r in smf['records']})
+                sgr_sources={str(rid):sha256(find_ci(sgres,f"sg-{rid}.sgr")) for rid in sgr_ids}
                 row.update(
                     {
                         "collision_width": imf["width"],
                         "collision_height": imf["height"],
                         "walkable_value_1": sum(1 for value in imf["grid"] if value == 1),
+                        "sources": {"imf":sha256(imf_path),"mmf":sha256(mmf_path),"smf":sha256(smf_path),"sgr":sgr_sources},
                     }
                 )
                 png = tmp / f"map-{map_id:04d}.png"
                 rendered = render(sgres, map_id, png)
                 row["render"] = {k: v for k, v in rendered.items() if k != "output"}
-                row["png_sha256"] = hashlib.sha256(png.read_bytes()).hexdigest()
+                row["png_sha256"] = sha256(png)
                 row["png_size"] = png.stat().st_size
                 row["ok"] = True
             except Exception as exc:
@@ -103,7 +107,7 @@ def main() -> int:
             rows.append(row)
 
     payload = {
-        "schema": 1,
+        "schema": 2,
         "evidence": "VERIFIED_STATIC_PROBE",
         "range": {"start": args.start, "count": args.count},
         "maps": rows,
