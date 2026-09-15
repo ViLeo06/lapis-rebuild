@@ -1,5 +1,6 @@
 import { assert, validateManifest, validateAnimation, validateCollision, validateContentSummary, validateNpcScript, validateQuestContent, frameFile, textureKey, safePath, mapTextureKey, effectTextureKey } from './model.ts';
 import type { LoadedPack, Inspector, LoadedContent } from './model.ts';
+import {installSourcePanel} from './source-panel.ts';
 declare global { interface Window { __LAPIS_PACK__?: Record<string,string>; } }
 export const assetUrl = (path: string) => {
   safePath(path);
@@ -45,6 +46,8 @@ export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack>
   const effects=manifest.effects??{};
   for(const effect of Object.values(effects))for(const index of effect.sequence)images[effectTextureKey(effect.resource_id,index)]=assetUrl(frameFile(effect.frames_dir,index));
   const loadedContent=await content(manifest);
+  const pack:LoadedPack={manifest,collision:primary.collision,inspector:primary.inspector,maps,effects,animations,images,content:loadedContent,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
+  installSourcePanel(pack);
   progress(`已校验 ${Object.keys(images).length} 个图像资源引用${loadedContent?` / ${loadedContent.summary.quests.length} 组任务内容`:''}`);
-  return {manifest,collision:primary.collision,inspector:primary.inspector,maps,effects,animations,images,content:loadedContent,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
+  return pack;
 }
