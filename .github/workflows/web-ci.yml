@@ -68,6 +68,7 @@ jobs:
           python3 tools/validate/validate_quest_content.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --out web/test-results/quest-content-summary.json
           python3 tools/validate/validate_extended_content.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --out web/test-results/extended-content-summary.json
           python3 tools/validate/validate_tip_assets.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/tip-structure-summary.json
+          python3 tools/inspect_spr_runs.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/spr-span-evidence.json
       - name: Publish static evidence early
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -80,6 +81,7 @@ jobs:
             web/test-results/quest-content-summary.json
             web/test-results/extended-content-summary.json
             web/test-results/tip-structure-summary.json
+            web/test-results/spr-span-evidence.json
           retention-days: 3
           if-no-files-found: error
       - name: Extract Quest source for private analysis
