@@ -5,14 +5,20 @@ import argparse,json,sys,hashlib
 ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT/'tools/convert'))
 from spr import write_png
 
+def map_payload(out:Path,map_id:int,name:str,width:int,height:int,cw:int,ch:int,color:tuple[int,int,int,int]):
+    png=f'maps/map-{map_id:04d}.png';collision=f'maps/map-{map_id:04d}-collision.json';inspector=f'maps/map-{map_id:04d}-inspector.json'
+    write_png(out/png,width,height,bytes(color)*(width*height))
+    grid=[1 if (x+y)%2==0 and 1<x<cw-2 and 1<y<ch-2 else 0 for x in range(cw) for y in range(ch)]
+    (out/collision).write_text(json.dumps({'width':cw,'height':ch,'grid_order':'first-major','grid':grid}))
+    mw=max(1,width//64);mh=max(1,height//32)
+    (out/inspector).write_text(json.dumps({'width':mw,'height':mh,'cells':[{'resource_id':map_id+1,'directory_path':[0,0,0,0]}]*(mw*mh)}))
+    return {'id':map_id,'name':name,'png':png,'collision':collision,'inspector':inspector,'render':{'width':width,'height':height},'evidence':'SYNTHETIC'}
+
 def generate(out:Path):
     if out.exists():raise FileExistsError('Refusing existing pack')
     out.mkdir(parents=True)
-    manifest={'schema':1,'provenance':{'kind':'synthetic','evidence':'VERIFIED'},'characters':{},'map':{'id':0,'name':'Synthetic fixture','png':'maps/map.png','collision':'maps/collision.json','inspector':'maps/inspector.json','render':{'width':1536,'height':768}}}
-    write_png(out/'maps/map.png',1536,768,bytes((38,62,52,255))*(1536*768))
-    grid=[1 if (x+y)%2==0 and 2<x<44 and 2<y<44 else 0 for x in range(47) for y in range(47)]
-    (out/'maps/collision.json').write_text(json.dumps({'width':47,'height':47,'grid_order':'first-major','grid':grid}))
-    (out/'maps/inspector.json').write_text(json.dumps({'width':24,'height':24,'cells':[{'resource_id':1,'directory_path':[0,0,0,0]}]*576}))
+    maps={'0':map_payload(out,0,'Synthetic fixture',1536,768,47,47,(38,62,52,255)),'1':map_payload(out,1,'Synthetic city',1024,640,31,39,(49,54,68,255))}
+    manifest={'schema':1,'provenance':{'kind':'synthetic','evidence':'VERIFIED'},'characters':{},'map':maps['0'],'maps':maps,'effects':{}}
     for cid,label,color in [(100,'swordsman',(205,185,110,255)),(109,'wizard',(136,139,196,255))]:
         char={'class_id':cid,'label':label,'actions':{}}
         for action in ['00','01','02','03','05']:
@@ -24,6 +30,11 @@ def generate(out:Path):
             anim={'action_slot':action,'frames_per_direction':n,'raw_timing':5,'directions':[[d*n+j for j in range(n)] for d in range(8)],'spr_frame_count':n*8,'frame_bounds':bounds}
             (out/f'{rel}/animation.json').write_text(json.dumps(anim));char['actions'][action]={'animation':f'{rel}/animation.json','frames_dir':f'{rel}/frames'}
         manifest['characters'][str(cid)]=char
+    effect_rel='effects/magic-001/frames';effect_bounds=[]
+    for i,size in enumerate((24,30,36)):
+        left=-size//2;top=-size//2;effect_bounds.append({'index':i,'left':left,'top':top,'right':left+size,'bottom':top+size})
+        rgba=bytes((210,170+i*20,90,180))*(size*size);write_png(out/f'{effect_rel}/frame-{i:03d}.png',size,size,rgba)
+    manifest['effects']['1']={'resource_id':1,'layer_name':'FOCUS','raw_timing':30,'frame_count':3,'sequence':[0,1,2],'frames_dir':effect_rel,'frame_bounds':effect_bounds,'sequence_evidence':'SYNTHETIC','timing_semantics':'UNVERIFIED','placement_semantics':'UNVERIFIED','warning':'Synthetic diagnostic effect'}
     (out/'prototype.json').write_text(json.dumps(manifest))
     files={p.relative_to(out).as_posix():{'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'size':p.stat().st_size} for p in sorted(out.rglob('*')) if p.is_file()}
     (out/'asset-index.json').write_text(json.dumps({'schema':1,'files':files},indent=2))
