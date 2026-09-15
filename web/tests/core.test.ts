@@ -23,7 +23,7 @@ test('negative pixel conversion preserves floor semantics',()=>{assert.deepEqual
 test('route stays on walkable nodes',()=>{const c=grid(),r=findRoute(c,[0,0],[2,2]);assert.ok(r);assert.deepEqual(r[0],[0,0]);assert.deepEqual(r.at(-1),[2,2]);assert.ok(r.every(n=>rawCell(c,n)===1));});
 test('blocked and unreachable paths rejected',()=>{assert.equal(findRoute(grid(),[0,0],[0,1]),null);const c=grid();c.grid=[1,0,0,0,0,0,0,0,1];assert.equal(findRoute(c,[0,0],[2,2]),null);});
 test('nearest walkable is deterministic',()=>assert.deepEqual(closestWalkable(grid(),[2,0]),[1,0]));
-test('direction ordering is explicit provisional policy',()=>{assert.equal(directionFor(0,1),0);assert.equal(directionFor(1,0),2);assert.equal(directionFor(0,-1),4);assert.equal(directionFor(-1,0),6);});
+test('direction ordering matches observed character rows',()=>{assert.equal(directionFor(0,1),0);assert.equal(directionFor(1,0),6);assert.equal(directionFor(0,-1),4);assert.equal(directionFor(-1,0),2);});
 test('attack rejected outside battle',()=>assert.equal(useAttack(initialState(),'x',0,0,null).ok,false));
 test('damage and cooldown do not permit button-spam',()=>{const s=beginBattle(0,0);assert.ok(useAttack(s,'dummy-melee',0,0,null).ok);const hp=s.enemies[0].hp;assert.equal(useAttack(s,'dummy-melee',0,0,null).ok,false);assert.equal(s.enemies[0].hp,hp);});
 test('mana failure is atomic',()=>{const s=beginBattle(0,0);s.mp=1;const before=JSON.stringify(s);assert.equal(useAttack(s,'dummy-melee',0,0,{skill_id:1101,name:'hit',mp_cost:25,explanation:'',magic_pattern_id:1}).ok,false);assert.equal(JSON.stringify(s),before);});
