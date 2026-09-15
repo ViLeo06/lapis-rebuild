@@ -2,7 +2,10 @@ name: Static battle binary research
 on:
   push:
     branches: ['codex/**']
-    paths: ['.github/workflows/static-battle-unpack.yml']
+    paths:
+      - '.github/workflows/static-battle-unpack.yml'
+      - 'tools/probe_battle_binary.py'
+      - 'tools/probe_retail_battle_runtime.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,9 +34,11 @@ jobs:
           mkdir "$RUNNER_TEMP/battle-research"
           "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" > "$RUNNER_TEMP/battle-research/unpack.log" 2>&1
           chmod 0644 "$RUNNER_TEMP/battle-research/neodark-unpacked.bin"
+          echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/battle-research/neodark-unpacked.bin" | sha256sum -c -
       - name: Inspect decompressed data without loading the program
         shell: bash
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           import hashlib, json, os, sys
           from pathlib import Path
@@ -42,9 +47,6 @@ jobs:
           root = Path(os.environ['RUNNER_TEMP']) / 'battle-research'
           target = root / 'neodark-unpacked.bin'
           digest = hashlib.sha256(target.read_bytes()).hexdigest()
-          # Pin this invocation to the just-produced data file; preserve the
-          # transformation chain separately rather than claiming its hash is
-          # the original packed executable's hash.
           probe.EXPECTED_SHA256 = digest
           sys.argv = ['probe_battle_binary', str(target), '--out', str(root / 'unpacked-xrefs.json')]
           probe.main()
@@ -58,6 +60,7 @@ jobs:
           }
           (root / 'unpacked-xrefs.json').write_text(json.dumps(report, indent=2) + '\n')
           PY
+          python3 tools/probe_retail_battle_runtime.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/retail-battle-runtime.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
