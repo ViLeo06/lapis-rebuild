@@ -39,6 +39,10 @@
 | WEB-033 | VERIFIED | HelpScript static structure: 5 HELP / 14 STEP / 30 four-integer records | Static parser/validation |
 | WEB-034 | VERIFIED | Neohelp has 18 sections / 336 records; all observed nonnegative third-field references resolve to an existing section ID | Does not yet claim field semantics |
 | WEB-035 | VERIFIED | Prologue has 19 structural rows / 17 non-empty text rows | Static parser/validation |
+| WEB-036 | VERIFIED-HISTORICAL | The original game explicitly distinguishes **non-battle state** and **battle screen/battle scene**; battle commands/status UI differ from the non-battle orb UI | 2003 Sina Q&A: battle-screen lower-left commands/status portrait, non-battle colored orbs, joining an existing battle scene; 2003 official update text: “进入回合制战斗画面后” |
+| WEB-037 | VERIFIED-HISTORICAL | Combat is a semi-turn/ATB-like tactical loop: a character acts only after its **行动槽** fills, may move/attack, then waits for the gauge again | 2003 17173 introduction; corroborated by period player notes referring to “移动格子”, “行动回合” and “回合循环” |
+| WEB-038 | VERIFIED-MANUAL | Normal play should not display the diagnostic route polyline or continuously flashing SPR bounds box | User manual validation 2026-09-15; the line and box are reconstruction debug overlays, not required gameplay UI; defaults changed to hidden |
+| WEB-039 | UNVERIFIED | Exact action-gauge fill time, whether movement and attack share/consume one action exactly as current prototype, enemy AI cadence, battle-entry trigger mapping and the precise battle-scene background | Current `battle-screen-policy-2` is a reversible engineering approximation pending stronger static/dynamic evidence |
 
 ## Interpretation boundaries
 
@@ -48,6 +52,8 @@
 - M3 guide completion proves engineering continuity only; it does not identify an original NPC, trigger, reward or map binding.
 - Recovered Quest/NPC text proves static source content exists. It does not by itself prove live entity placement, step gating or server/runtime conditions.
 - Browser/E2E success proves load/runtime invariants; manual visual review is separately required for sprite composition, direction, anchor and gameplay feel.
+- Contemporary 2003 documentation is strong evidence for the **field → battle-screen + action-gauge** architecture, but it does not by itself prove milliseconds, path tie-breaks, AI cadence or exact internal state-machine code.
+- No public original game source-code repository has been identified in the searches performed so far. Current combat reconstruction therefore combines period documentation, hash-pinned client static evidence and reversible `UNVERIFIED` policies; it does not pretend to be recovered source code.
 - Full recovered dialogue/story text is generated only inside private derived packs/artifacts and is not committed to Git.
 - Private asset evidence does not grant redistribution rights.
 - Original client binaries are not executed by CI or normal development environments.
