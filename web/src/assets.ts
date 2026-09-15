@@ -1,5 +1,5 @@
-import { assert, validateManifest, validateAnimation, validateCollision, frameFile, textureKey, safePath, mapTextureKey, effectTextureKey } from './model.ts';
-import type { LoadedPack, Inspector } from './model.ts';
+import { assert, validateManifest, validateAnimation, validateCollision, validateContentSummary, validateNpcScript, validateQuestContent, frameFile, textureKey, safePath, mapTextureKey, effectTextureKey } from './model.ts';
+import type { LoadedPack, Inspector, LoadedContent } from './model.ts';
 declare global { interface Window { __LAPIS_PACK__?: Record<string,string>; } }
 export const assetUrl = (path: string) => {
   safePath(path);
@@ -12,6 +12,16 @@ async function json(path: string): Promise<unknown> {
 }
 async function inspector(path:string|undefined):Promise<Inspector|null>{
   if(!path)return null;const raw=await json(path) as Inspector;assert(raw.width>0&&raw.height>0&&raw.cells.length===raw.width*raw.height,'Invalid map inspector');return raw;
+}
+async function content(manifest:ReturnType<typeof validateManifest>):Promise<LoadedContent|null>{
+  const c=manifest.content;if(!c)return null;
+  const summary=validateContentSummary(await json(c.summary));
+  const npcScript=validateNpcScript(await json(c.npc_script));
+  assert(summary.npc.npc_count===npcScript.npcs.length,'Content summary/NPC mismatch');
+  const quests:LoadedContent['quests']={};
+  for(const [id,path] of Object.entries(c.quests))quests[id]=validateQuestContent(await json(path));
+  assert(summary.quests.length===Object.keys(quests).length,'Content summary/quest mismatch');
+  return {manifest:c,summary,npcScript,quests};
 }
 export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack> {
   progress('读取资源清单');
@@ -34,6 +44,7 @@ export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack>
   }
   const effects=manifest.effects??{};
   for(const effect of Object.values(effects))for(const index of effect.sequence)images[effectTextureKey(effect.resource_id,index)]=assetUrl(frameFile(effect.frames_dir,index));
-  progress(`已校验 ${Object.keys(images).length} 个图像资源引用`);
-  return {manifest,collision:primary.collision,inspector:primary.inspector,maps,effects,animations,images,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
+  const loadedContent=await content(manifest);
+  progress(`已校验 ${Object.keys(images).length} 个图像资源引用${loadedContent?` / ${loadedContent.summary.quests.length} 组任务内容`:''}`);
+  return {manifest,collision:primary.collision,inspector:primary.inspector,maps,effects,animations,images,content:loadedContent,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
 }
