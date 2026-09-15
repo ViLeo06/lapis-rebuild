@@ -59,3 +59,12 @@ test('class switch unequips incompatible items',async({page})=>{
  expect((await snap(page)).inventory.weapon).toBe(null);
  await page.selectOption('#equip-weapon','12');expect((await snap(page)).equipment.attack).toBe(7);
 });
+test('M3 guide drives NPC -> map -> quest -> save loop',async({page})=>{
+ await ready(page);expect((await snap(page)).quest.guide).toBe('not_started');
+ await page.click('#npc');await expect.poll(async()=>(await snap(page)).mapId).toBe(1);expect((await snap(page)).quest.guide).toBe('city_visit');await expect(page.locator('#quest-status')).toContainText('前往外城');
+ await page.click('#npc');await expect.poll(async()=>(await snap(page)).mapId).toBe(0);expect((await snap(page)).quest.guide).toBe('return_training');
+ await page.click('#npc');expect((await snap(page)).quest.guide).toBe('complete');await expect(page.locator('#quest-status')).toContainText('已完成');
+ await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
+ await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');
+ await expect.poll(async()=>(await snap(page)).quest.guide).toBe('complete');await page.screenshot({path:'test-results/quest-loop.png',fullPage:true});
+});
