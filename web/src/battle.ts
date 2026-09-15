@@ -1,4 +1,5 @@
 import { PROVISIONAL as P } from './config.ts';
+import {RECOVERED_READINESS,SWORDSMAN_BATTLE_PROFILE,magicReadinessCost} from './battle-profile.ts';
 import type {Collision} from './model.ts';
 import type {Cell} from './coordinates.ts';
 import {referenceCellToScreen} from './coordinates.ts';
@@ -37,11 +38,18 @@ export type BattleState = {
   cooldown:number;
   action:number;
   actionMax:number;
+  actionClock:number;
+  moveReadinessCost:number;
+  attackReadinessCost:number;
+  restReadinessCost:number;
+  magicReadinessCost:number;
   enemyClock:number;
   enemies:Enemy[];
 };
 
 export function initialState(): BattleState {
+  const profile=SWORDSMAN_BATTLE_PROFILE;
+  const actionMax=RECOVERED_READINESS.maximum;
   return {
     phase:'safe',
     hp:P.initialHp,
@@ -53,7 +61,12 @@ export function initialState(): BattleState {
     manaBuff:0,
     cooldown:0,
     action:0,
-    actionMax:P.battleActionMax,
+    actionMax,
+    actionClock:0,
+    moveReadinessCost:profile.movementReadinessCost,
+    attackReadinessCost:profile.attackReadinessCost,
+    restReadinessCost:profile.restReadinessCost,
+    magicReadinessCost:magicReadinessCost(profile,actionMax),
     enemyClock:0,
     enemies:[],
   };
@@ -62,8 +75,8 @@ export function initialState(): BattleState {
 export function beginBattle(x:number,y:number): BattleState {
   const s=initialState();
   s.phase='active';
-  // The separate battle screen starts with one immediately available action.
-  // Exact recharge timing remains UNVERIFIED until runtime evidence is captured.
+  // Recovered old-client behavior grants control only when current readiness
+  // reaches the unit maximum. Starting full keeps the first command immediate.
   s.action=s.actionMax;
   s.enemies=[
     {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0},
@@ -76,10 +89,12 @@ export function actionReady(s:BattleState): boolean {
   return s.phase==='active' && s.action>=s.actionMax && s.cooldown<=0;
 }
 
-export function consumeAction(s:BattleState): boolean {
-  if(!actionReady(s))return false;
-  s.action=0;
-  s.cooldown=P.attackCooldownMs;
+// Recovered behavior subtracts an authored cost; it does not zero the whole
+// gauge after every command. The default is movement for existing scene calls.
+export function consumeAction(s:BattleState,cost=s.moveReadinessCost): boolean {
+  if(!actionReady(s)||!Number.isFinite(cost)||cost<=0)return false;
+  s.action=Math.max(0,s.action-cost);
+  s.cooldown=0;
   return true;
 }
 
@@ -112,8 +127,9 @@ export function useAttack(
   const range=sid&&sid>=19000?P.rangedRadiusPx:P.meleeRadiusPx;
   if(!buff&&e&&Math.hypot(e.x-x,e.y-y)>range)return {ok:false,message:'目标超出临时射程'};
 
+  const readinessCost=skill?s.magicReadinessCost:s.attackReadinessCost;
+  if(!consumeAction(s,readinessCost))return {ok:false,message:'行动槽尚未蓄满'};
   s.mp-=cost;
-  consumeAction(s);
   if(sid===1301)s.shield=P.shieldDurationMs;
   else if(sid===19301)s.manaBuff=P.manaBuffDurationMs;
   else if(e){
@@ -128,7 +144,7 @@ export function useAttack(
     }
   }
   finish(s);
-  return {ok:true,message:`${skill?.name??'普通攻击'} / UNVERIFIED`};
+  return {ok:true,message:`${skill?.name??'普通攻击'} / damage UNVERIFIED`};
 }
 
 export type TacticalContext={collision:Collision;playerBusy:boolean;reserved:readonly Cell[]};
@@ -136,7 +152,17 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   if(s.phase!=='active'||![delta,x,y,defense].every(Number.isFinite)||delta<0||defense<0)return;
   const dt=Math.min(250,Math.max(0,delta));
   s.cooldown=Math.max(0,s.cooldown-dt);
-  if(!context?.playerBusy)s.action=Math.min(s.actionMax,s.action+s.actionMax*dt/P.battleActionFillMs);
+
+  // Original battle messages increment readiness one point at a time. The
+  // 500ms cadence is recovered secondary evidence and remains pending an
+  // isolated native-client capture.
+  s.actionClock+=dt;
+  const ticks=Math.floor(s.actionClock/RECOVERED_READINESS.inferredTickMs);
+  if(ticks>0){
+    s.actionClock-=ticks*RECOVERED_READINESS.inferredTickMs;
+    s.action=Math.min(s.actionMax,s.action+ticks*RECOVERED_READINESS.incrementPerTick);
+  }
+
   s.shield=Math.max(0,s.shield-dt);
   s.manaBuff=Math.max(0,s.manaBuff-dt);
   s.enemyClock+=dt;
@@ -148,6 +174,7 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
       e.poison-=dose;
     }
   }
+  // Enemy AI remains an explicitly provisional training implementation.
   for(const e of s.enemies){
     if(e.hp<=0)continue;
     e.action=Math.min(s.actionMax,e.action+s.actionMax*dt/P.enemyIntervalMs);
