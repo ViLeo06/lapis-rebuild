@@ -1,4 +1,4 @@
-import { assert, validateManifest, validateAnimation, validateCollision, validateContentSummary, validateNpcScript, validateQuestContent, frameFile, textureKey, safePath, mapTextureKey, effectTextureKey } from './model.ts';
+import { assert, validateManifest, validateAnimation, validateCollision, validateContentSummary, validateNpcScript, validateQuestContent, validateTutorialContent, validateHelpScript, validateTutorialHelpSummary, frameFile, textureKey, safePath, mapTextureKey, effectTextureKey } from './model.ts';
 import type { LoadedPack, Inspector, LoadedContent } from './model.ts';
 import {installSourcePanel} from './source-panel.ts';
 declare global { interface Window { __LAPIS_PACK__?: Record<string,string>; } }
@@ -22,7 +22,13 @@ async function content(manifest:ReturnType<typeof validateManifest>):Promise<Loa
   const quests:LoadedContent['quests']={};
   for(const [id,path] of Object.entries(c.quests))quests[id]=validateQuestContent(await json(path));
   assert(summary.quests.length===Object.keys(quests).length,'Content summary/quest mismatch');
-  return {manifest:c,summary,npcScript,quests};
+  const hasExtended=!!(c.tutorial&&c.help_script&&c.tutorial_help_summary);
+  const tutorial=hasExtended?validateTutorialContent(await json(c.tutorial!)):null;
+  const helpScript=hasExtended?validateHelpScript(await json(c.help_script!)):null;
+  const tutorialHelpSummary=hasExtended?validateTutorialHelpSummary(await json(c.tutorial_help_summary!)):null;
+  if(tutorial&&tutorialHelpSummary)assert(tutorial.summary.talk_count===tutorialHelpSummary.tutorial.talk_count,'Tutorial summary mismatch');
+  if(helpScript&&tutorialHelpSummary){assert(helpScript.summary.help_count===tutorialHelpSummary.help_script.help_count,'Help summary mismatch');assert(helpScript.summary.step_count===tutorialHelpSummary.help_script.step_count,'Help step summary mismatch');assert(helpScript.summary.record_count===tutorialHelpSummary.help_script.record_count,'Help record summary mismatch');}
+  return {manifest:c,summary,npcScript,quests,tutorial,helpScript,tutorialHelpSummary};
 }
 export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack> {
   progress('读取资源清单');
@@ -48,6 +54,6 @@ export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack>
   const loadedContent=await content(manifest);
   const pack:LoadedPack={manifest,collision:primary.collision,inspector:primary.inspector,maps,effects,animations,images,content:loadedContent,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
   installSourcePanel(pack);
-  progress(`已校验 ${Object.keys(images).length} 个图像资源引用${loadedContent?` / ${loadedContent.summary.quests.length} 组任务内容`:''}`);
+  progress(`已校验 ${Object.keys(images).length} 个图像资源引用${loadedContent?` / ${loadedContent.summary.quests.length} 组任务内容${loadedContent.tutorial?` / ${loadedContent.tutorial.summary.talk_count} TALK`:''}`:''}`);
   return pack;
 }
