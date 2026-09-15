@@ -42,6 +42,17 @@ Human review is a first-class gate, not an informal extra. The first two user re
 
 After changes to sprite decoding, direction mapping, anchors, battle flow, map occlusion or effect placement, generate a fresh private standalone HTML and manually check both B100 and B109. Automated browser green status proves runtime invariants; it does not prove the image/animation/gameplay feels like the original.
 
+## Historical battle references
+
+The current high-level combat architecture is based on contemporary sources, not on guessed genre conventions:
+
+- 17173, 2003-04-03, `全新战棋策略网游《佣兵传说》精彩介绍`: explicitly states that a character waits for the **行动槽** to fill, may then move/attack, and must wait for the gauge again. `https://news.17173.com/content/2003-4-3/n586_502831.html`
+- 新浪游戏, 2003-05-19, `佣兵传说Q&A`: distinguishes the **战斗画面** status/commands from the non-battle colored-orb UI and describes joining the same **战斗场景**. `https://games.sina.com.cn/zhqu/yb/article/2003-05-19/6407.shtml`
+- 新浪游戏, 2003-10-27, official update report: describes “进入回合制战斗画面后” followed by realtime interaction inside the battle, supporting a semi-turn/action-gauge interpretation rather than free realtime field combat. `https://games.sina.com.cn/newgames/2003/10/10277332.shtml`
+- 新浪玩家资料, 2003-12-31: refers to “移动格子”, “自己有行动回合的时候” and “加快回合循环”. `https://games.sina.com.cn/z/yb/2003-12-31/88889.shtml`
+
+These sources verify the broad architecture. They do **not** verify the current 700 ms gauge fill, enemy cadence, path tie-break, exact action costs or battle-scene resource mapping. No trustworthy public original source-code repository has been identified yet.
+
 ## Current Web checkpoint
 
 - Maps: `0000 / 对练场` and `0001 / 布日古斯_外城`.
