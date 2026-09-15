@@ -1,4 +1,4 @@
-import guideData from '../../data/npcs/m3-guide.json';
+import guideData from '../../data/npcs/m3-guide.json' with { type: 'json' };
 
 export type GuideStage='not_started'|'city_visit'|'return_training'|'complete';
 export type QuestState={guide:GuideStage};
