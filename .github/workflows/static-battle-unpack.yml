@@ -1,0 +1,67 @@
+name: Static battle binary research
+on:
+  push:
+    branches: ['codex/**']
+    paths: ['.github/workflows/static-battle-unpack.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Fetch and verify the official decompression tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 60 https://github.com/upx/upx/releases/download/v5.2.1/upx-5.2.1-amd64_linux.tar.xz -o "$RUNNER_TEMP/upx.tar.xz"
+          echo "402162aad30af47e60dbd767fb2e64ca394ace9727ba1f40283641f1d1b91657  $RUNNER_TEMP/upx.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/upx.tar.xz" -C "$RUNNER_TEMP"
+      - name: Static extraction and decompression only
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          echo "c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd  $RUNNER_TEMP/extracted/client/NeoDark.exe" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/battle-research"
+          "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" > "$RUNNER_TEMP/battle-research/unpack.log" 2>&1
+          chmod 0644 "$RUNNER_TEMP/battle-research/neodark-unpacked.bin"
+      - name: Inspect decompressed data without loading the program
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, 'tools')
+          import probe_battle_binary as probe
+          root = Path(os.environ['RUNNER_TEMP']) / 'battle-research'
+          target = root / 'neodark-unpacked.bin'
+          digest = hashlib.sha256(target.read_bytes()).hexdigest()
+          # Pin this invocation to the just-produced data file; preserve the
+          # transformation chain separately rather than claiming its hash is
+          # the original packed executable's hash.
+          probe.EXPECTED_SHA256 = digest
+          sys.argv = ['probe_battle_binary', str(target), '--out', str(root / 'unpacked-xrefs.json')]
+          probe.main()
+          report = json.loads((root / 'unpacked-xrefs.json').read_text())
+          report['transformation'] = {
+              'original_packed_sha256': 'c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd',
+              'tool': 'official UPX 5.2.1 Linux amd64, -d',
+              'tool_archive_sha256': '402162aad30af47e60dbd767fb2e64ca394ace9727ba1f40283641f1d1b91657',
+              'executed_original_program': False,
+              'output_sha256': digest,
+          }
+          (root / 'unpacked-xrefs.json').write_text(json.dumps(report, indent=2) + '\n')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: private-static-unpacked-battle
+          path: ${{ runner.temp }}/battle-research/
+          retention-days: 1
+          if-no-files-found: warn
