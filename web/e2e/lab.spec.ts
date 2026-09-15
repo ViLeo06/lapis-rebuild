@@ -26,16 +26,19 @@ test('IndexedDB save survives page reload',async({page})=>{await ready(page);awa
 test('foreign save rejected without mutating actor',async({page})=>{await ready(page);const before=await snap(page);await page.locator('#import').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({version:2,pack:'foreign',character:'199',x:0,y:0,gold:999}))});expect((await snap(page)).character).toBe(before.character);await expect(page.locator('#notice')).toContainText('mismatch');});
 test('missing pack fails closed',async({page})=>{await page.route('**/game-data/prototype.json',route=>route.fulfill({status:404,body:'missing'}));await page.goto('/');await expect(page.locator('#loading')).toContainText('HTTP 404');expect(await page.evaluate(()=>!!window.lapisDiagnostics)).toBe(false);});
 test('responsive layout has no horizontal overflow',async({page})=>{await page.setViewportSize({width:820,height:1180});await ready(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(820);await page.screenshot({path:'test-results/compact.png',fullPage:true});});
-test('offline HTML opens without external requests',async({page})=>{test.skip(!process.env.LAPIS_OFFLINE_PREVIEW,'No offline build supplied');const external:string[]=[];page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});await page.goto(pathToFileURL(process.env.LAPIS_OFFLINE_PREVIEW!).href);await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#character','109');await page.selectOption('#action','05');await page.click('#step');expect((await snap(page)).length).toBe(11);await page.selectOption('#map','1');expect((await snap(page)).mapId).toBe(1);expect(external).toEqual([]);await page.screenshot({path:'test-results/offline.png',fullPage:true});});
+test('offline HTML opens without external requests',async({page})=>{test.skip(!process.env.LAPIS_OFFLINE_PREVIEW,'No offline build supplied');const external:string[]=[];page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});await page.goto(pathToFileURL(process.env.LAPIS_OFFLINE_PREVIEW!).href);await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#character','109');await page.selectOption('#action','05');await page.click('#step');expect((await snap(page)).length).toBe(11);await page.selectOption('#map','1');expect((await snap(page)).mapId).toBe(1);await page.click('#battle');await expect.poll(async()=>(await snap(page)).inBattleView).toBe(true);expect((await snap(page)).mapId).toBe(0);await page.click('#battle-pause');await page.click('#return');expect((await snap(page)).mapId).toBe(1);expect(external).toEqual([]);await page.screenshot({path:'test-results/offline.png',fullPage:true});});
 test('training victory, settlement and saved reward survive reload',async({page})=>{
- test.setTimeout(90000);await ready(page);await page.click('#battle');
+ test.setTimeout(60000);await ready(page);await page.click('#battle');
  for(let n=0;n<20;n++){
-   await expect.poll(async()=>{const s=await snap(page);return s.phase==='won'||s.actionReady;},{timeout:15000}).toBe(true);
+   await expect.poll(async()=>{const s=await snap(page);return s.phase!=='active'||s.actionReady;},{timeout:10000,intervals:[50]}).toBe(true);
    const s=await snap(page);if(s.phase==='won')break;
+   expect(s.phase,`Battle ended before settlement: ${JSON.stringify({hp:s.hp,enemies:s.enemies})}`).toBe('active');
    const target=s.enemies.find(e=>e.hp>0)!;
-   await clickWorld(page,target.x,target.y);
+   // Re-select only when necessary. Default exponential polling plus a redundant
+   // canvas selection on every turn was wasting whole enemy actions.
+   if(s.target!==target.id){await clickWorld(page,target.x,target.y);await expect.poll(async()=>(await snap(page)).target,{intervals:[50]}).toBe(target.id);}
    const distance=Math.max(Math.abs(target.cell[0]-s.battleCell[0]),Math.abs(target.cell[1]-s.battleCell[1]));
-   if(distance<=1){await page.click('#attack');continue;}
+   if(distance<=1){await page.locator('#attack').click({timeout:3000});continue;}
    const options=[...s.reachable].sort((a,b)=>Math.max(Math.abs(a[0]-target.cell[0]),Math.abs(a[1]-target.cell[1]))-Math.max(Math.abs(b[0]-target.cell[0]),Math.abs(b[1]-target.cell[1])));
    expect(options.length).toBeGreaterThan(0);const c=options[0];await clickWorld(page,(c[0]+1)*32,(c[1]+1)*16);
  }
@@ -69,4 +72,13 @@ test('M3 guide drives NPC -> map -> quest -> save loop',async({page})=>{
  await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
  await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');
  await expect.poll(async()=>(await snap(page)).quest.guide).toBe('complete');await page.screenshot({path:'test-results/quest-loop.png',fullPage:true});
+});
+
+test('defeat freezes battle state, blocks actions and returns without a reward',async({page})=>{
+ await ready(page);const field=await snap(page);await page.click('#battle');
+ await expect.poll(async()=>(await snap(page)).phase,{timeout:30000,intervals:[100]}).toBe('lost');
+ const dead=await snap(page);await expect(page.locator('#attack')).toBeDisabled();
+ await page.dispatchEvent('#attack','click');await page.waitForTimeout(350);
+ const after=await snap(page);expect(after.hp).toBe(0);expect(after.enemies).toEqual(dead.enemies);expect(after.anchor).toEqual(dead.anchor);
+ await page.click('#return');const back=await snap(page);expect(back.mapId).toBe(field.mapId);expect(back.anchor).toEqual(field.anchor);expect(back.gold).toBe(0);
 });
