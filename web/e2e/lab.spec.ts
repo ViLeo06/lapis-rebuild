@@ -39,8 +39,7 @@ test('training victory, settlement and saved reward survive reload',async({page}
  await expect.poll(async()=>(await snap(page)).target).toBe(target.id);
  for(let i=0;i<5;i++){await expect.poll(async()=>(await snap(page)).actionReady,{timeout:15000}).toBe(true);await page.click('#attack');await page.waitForTimeout(100);}
  await expect.poll(async()=>(await snap(page)).phase).toBe('won');
- await page.click('#return');expect((await snap(page)).gold).toBe(10);
- await page.click('#return');expect((await snap(page)).gold).toBe(10);
+ await page.click('#return');expect((await snap(page)).gold).toBe(10);expect((await snap(page)).inBattleView).toBe(false);
  await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
  await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);
  await page.click('#load');await expect.poll(async()=>(await snap(page)).gold).toBe(10);
