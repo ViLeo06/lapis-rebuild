@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {validateManifest} from '../src/model.ts';
+import {validateSave} from '../src/save.ts';
+const map=(id:number,name=`map-${id}`)=>({id,name,png:`maps/map-${id}.png`,collision:`maps/c-${id}.json`,inspector:`maps/i-${id}.json`,render:{width:640,height:480}});
+const effect=()=>({resource_id:1,layer_name:'FOCUS',raw_timing:30,frame_count:3,sequence:[0,1,2],frames_dir:'effects/magic-001/frames',frame_bounds:[0,1,2].map(index=>({index,left:-5,top:-5,right:5,bottom:5})),sequence_evidence:'VERIFIED_FILE_ORDER',timing_semantics:'UNVERIFIED',placement_semantics:'UNVERIFIED',warning:'diagnostic only'});
+const manifest=()=>({schema:1,provenance:{kind:'synthetic',evidence:'VERIFIED' as const},characters:{'100':{class_id:100,label:'swordsman',actions:{'00':{animation:'a/00.json',frames_dir:'a/00'},'01':{animation:'a/01.json',frames_dir:'a/01'},'02':{animation:'a/02.json',frames_dir:'a/02'}}}},map:map(0),maps:{'0':map(0),'1':map(1)},effects:{'1':effect()}});
+test('multi-map and sequential FOCUS diagnostic pack validates',()=>{const m=validateManifest(manifest());assert.equal(m.maps?.['1'].id,1);assert.equal(m.effects?.['1'].frame_count,3);});
+test('map ids and safe paths are strict',()=>{const a=manifest();a.maps['1'].id=2;assert.throws(()=>validateManifest(a));const b=manifest();b.maps['1'].png='https://evil/x.png';assert.throws(()=>validateManifest(b));});
+test('FOCUS sequence cannot silently become directional or sparse',()=>{const a=manifest();a.effects['1'].sequence=[3,4,5];assert.throws(()=>validateManifest(a));const b=manifest();b.effects['1'].frame_bounds.pop();assert.throws(()=>validateManifest(b));});
+test('v1 save may carry a bounded optional map id',()=>{const base={version:1 as const,pack:'p',character:'100',x:32,y:32,gold:0,savedAt:'2026-09-15T00:00:00Z'};assert.equal(validateSave({...base,mapId:1},'p',['100'],100,100).mapId,1);assert.throws(()=>validateSave({...base,mapId:-1},'p',['100'],100,100));assert.throws(()=>validateSave({...base,mapId:1.5},'p',['100'],100,100));});
