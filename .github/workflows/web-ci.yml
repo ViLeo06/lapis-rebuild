@@ -1,0 +1,83 @@
+name: Web and parser validation
+on:
+  push:
+    branches: [codex/m0-ani]
+    paths: ['web/**', 'tools/**', 'tests/**', 'data/**', '.github/workflows/web-ci.yml']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Parser tests and synthetic pack
+        run: |
+          python3 -m unittest discover -s tests/parsers -v
+          python3 tools/testing/make_web_fixture.py --out web/public/game-data
+      - name: Locked dependencies, typecheck, unit tests and build
+        working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm test
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Build standalone synthetic preview
+        run: python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/offline.html"
+      - name: Chromium integration and offline tests
+        working-directory: web
+        env:
+          LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: web-synthetic-validation
+          path: web/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+  private-original:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[private-smoke]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Fetch hash-pinned sample and extract without execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          python3 tools/prepare_web.py --client-root "$RUNNER_TEMP/extracted/client" --out web/public/game-data
+      - name: Build and browser setup
+        working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Private standalone preview
+        run: python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/lapis-private.html"
+      - name: Real-resource browser and offline tests
+        working-directory: web
+        env:
+          LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: private-original-validation
+          path: |
+            web/test-results/
+            ${{ runner.temp }}/lapis-private.html
+          retention-days: 3
+          if-no-files-found: warn

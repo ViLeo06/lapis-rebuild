@@ -19,7 +19,6 @@ assets_raw/
 assets_derived/
 extracted/
 quarantine/
-game/generated/
 *.exe
 *.msi
 *.iso
@@ -43,3 +42,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+game/generated/
+# Web dependencies and private generated packs
+node_modules/
+web/public/game-data/
+web/test-results/
+web/playwright-report/
