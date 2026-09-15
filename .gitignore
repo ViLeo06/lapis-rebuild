@@ -19,6 +19,7 @@ assets_raw/
 assets_derived/
 extracted/
 quarantine/
+game/generated/
 *.exe
 *.msi
 *.iso
