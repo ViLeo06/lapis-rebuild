@@ -6,7 +6,7 @@ needed to open the resulting file. Browser storage can vary on file:// origins;
 JSON save export/import is always retained as the portable fallback.
 """
 from __future__ import annotations
-import argparse,base64,hashlib,json,re
+import argparse,base64,hashlib,json,re,html as html_module
 from pathlib import Path
 
 def package(dist:Path,pack:Path,out:Path):
@@ -31,6 +31,10 @@ def package(dist:Path,pack:Path,out:Path):
     for css in cssfiles:html=re.sub(r'<link[^>]+href="'+re.escape(css)+r'"[^>]*>',lambda _: '<style>'+(dist/css.removeprefix('./')).read_text()+'</style>',html)
     data_script='<script>window.__LAPIS_PACK__='+json.dumps(embedded,separators=(',',':')).replace('<','\\u003c')+';</script>'
     html=re.sub(r'<script[^>]+src="[^"]+"[^>]*></script>',lambda _:data_script+'<script type="module">'+js.replace('</script','<\\/script')+'</script>',html)
+    notices=Path(__file__).resolve().parents[1]/'web/THIRD_PARTY_NOTICES.txt'
+    if not notices.is_file():raise FileNotFoundError('Third-party license notices missing')
+    legal='<details style="margin:1em 2em;color:#a4aaa0;font:11px system-ui"><summary>Third-party software licenses</summary><pre style="white-space:pre-wrap">'+html_module.escape(notices.read_text())+'</pre></details>'
+    html=html.replace('</body>',legal+'</body>')
     out.parent.mkdir(parents=True,exist_ok=True);out.write_text(html)
     result={'filename':out.name,'bytes':out.stat().st_size,'sha256':hashlib.sha256(out.read_bytes()).hexdigest(),'embedded_files':len(embedded),'visibility':'private-only'}
     print(json.dumps(result));return result

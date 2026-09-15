@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Generate a private Web pack using existing project-owned format parsers.
+"""Generate a private Web pack using project-owned parsers and pinned inputs.
 
 Never executes original client software. Existing output is not overwritten.
 """
 from __future__ import annotations
-import argparse,hashlib,json,shutil,subprocess,sys,tempfile
+import argparse,hashlib,json,subprocess,sys,tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools/convert'))
@@ -15,6 +15,9 @@ def generate(client:Path,out:Path):
     if out.exists():raise FileExistsError(f'Refusing existing output: {out}')
     client=client.resolve();out.parent.mkdir(parents=True,exist_ok=True)
     if not (client/'Char').is_dir() or not (client/'SGRes').is_dir():raise ValueError('Expected extracted client/ containing Char and SGRes')
+    baseline=json.loads((ROOT/'manifests/web-source-baseline.json').read_text())
+    for rel,expected in baseline['files'].items():
+        if digest(client/rel)!=expected:raise ValueError(f'Input differs from verified 2.2 baseline: {rel}')
     with tempfile.TemporaryDirectory(prefix='lapis-web-',dir=out.parent) as tmp:
         stage=Path(tmp)/'pack'
         subprocess.run([sys.executable,str(ROOT/'tools/prepare_prototype.py'),'--char-dir',str(client/'Char'),'--sgres-dir',str(client/'SGRes'),'--out',str(stage)],check=True,capture_output=True,text=True)
@@ -26,12 +29,8 @@ def generate(client:Path,out:Path):
         mmf=parse_mmf(paths[0]);ins={'width':mmf['width'],'height':mmf['height'],'cells':[{'resource_id':c['resource_id'],'directory_path':c['directory_path']} for c in mmf['cells']]}
         manifest['map']['inspector']='maps/map-0000-inspector.json'
         (stage/manifest['map']['inspector']).write_text(json.dumps(ins,separators=(',',':'))+'\n')
-        sources={}
-        for p in sorted((client/'Char').iterdir()):
-            if p.stem.split('_')[0] in ('B100','B109') and p.suffix.lower() in ('.ani','.spr'):
-                sources['Char/'+p.name]=digest(p)
-        for p in sorted((client/'SGRes').iterdir()):
-            if p.stem.lower()=='sz-0000' and p.suffix.lower() in ('.mmf','.smf','.imf'):sources['SGRes/'+p.name]=digest(p)
+        sources=baseline['files']
+        manifest['provenance']['pack_sha256']=hashlib.sha256(json.dumps({'schema':1,'inputs':sources},sort_keys=True,separators=(',',':')).encode()).hexdigest()
         for p in stage.rglob('index.json'):
             obj=json.loads(p.read_text());obj['source']=Path(obj['source']).name;p.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
         (stage/'prototype.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')

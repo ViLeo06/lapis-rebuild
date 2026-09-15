@@ -10,7 +10,20 @@ export const PROVISIONAL = Object.freeze({
   meleeRadiusPx: 95,
   rangedRadiusPx: 300,
   effectDurationMs: 600,
+  initialHp: 125,
+  initialMp: 100,
+  heavyDamage: 34,
+  doubleDamage: 36,
+  shieldDurationMs: 6000,
+  manaBuffDurationMs: 6000,
+  blindDurationMs: 5000,
+  poisonDurationMs: 5000,
+  poisonInitialDamage: 12,
+  poisonDamagePerMs: 0.005,
+  manaReturn: 6,
+  damageReduction: 0.5,
+  reward: 10,
   revision: 'training-policy-1',
 });
-export const ACTIONS: Record<string,string> = { '00':'\u5f85\u673a', '01':'\u79fb\u52a8', '02':'\u653b\u51fb / \u65bd\u6cd5', '03':'\u53d7\u51fb', '05':'\u7279\u6b8a\u5e8f\u5217' };
-export const DIRECTIONS = ['\u5357','\u4e1c\u5357','\u4e1c','\u4e1c\u5317','\u5317','\u897f\u5317','\u897f','\u897f\u5357'];
+export const ACTIONS: Record<string,string> = { '00':'待机', '01':'移动', '02':'攻击 / 施法', '03':'受击', '05':'特殊序列' };
+export const DIRECTIONS = ['南','东南','东','东北','北','西北','西','西南'];

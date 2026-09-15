@@ -11,7 +11,7 @@ async function json(path: string): Promise<unknown> {
   return response.json();
 }
 export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack> {
-  progress('\u8bfb\u53d6\u8d44\u6e90\u6e05\u5355');
+  progress('读取资源清单');
   const manifest=validateManifest(await json('prototype.json'));
   const collision=validateCollision(await json(manifest.map.collision));
   const inspector = manifest.map.inspector ? await json(manifest.map.inspector) as Inspector : null;
@@ -24,6 +24,6 @@ export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack>
       for(const index of new Set(a.directions.flat())) images[textureKey(id,slot,index)]=assetUrl(frameFile(paths.frames_dir,index));
     }
   }
-  progress(`\u5df2\u6821\u9a8c ${Object.keys(images).length-1} \u5f20\u89d2\u8272\u5e27`);
-  return {manifest,collision,inspector,animations,images,digest:manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
+  progress(`已校验 ${Object.keys(images).length-1} 张角色帧`);
+  return {manifest,collision,inspector,animations,images,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
 }

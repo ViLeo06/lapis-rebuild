@@ -5,7 +5,14 @@ const snap=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot());
 async function ready(page:Page){await page.goto('/');await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);}
 async function clickWorld(page:Page,x:number,y:number){const b=await page.locator('canvas').boundingBox();if(!b)throw Error('Missing canvas');const z=Math.min(b.width/1536,b.height/768)*.98;await page.mouse.click(b.x+b.width/2+(x-768)*z,b.y+b.height/2+(y-384)*z);}
 test('loads real-format pack with no JS errors',async({page})=>{const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);await expect(page.locator('#loading')).toBeHidden();await expect(page.locator('canvas')).toBeVisible();await expect(page.locator('#raw-timing')).toHaveText('5');await page.screenshot({path:'test-results/diagnostic.png',fullPage:true});expect(errors).toEqual([]);});
-test('all 80 action-direction combinations and frame stepping',async({page})=>{const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);for(const cid of ['100','109']){await page.selectOption('#character',cid);for(const slot of ['00','01','02','03','05']){await page.selectOption('#action',slot);for(let d=0;d<8;d++){await page.selectOption('#direction',String(d));await page.click('#step');const s=await snap(page);expect(s.character).toBe(cid);expect(s.slot).toBe(slot);expect(s.direction).toBe(d);expect(s.cursor).toBeLessThan(s.length);expect(s.frame).toBeGreaterThanOrEqual(0);}}}expect(errors).toEqual([]);});
+for(const cid of ['100','109']) for(const slot of ['00','01','02','03','05']) {
+ test(`eight directions and frame stepping B${cid}_${slot}`,async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);
+  await page.selectOption('#character',cid);await page.selectOption('#action',slot);
+  for(let d=0;d<8;d++){await page.selectOption('#direction',String(d));await page.click('#step');const s=await snap(page);expect(s.character).toBe(cid);expect(s.slot).toBe(slot);expect(s.direction).toBe(d);expect(s.cursor).toBeLessThan(s.length);expect(s.frame).toBeGreaterThanOrEqual(0);}
+  expect(errors).toEqual([]);
+ });
+}
 test('pause freezes and step advances exactly one frame',async({page})=>{await ready(page);await page.click('#step');const a=await snap(page);await page.waitForTimeout(250);expect((await snap(page)).cursor).toBe(a.cursor);await page.click('#step');expect((await snap(page)).cursor).toBe((a.cursor+1)%a.length);});
 test('map overlays and hover inspector',async({page})=>{await ready(page);await page.check('#grid');await page.check('#collision');await clickWorld(page,700,400);await expect(page.locator('#resource')).not.toHaveText('--');await page.screenshot({path:'test-results/overlays.png',fullPage:true});});
 test('click movement reaches a legal route anchor',async({page})=>{await ready(page);const before=await snap(page);await clickWorld(page,before.anchor.x+64,before.anchor.y);await expect.poll(async()=>(await snap(page)).anchor.x,{timeout:10000}).not.toBe(before.anchor.x);await expect.poll(async()=>(await snap(page)).routeLength,{timeout:10000}).toBe(0);});
@@ -16,3 +23,21 @@ test('foreign save rejected without mutating actor',async({page})=>{await ready(
 test('missing pack fails closed',async({page})=>{await page.route('**/game-data/prototype.json',route=>route.fulfill({status:404,body:'missing'}));await page.goto('/');await expect(page.locator('#loading')).toContainText('HTTP 404');expect(await page.evaluate(()=>!!window.lapisDiagnostics)).toBe(false);});
 test('responsive layout has no horizontal overflow',async({page})=>{await page.setViewportSize({width:820,height:1180});await ready(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(820);await page.screenshot({path:'test-results/compact.png',fullPage:true});});
 test('offline HTML opens without external requests',async({page})=>{test.skip(!process.env.LAPIS_OFFLINE_PREVIEW,'No offline build supplied');const external:string[]=[];page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});await page.goto(pathToFileURL(process.env.LAPIS_OFFLINE_PREVIEW!).href);await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#character','109');await page.selectOption('#action','05');await page.click('#step');expect((await snap(page)).length).toBe(11);expect(external).toEqual([]);await page.screenshot({path:'test-results/offline.png',fullPage:true});});
+test('training victory, settlement and saved reward survive reload',async({page})=>{
+ await ready(page);await page.click('#battle');
+ for(let i=0;i<5;i++){await page.click('#attack');await page.waitForTimeout(800);}
+ expect((await snap(page)).enemies[0].hp).toBe(0);
+ const state=await snap(page),target=state.enemies[1];
+ await clickWorld(page,state.anchor.x+128,state.anchor.y);
+ await expect.poll(async()=>(await snap(page)).routeLength,{timeout:10000}).toBe(0);
+ await clickWorld(page,target.x,target.y);
+ await expect.poll(async()=>(await snap(page)).target).toBe(target.id);
+ for(let i=0;i<5;i++){await page.click('#attack');await page.waitForTimeout(800);}
+ await expect.poll(async()=>(await snap(page)).phase).toBe('won');
+ await page.click('#return');expect((await snap(page)).gold).toBe(10);
+ await page.click('#return');expect((await snap(page)).gold).toBe(10);
+ await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
+ await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);
+ await page.click('#load');await expect.poll(async()=>(await snap(page)).gold).toBe(10);
+ await page.screenshot({path:'test-results/settlement.png',fullPage:true});
+});
