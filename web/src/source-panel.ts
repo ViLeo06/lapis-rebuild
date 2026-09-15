@@ -7,17 +7,17 @@ export function installSourcePanel(pack:LoadedPack){
   const panel=document.createElement('div');panel.className='panel';panel.id='source-content-panel';
   const title=document.createElement('h2');title.textContent='04 原版内容证据';panel.append(title);
   const content=pack.content;
-  if(!content){const p=document.createElement('p');p.className='hint';p.id='source-evidence';p.textContent='当前资源包没有 Quest/NPC 内容。';panel.append(p);aside.append(panel);return;}
+  if(!content){const p=document.createElement('p');p.className='quiet';p.id='source-evidence';p.textContent='当前资源包没有 Quest/NPC 内容。';panel.append(p);aside.append(panel);return;}
   const source=content;
-  const meta=document.createElement('p');meta.className='hint';meta.id='source-evidence';meta.textContent=`${source.manifest.evidence} · ${source.summary.npc.npc_count} NPC · ${source.summary.quests.length} Quest 文件`;panel.append(meta);
+  const meta=document.createElement('p');meta.className='quiet';meta.id='source-evidence';meta.textContent=`${source.manifest.evidence} · ${source.summary.npc.npc_count} NPC · ${source.summary.quests.length} Quest 文件`;panel.append(meta);
 
   const npcLabel=document.createElement('label');npcLabel.textContent='NPC 静态记录 ';const npcSelect=document.createElement('select');npcSelect.id='source-npc';npcLabel.append(npcSelect);panel.append(npcLabel);
-  const npcLine=document.createElement('select');npcLine.id='source-npc-line';const npcText=document.createElement('p');npcText.id='source-npc-text';npcText.className='hint';panel.append(npcLine,npcText);
+  const npcLine=document.createElement('select');npcLine.id='source-npc-line';const npcText=document.createElement('p');npcText.id='source-npc-text';npcText.className='quiet';panel.append(npcLine,npcText);
 
   const questLabel=document.createElement('label');questLabel.textContent='Quest 文件 ';const questSelect=document.createElement('select');questSelect.id='source-quest';questLabel.append(questSelect);panel.append(questLabel);
-  const stepSelect=document.createElement('select');stepSelect.id='source-step';const questText=document.createElement('div');questText.id='source-quest-text';questText.className='hint';panel.append(stepSelect,questText);
+  const stepSelect=document.createElement('select');stepSelect.id='source-step';const questText=document.createElement('div');questText.id='source-quest-text';questText.className='quiet';panel.append(stepSelect,questText);
 
-  const note=document.createElement('p');note.className='hint';note.textContent='这是固定 2.2 资源中的静态内容证据。NPC/任务触发坐标、地图绑定和运行时分支仍需后续校准。';panel.append(note);
+  const note=document.createElement('p');note.className='quiet';note.textContent='这是固定 2.2 资源中的静态内容证据。NPC/任务触发坐标、地图绑定和运行时分支仍需后续校准。';panel.append(note);
 
   const npcs=source.npcScript.npcs;
   for(const npc of npcs)npcSelect.add(option(`${npc.npc_id} / ${npc.name}`,String(npc.npc_id)));
