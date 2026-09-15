@@ -25,19 +25,24 @@ test('enemy path approaches without stepping on player or reserved cells',()=>{
  const c=grid(),next=enemyStep(c,[3,3],[7,7],[[7,7],[4,4]]);assert.ok(next);assert.notDeepEqual(next,[4,4]);assert.notDeepEqual(next,[7,7]);
  assert.equal(enemyStep(c,[5,5],[7,7],[[4,4],[4,6],[6,4],[6,6],[7,7]]),null);
 });
-test('action gauge cannot refill while the player is still executing movement',()=>{
+test('movement subtracts six readiness points instead of resetting the gauge',()=>{
+ const s=beginBattle(192,96);assert.equal(s.actionMax,20);assert.equal(s.action,20);
+ assert.ok(consumeAction(s));assert.equal(s.action,14);
+});
+test('readiness refills by one discrete point per recovered tick even while animation is busy',()=>{
  const s=beginBattle(192,96);consumeAction(s);s.enemies.forEach(e=>{e.x=320;e.y=160;});
- for(let i=0;i<30;i++)updateBattle(s,100,192,96,0,{collision:grid(),playerBusy:true,reserved:[]});
- // Avoid a terminal victory fixture: check recharge on a live encounter instead.
- assert.equal(s.phase,'active');assert.equal(s.action,0);
- for(let i=0;i<8;i++)updateBattle(s,100,192,96,0,{collision:grid(),playerBusy:false,reserved:[]});
+ for(let i=0;i<4;i++)updateBattle(s,100,192,96,0,{collision:grid(),playerBusy:true,reserved:[]});
+ assert.equal(s.action,14);
+ updateBattle(s,100,192,96,0,{collision:grid(),playerBusy:true,reserved:[]});
+ assert.equal(s.action,15);
+ for(let i=0;i<25;i++)updateBattle(s,100,192,96,0,{collision:grid(),playerBusy:true,reserved:[]});
  assert.equal(s.action,s.actionMax);
 });
 test('invalid battle clock inputs are atomic',()=>{
  for(const delta of [NaN,Infinity,-1]){const s=beginBattle(0,0),before=JSON.stringify(s);updateBattle(s,delta,0,0);assert.equal(JSON.stringify(s),before);}
 });
-test('enemies carry independent action gauges and terminal battles freeze',()=>{
- const s=beginBattle(0,0);s.enemies[0].action=95;s.enemies[1].action=0;
+test('enemies carry independent provisional action gauges and terminal battles freeze',()=>{
+ const s=beginBattle(0,0);s.enemies[0].action=19;s.enemies[1].action=0;
  updateBattle(s,100,0,0);assert.equal(s.enemies[0].action,0);assert.ok(s.enemies[1].action>0&&s.enemies[1].action<10);
  s.phase='won';const before=JSON.stringify(s);updateBattle(s,100,0,0);assert.equal(JSON.stringify(s),before);
 });
