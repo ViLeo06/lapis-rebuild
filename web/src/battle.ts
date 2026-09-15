@@ -1,5 +1,5 @@
 import { PROVISIONAL as P } from './config.ts';
-export type Skill = { skill_id: number; name: string; mp_cost: number; explanation: string; magic_pattern_id: number };
+export type Skill = { skill_id: number; name: string; mp_cost: number; explanation: string; magic_pattern_id: number; magic_pattern?:{magic_resources?:{magic_resource_id:number;role?:string;start_tick?:number}[]} };
 export type Enemy = { id: string; hp: number; maxHp: number; x: number; y: number; role: 'melee'|'ranged'; blind: number; poison: number };
 export type BattleState = { phase: 'safe'|'active'|'won'|'lost'; hp:number;mp:number;maxHp:number;maxMp:number; reward:number; shield:number;manaBuff:number; cooldown:number; enemyClock:number; enemies:Enemy[] };
 export function initialState(): BattleState { return {phase:'safe',hp:P.initialHp,mp:P.initialMp,maxHp:P.initialHp,maxMp:P.initialMp,reward:0,shield:0,manaBuff:0,cooldown:0,enemyClock:0,enemies:[]}; }
