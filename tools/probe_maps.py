@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -30,6 +31,11 @@ def find_ci(root: Path, name: str) -> Path:
 
 
 def load_zone_names(client: Path) -> dict[int, str]:
+    """Map `sz-NNNN` resource identifiers to the localized zone-name column.
+
+    `zone_name.txt` contains extra numeric/control columns. The map resource token
+    is more reliable than assuming that the first numeric field is the map id.
+    """
     archive = client / "NRes" / "Set.lib"
     if not archive.is_file():
         return {}
@@ -41,17 +47,20 @@ def load_zone_names(client: Path) -> dict[int, str]:
             return {}
         text = zone.read_bytes().decode("gb18030", errors="replace")
     names: dict[int, str] = {}
-    for line in text.splitlines():
-        line = line.strip()
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
         if not line:
             continue
-        parts = line.split(None, 1)
-        if len(parts) != 2:
+        parts = [p.strip() for p in line.split("\t")]
+        if len(parts) < 4:
+            parts = line.split()
+        map_index = next((i for i, value in enumerate(parts) if re.fullmatch(r"sz-\d{4}", value, re.IGNORECASE)), None)
+        if map_index is None or map_index < 1:
             continue
-        try:
-            names[int(parts[0])] = parts[1].strip()
-        except ValueError:
-            continue
+        map_id = int(parts[map_index].split("-", 1)[1])
+        name = parts[map_index - 1].strip()
+        if name:
+            names[map_id] = name
     return names
 
 
