@@ -27,7 +27,11 @@ export const PROVISIONAL = Object.freeze({
   manaReturn: 6,
   damageReduction: 0.5,
   reward: 10,
-  revision: 'battle-screen-policy-2',
+  battleMapId: 0,
+  defaultFieldMapId: 1,
+  battleSpellRangeCells: 6,
+  enemyRangedCells: 5,
+  revision: 'battle-screen-policy-3',
 });
 export const ACTIONS: Record<string,string> = { '00':'待机', '01':'移动', '02':'攻击 / 施法', '03':'受击', '05':'特殊序列' };
 // Real B100/B109 visual inspection: raw ANI rows run clockwise from south via west.

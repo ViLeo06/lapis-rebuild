@@ -1,4 +1,8 @@
 import { PROVISIONAL as P } from './config.ts';
+import type {Collision} from './model.ts';
+import type {Cell} from './coordinates.ts';
+import {referenceCellToScreen} from './coordinates.ts';
+import {pixelCell,tileDistance,enemyStep} from './tactics.ts';
 
 export type Skill = {
   skill_id: number;
@@ -18,6 +22,7 @@ export type Enemy = {
   role: 'melee'|'ranged';
   blind: number;
   poison: number;
+  action: number;
 };
 
 export type BattleState = {
@@ -61,8 +66,8 @@ export function beginBattle(x:number,y:number): BattleState {
   // Exact recharge timing remains UNVERIFIED until runtime evidence is captured.
   s.action=s.actionMax;
   s.enemies=[
-    {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0},
-    {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0},
+    {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0},
+    {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0},
   ];
   return s;
 }
@@ -126,11 +131,12 @@ export function useAttack(
   return {ok:true,message:`${skill?.name??'普通攻击'} / UNVERIFIED`};
 }
 
-export function updateBattle(s:BattleState,delta:number,x:number,y:number,defense=0):void {
-  if(s.phase!=='active')return;
+export type TacticalContext={collision:Collision;playerBusy:boolean;reserved:readonly Cell[]};
+export function updateBattle(s:BattleState,delta:number,x:number,y:number,defense=0,context?:TacticalContext):void {
+  if(s.phase!=='active'||![delta,x,y,defense].every(Number.isFinite)||delta<0||defense<0)return;
   const dt=Math.min(250,Math.max(0,delta));
   s.cooldown=Math.max(0,s.cooldown-dt);
-  s.action=Math.min(s.actionMax,s.action+s.actionMax*dt/P.battleActionFillMs);
+  if(!context?.playerBusy)s.action=Math.min(s.actionMax,s.action+s.actionMax*dt/P.battleActionFillMs);
   s.shield=Math.max(0,s.shield-dt);
   s.manaBuff=Math.max(0,s.manaBuff-dt);
   s.enemyClock+=dt;
@@ -142,16 +148,22 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
       e.poison-=dose;
     }
   }
-  if(s.enemyClock>=P.enemyIntervalMs){
-    s.enemyClock%=P.enemyIntervalMs;
-    for(const e of s.enemies){
-      if(e.hp<=0)continue;
+  for(const e of s.enemies){
+    if(e.hp<=0)continue;
+    e.action=Math.min(s.actionMax,e.action+s.actionMax*dt/P.enemyIntervalMs);
+    if(e.action+1e-8>=s.actionMax){
+      e.action=0;
       const range=e.role==='melee'?P.meleeRadiusPx:P.rangedRadiusPx;
-      if(Math.hypot(e.x-x,e.y-y)<=range){
+      const inRange=context?tileDistance(pixelCell(e.x,e.y),pixelCell(x,y))<=(e.role==='melee'?1:P.enemyRangedCells):Math.hypot(e.x-x,e.y-y)<=range;
+      if(inRange){
         let damage=Math.max(1,P.enemyDamage-defense);
         if(e.blind>0)damage*=P.damageReduction;
         if(s.shield>0)damage*=P.damageReduction;
         s.hp=Math.max(0,s.hp-damage);
+      }else if(context){
+        const occupied=[pixelCell(x,y),...context.reserved,...s.enemies.filter(other=>other!==e&&other.hp>0).map(other=>pixelCell(other.x,other.y))];
+        const next=enemyStep(context.collision,pixelCell(e.x,e.y),pixelCell(x,y),occupied);
+        if(next){const p=referenceCellToScreen(next);e.x=p[0];e.y=p[1];}
       }
     }
   }

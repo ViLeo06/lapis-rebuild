@@ -11,8 +11,9 @@ import type { Skill } from './battle.ts';
 import { validateSave, writeSave, readSave } from './save.ts';
 import type { Save } from './save.ts';
 import {initialQuestState,advanceGuide} from './quest.ts';
+import {chooseBattleLayout,reachableCells,tacticalRoute,pixelCell,tileDistance,cellKey} from './tactics.ts';
 
-type FieldReturn = {mapId:number;anchor:{x:number;y:number};direction:number};
+type FieldReturn = {mapId:number;anchor:{x:number;y:number};direction:number;camera:{x:number;y:number;zoom:number}};
 
 export class LabScene extends Phaser.Scene {
   pack: LoadedPack;
@@ -27,6 +28,9 @@ export class LabScene extends Phaser.Scene {
   showCollision=false;
   showBounds=false;
   inBattleView=false;
+  battlePaused=false;
+  private battleFocus:{x:number;y:number;width:number;height:number}|null=null;
+  private effectOrigin:{x:number;y:number}|null=null;
   anchor={x:768,y:384};
   hover={x:0,y:0};
   route: Cell[]=[];
@@ -58,7 +62,7 @@ export class LabScene extends Phaser.Scene {
     this.pack=pack;
     this.notice=notice;
     this.character=Object.keys(pack.manifest.characters)[0];
-    this.mapId=pack.manifest.map.id;
+    this.mapId=pack.maps[String(P.defaultFieldMapId)]?P.defaultFieldMapId:pack.manifest.map.id;
     const effect=Object.keys(pack.effects)[0];
     this.effectId=effect===undefined?null:Number(effect);
   }
@@ -130,6 +134,11 @@ export class LabScene extends Phaser.Scene {
     if(this.effectId===null||!this.pack.effects[String(this.effectId)])throw new Error('No diagnostic effect selected');
     return this.pack.effects[String(this.effectId)];
   }
+  private busy():boolean{return this.route.length>0||this.timedAction>0;}
+  canAct():boolean{return this.inBattleView&&!this.battlePaused&&!document.hidden&&!this.busy()&&actionReady(this.state);}
+  private occupiedCells():Cell[]{return this.state.enemies.filter(e=>e.hp>0).map(e=>pixelCell(e.x,e.y));}
+  private reachable():Cell[][]{return this.canAct()?[...reachableCells(this.currentMap().collision,pixelCell(this.anchor.x,this.anchor.y),this.battleMoveLimit(),this.occupiedCells()).values()].filter(p=>p.length>1):[];}
+  toggleBattlePause(){if(this.inBattleView&&this.state.phase==='active')this.battlePaused=!this.battlePaused;}
   private battleMoveLimit():number{return Number(this.character)%10===9?P.wizardMoveCells:P.swordsmanMoveCells;}
 
   resetPosition(){
@@ -148,6 +157,7 @@ export class LabScene extends Phaser.Scene {
 
   fit(){
     if(!this.cameras?.main)return;
+    if(this.inBattleView&&this.battleFocus){const f=this.battleFocus;this.cameras.main.setZoom(Math.min(this.scale.width/f.width,this.scale.height/f.height)*.96).centerOn(f.x,f.y);return;}
     const {width,height}=this.currentMap().manifest.render;
     this.cameras.main.setZoom(Math.min(this.scale.width/width,this.scale.height/height)*.98).centerOn(width/2,height/2);
   }
@@ -206,6 +216,7 @@ export class LabScene extends Phaser.Scene {
   setEffect(id:number){
     if(!this.pack.effects[String(id)])return;
     this.effectId=id;
+    this.effectOrigin=null;
     this.effectCursor=0;
     this.effectElapsed=0;
     this.effectPlaying=false;
@@ -228,11 +239,12 @@ export class LabScene extends Phaser.Scene {
   }
 
   moveTo(x:number,y:number){
-    if(this.state.phase==='lost')return;
+    if(this.inBattleView&&!this.canAct()){this.notice('行动未就绪、正在执行或战斗已暂停');return;}
+    if(!Number.isFinite(x)||!Number.isFinite(y))return;
     const c=this.currentMap().collision;
     const start=closestWalkable(c,nearestAnchor(this.anchor.x,this.anchor.y));
     const end=referenceScreenToCell(x,y);
-    const found=findRoute(c,start,end);
+    const found=this.inBattleView?tacticalRoute(c,start,end,this.battleMoveLimit(),this.occupiedCells()):findRoute(c,start,end);
     if(!found){this.notice('无可通行路径');return;}
     const nextRoute=found.slice(1);
     if(!nextRoute.length)return;
@@ -261,16 +273,29 @@ export class LabScene extends Phaser.Scene {
 
   enterBattle(){
     if(this.inBattleView)return;
-    this.fieldReturn={mapId:this.mapId,anchor:{...this.anchor},direction:this.direction};
+    if(this.route.length){this.notice('请等角色停稳后进入战斗');return;}
+    const map=this.pack.maps[String(P.battleMapId)];
+    if(!map){this.notice('缺少战场资源');return;}
+    let layout:ReturnType<typeof chooseBattleLayout>;
+    try{layout=chooseBattleLayout(map.collision);}catch(e){this.notice(String(e));return;}
+    const camera=this.cameras.main,center=camera.getWorldPoint(this.scale.width/2,this.scale.height/2);
+    this.fieldReturn={mapId:this.mapId,anchor:{...this.anchor},direction:this.direction,camera:{x:center.x,y:center.y,zoom:camera.zoom}};
     this.inBattleView=true;
+    this.battlePaused=false;
+    this.mapId=P.battleMapId;
+    this.mapImage.setTexture(mapTextureKey(this.mapId));
+    this.battleFocus=layout.focus;
+    const pos=referenceCellToScreen(layout.player);this.anchor={x:pos[0],y:pos[1]};
     this.route=[];
     this.state=beginBattle(this.anchor.x,this.anchor.y);
+    layout.enemies.forEach((cell,i)=>{const xy=referenceCellToScreen(cell);this.state.enemies[i].x=xy[0];this.state.enemies[i].y=xy[1];});
+    this.fit();
     this.selectedEnemy='dummy-melee';
     this.setAction('00');
     this.effectSprite?.setVisible(false);
     this.effectPlaying=false;
     this.updateGuideLabel();
-    this.notice('已进入独立战斗画面：行动槽蓄满后可移动或攻击；具体充能速度、敌人和数值仍为 UNVERIFIED。');
+    this.notice('已切入对练场：点亮色格移动，选敌人后攻击。战场选用与数值仍为临时规则。');
   }
 
   leaveBattle(){
@@ -279,6 +304,9 @@ export class LabScene extends Phaser.Scene {
     const back=this.fieldReturn;
     this.inBattleView=false;
     this.fieldReturn=null;
+    this.battleFocus=null;
+    this.battlePaused=false;
+    this.effectOrigin=null;
     this.state=initialState();
     this.route=[];
     this.setAction('00');
@@ -291,15 +319,21 @@ export class LabScene extends Phaser.Scene {
     this.effectSprite?.setVisible(false);
     this.effectPlaying=false;
     this.updateGuideLabel();
-    this.fit();
+    if(back)this.cameras.main.setZoom(back.camera.zoom).centerOn(back.camera.x,back.camera.y);else this.fit();
     this.notice('已退出战斗画面，返回非战斗地图');
   }
 
   attack(skill:Skill|null){
     if(!this.inBattleView){this.notice('非战斗状态不能使用战斗指令');return;}
+    if(!this.canAct()){this.notice('请等待行动就绪');return;}
+    const target=this.state.enemies.find(e=>e.id===this.selectedEnemy&&e.hp>0);
+    const buff=skill?.skill_id===1301||skill?.skill_id===19301;
+    const range=skill&&skill.skill_id>=19000?P.battleSpellRangeCells:1;
+    if(!buff&&target&&tileDistance(pixelCell(this.anchor.x,this.anchor.y),pixelCell(target.x,target.y))>range){this.notice(`目标超出格子射程（${range}格）`);return;}
     const result=useAttack(this.state,this.selectedEnemy,this.anchor.x,this.anchor.y,skill,equipmentBonus(this.inventory,this.character).attack);
     this.notice(result.message);
     if(result.ok){
+      if(!buff&&target)this.direction=directionFor(target.x-this.anchor.x,target.y-this.anchor.y);
       this.setAction('02');
       this.playing=true;
       this.route=[];
@@ -308,6 +342,7 @@ export class LabScene extends Phaser.Scene {
       const rid=skill?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
       if(rid&&this.pack.effects[String(rid)]){
         this.setEffect(rid);
+        this.effectOrigin=!buff&&target?{x:target.x,y:target.y}:{...this.anchor};
         this.playEffect();
       }
     }
@@ -334,16 +369,18 @@ export class LabScene extends Phaser.Scene {
     catch(e){this.notice(`存档失败，可使用导出 JSON：${String(e)}`);}
   }
   restore(raw:unknown){
+    if(this.inBattleView)throw new Error('请先退出战斗再读档');
     const all=Object.values(this.pack.maps).map(m=>m.manifest.render);
     const maxWidth=Math.max(...all.map(m=>m.width)),maxHeight=Math.max(...all.map(m=>m.height));
     const s=validateSave(raw,this.pack.digest,Object.keys(this.pack.manifest.characters),maxWidth,maxHeight);
     const mapId=s.mapId??this.pack.manifest.map.id;
-    if(!this.pack.maps[String(mapId)])throw new Error('Unknown save map');
+    const destination=this.pack.maps[String(mapId)];
+    if(!destination)throw new Error('Unknown save map');
+    if(s.x>destination.manifest.render.width||s.y>destination.manifest.render.height||rawCell(destination.collision,nearestAnchor(s.x,s.y))!==1)throw new Error('存档位置不可通行');
     this.inBattleView=false;
     this.fieldReturn=null;
     this.setCharacter(s.character);
     this.setMap(mapId);
-    if(rawCell(this.currentMap().collision,nearestAnchor(s.x,s.y))!==1)throw new Error('存档位置不可通行');
     this.anchor={x:s.x,y:s.y};
     this.gold=s.gold;
     this.inventory=s.inventory!;
@@ -363,16 +400,22 @@ export class LabScene extends Phaser.Scene {
     const ins=this.currentMap().inspector;
     const tile=ins&&tileX>=0&&tileY>=0&&tileX<ins.width&&tileY<ins.height?ins.cells[tileX*ins.height+tileY]:null;
     const e=this.effectId===null?null:this.effect();
+    const cam=this.cameras.main,origin=cam.getWorldPoint(0,0);
     return {
+      camera:{x:origin.x,y:origin.y,zoom:cam.zoom},
+      debugBounds:this.showBounds,routeLineVisible:false,busy:this.busy(),battlePaused:this.battlePaused,
+      battleCell:pixelCell(this.anchor.x,this.anchor.y),
+      reachable:this.reachable().map(p=>p.at(-1)!),
+      fieldReturn:this.fieldReturn?{mapId:this.fieldReturn.mapId,anchor:{...this.fieldReturn.anchor}}:null,
       inventory:{...this.inventory,owned:[...this.inventory.owned]},equipment:equipmentBonus(this.inventory,this.character),quest:{...this.quest},
       ready:!!this.sprite,inBattleView:this.inBattleView,mapId:this.mapId,mapName:this.currentMap().manifest.name,character:this.character,
       slot:this.slot,direction:this.direction,cursor:this.cursor,frame:i,length:a.frames_per_direction,bounds:a.frame_bounds[i],timing:a.raw_timing,
       duration:this.duration,playing:this.playing,anchor:{...this.anchor},hover:{...this.hover},referenceCell:ref,projectedCell:projected,
       rawReference:rawCell(this.currentMap().collision,ref),rawAnchor:rawCell(this.currentMap().collision,projected),
       tile:tile?{x:tileX,y:tileY,resource_id:tile.resource_id,path:tile.directory_path}:null,routeLength:this.route.length,
-      cooldown:this.state.cooldown,action:this.state.action,actionMax:this.state.actionMax,actionReady:actionReady(this.state),moveLimit:this.battleMoveLimit(),
+      cooldown:this.state.cooldown,action:this.state.action,actionMax:this.state.actionMax,actionReady:this.canAct(),moveLimit:this.battleMoveLimit(),
       phase:this.state.phase,hp:Math.ceil(this.state.hp),mp:this.state.mp,gold:this.gold,
-      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),x:enemy.x,y:enemy.y})),target:this.selectedEnemy,
+      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y)})),target:this.selectedEnemy,
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,playing:this.effectPlaying}:null,
       fps:Math.round(this.game.loop.actualFps)
     };
@@ -380,10 +423,11 @@ export class LabScene extends Phaser.Scene {
 
   update(time:number,delta:number){
     if(!this.sprite)return;
-    const dt=Math.min(delta,100);
+    const dt=this.inBattleView&&(this.battlePaused||document.hidden)?0:Math.min(delta,100);
     if(this.route.length){
       const target=referenceCellToScreen(this.route[0]),dx=target[0]-this.anchor.x,dy=target[1]-this.anchor.y,d=Math.hypot(dx,dy),step=P.movementPixelsPerSecond*dt/1000;
       if(d<=step){
+        if(d>0)this.direction=directionFor(dx,dy);
         this.anchor={x:target[0],y:target[1]};
         this.route.shift();
         if(!this.route.length)this.setAction('00');
@@ -394,7 +438,7 @@ export class LabScene extends Phaser.Scene {
       }
     }
     if(this.timedAction>0){
-      this.timedAction-=dt;
+      this.timedAction=Math.max(0,this.timedAction-dt);
       if(this.timedAction<=0)this.setAction('00');
     }
     this.effectUntil=Math.max(0,this.effectUntil-dt);
@@ -410,18 +454,20 @@ export class LabScene extends Phaser.Scene {
       const e=this.effect();
       if(this.effectPlaying){
         const next=advanceClock(this.effectCursor,this.effectElapsed,dt,this.effectDuration,e.frame_count);
-        const wrapped=next.cursor<this.effectCursor;
+        const wrapped=this.effectCursor+Math.floor((this.effectElapsed+dt)/this.effectDuration)>=e.frame_count;
         this.effectCursor=next.cursor;
         this.effectElapsed=next.elapsed;
         if(wrapped){this.effectPlaying=false;this.effectSprite.setVisible(false);}
       }
       if(this.effectSprite.visible){
         const ei=e.sequence[this.effectCursor],eb=e.frame_bounds[ei];
-        this.effectSprite.setTexture(effectTextureKey(e.resource_id,ei)).setPosition(this.anchor.x+eb.left,this.anchor.y+eb.top);
+        const origin=this.effectOrigin??this.anchor;
+        this.effectSprite.setTexture(effectTextureKey(e.resource_id,ei)).setPosition(origin.x+eb.left,origin.y+eb.top);
       }
     }
     const before=this.state.phase;
-    updateBattle(this.state,dt,this.anchor.x,this.anchor.y,equipmentBonus(this.inventory,this.character).defense);
+    updateBattle(this.state,dt,this.anchor.x,this.anchor.y,equipmentBonus(this.inventory,this.character).defense,
+      this.inBattleView?{collision:this.currentMap().collision,playerBusy:this.busy(),reserved:this.route}:undefined);
     if(before!==this.state.phase){
       this.route=[];
       this.updateGuideLabel();
@@ -438,6 +484,14 @@ export class LabScene extends Phaser.Scene {
     const g=this.overlay;
     g.clear();
     const m=this.currentMap().manifest.render;
+    // Movement cells are battle UI, not a route polyline or sprite bounds.
+    if(this.inBattleView){
+      for(const path of this.reachable()){const cell=path.at(-1)!,[x,y]=referenceCellToScreen(cell);
+        g.fillStyle(0x7db5a5,.22);g.lineStyle(1,0xb8d4a1,.55);
+        const points=[{x,y:y-16},{x:x+32,y},{x,y:y+16},{x:x-32,y}];
+        g.fillPoints(points,true);g.strokePoints(points,true);
+      }
+    }
     if(this.showGrid){
       g.lineStyle(1,0xf0d09b,.18);
       for(let x=0;x<=m.width;x+=64)g.lineBetween(x,0,x,m.height);
