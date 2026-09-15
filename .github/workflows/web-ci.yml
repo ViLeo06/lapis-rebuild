@@ -47,7 +47,7 @@ jobs:
   private-original:
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[private-smoke]')
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 42
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
@@ -72,6 +72,12 @@ jobs:
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
         run: npm run test:e2e
+      - name: Real thirty-minute diagnostic soak
+        if: contains(github.event.head_commit.message, '[private-soak]')
+        working-directory: web
+        env:
+          LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
+        run: node soak.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

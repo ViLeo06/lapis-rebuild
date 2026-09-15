@@ -25,14 +25,15 @@ test('responsive layout has no horizontal overflow',async({page})=>{await page.s
 test('offline HTML opens without external requests',async({page})=>{test.skip(!process.env.LAPIS_OFFLINE_PREVIEW,'No offline build supplied');const external:string[]=[];page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});await page.goto(pathToFileURL(process.env.LAPIS_OFFLINE_PREVIEW!).href);await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#character','109');await page.selectOption('#action','05');await page.click('#step');expect((await snap(page)).length).toBe(11);expect(external).toEqual([]);await page.screenshot({path:'test-results/offline.png',fullPage:true});});
 test('training victory, settlement and saved reward survive reload',async({page})=>{
  await ready(page);await page.click('#battle');
- for(let i=0;i<5;i++){await page.click('#attack');await page.waitForTimeout(800);}
+ for(let i=0;i<5;i++){await expect.poll(async()=>(await snap(page)).cooldown,{timeout:15000}).toBe(0);await page.click('#attack');await page.waitForTimeout(100);}
  expect((await snap(page)).enemies[0].hp).toBe(0);
  const state=await snap(page),target=state.enemies[1];
  await clickWorld(page,state.anchor.x+128,state.anchor.y);
+ await expect.poll(async()=>(await snap(page)).anchor.x,{timeout:10000}).not.toBe(state.anchor.x);
  await expect.poll(async()=>(await snap(page)).routeLength,{timeout:10000}).toBe(0);
  await clickWorld(page,target.x,target.y);
  await expect.poll(async()=>(await snap(page)).target).toBe(target.id);
- for(let i=0;i<5;i++){await page.click('#attack');await page.waitForTimeout(800);}
+ for(let i=0;i<5;i++){await expect.poll(async()=>(await snap(page)).cooldown,{timeout:15000}).toBe(0);await page.click('#attack');await page.waitForTimeout(100);}
  await expect.poll(async()=>(await snap(page)).phase).toBe('won');
  await page.click('#return');expect((await snap(page)).gold).toBe(10);
  await page.click('#return');expect((await snap(page)).gold).toBe(10);
@@ -40,4 +41,19 @@ test('training victory, settlement and saved reward survive reload',async({page}
  await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);
  await page.click('#load');await expect.poll(async()=>(await snap(page)).gold).toBe(10);
  await page.screenshot({path:'test-results/settlement.png',fullPage:true});
+});
+test('equipment affects only training values and survives save',async({page})=>{
+ await ready(page);await page.selectOption('#equip-weapon','3');
+ expect((await snap(page)).equipment.attack).toBe(7);
+ await page.click('#save');await expect(page.locator('#notice')).toContainText('IndexedDB');
+ await page.reload();await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.click('#load');
+ await expect.poll(async()=>(await snap(page)).inventory.weapon).toBe(3);
+ await page.click('#battle');await expect(page.locator('#equip-weapon')).toBeDisabled();await page.click('#attack');
+ expect((await snap(page)).enemies[0].hp).toBe(65);
+ await page.screenshot({path:'test-results/equipment.png',fullPage:true});
+});
+test('class switch unequips incompatible items',async({page})=>{
+ await ready(page);await page.selectOption('#equip-weapon','1');await page.selectOption('#character','109');
+ expect((await snap(page)).inventory.weapon).toBe(null);
+ await page.selectOption('#equip-weapon','12');expect((await snap(page)).equipment.attack).toBe(7);
 });

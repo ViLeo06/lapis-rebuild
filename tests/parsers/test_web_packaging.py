@@ -31,6 +31,12 @@ class PackagingTests(unittest.TestCase):
         self.assertIn('window.__LAPIS_PACK__',text)
         self.assertIn('Phaser Studio',text)
         self.assertNotIn('src="./entry.js"',text)
+    def test_body_marker_inside_javascript_is_not_replaced(self):
+        js='window.literal="</body>";'
+        (self.dist/'entry.js').write_text(js)
+        self.run_pack();text=self.out.read_text()
+        self.assertIn(js,text)
+        self.assertEqual(text.count('Third-party software licenses'),1)
     def test_hash_mismatch(self):
         (self.pack/'prototype.json').write_text('modified')
         with self.assertRaises(ValueError):self.run_pack()
