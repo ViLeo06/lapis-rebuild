@@ -59,10 +59,11 @@ jobs:
           echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
           python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
           python3 tools/prepare_web.py --client-root "$RUNNER_TEMP/extracted/client" --out web/public/game-data
-      - name: Capture MagicRes and map structural evidence
+      - name: Capture MagicRes, map and content structural evidence
         run: |
           python3 tools/inspect_magicres.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/magicres-summary.json
           python3 tools/probe_maps.py --client-root "$RUNNER_TEMP/extracted/client" --start 0 --count 12 --out web/test-results/map-probe.json
+          python3 tools/probe_npc_quest.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/npc-quest-probe.json
       - name: Publish static evidence early
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -70,6 +71,7 @@ jobs:
           path: |
             web/test-results/magicres-summary.json
             web/test-results/map-probe.json
+            web/test-results/npc-quest-probe.json
           retention-days: 3
           if-no-files-found: error
       - name: Build and browser setup
