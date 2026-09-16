@@ -1,12 +1,22 @@
 import{test}from'node:test';
 import assert from'node:assert/strict';
-import{createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY,verifiedBattleEntry}from'../src/runtime-boundaries.ts';
+import{createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY,verifiedBattleEntry,worldEntityInteractionIntent,sceneObjectInteractionIntent}from'../src/runtime-boundaries.ts';
 import{resolveAiBinding,RETAIL_FALLBACK_AI,chooseWeightedAiAction,selectAiCandidate}from'../src/ai-runtime.ts';
 import{frameIntervalMs,sequenceDurationMs}from'../src/animation-policy.ts';
 import{TRAINING_DAMAGE_POLICY}from'../src/damage-policy.ts';
 import{serverQuestPresentation,serverNpcSelection,reconstructionQuestPresentation,warpRequest,recruitmentRequest}from'../src/quest-runtime-boundary.ts';
 import{beginBattle,updateBattle}from'../src/battle.ts';
 import type{BattleEvent}from'../src/battle.ts';
+
+test('recovered world and scene interaction gates keep native ids separate',()=>{
+ const special=worldEntityInteractionIntent({entityType:101,manhattanDistance:3,nearTargetWord:17,fallbackWord:99,fieldMapId:1});
+ assert.equal(special?.nativeAction,'49/21');assert.equal(special?.sourceRuntimeId,17);assert.equal(special?.provenance,'VERIFIED');
+ assert.equal(worldEntityInteractionIntent({entityType:103,manhattanDistance:4,nearTargetWord:17,fallbackWord:99}),null);
+ const fallback=worldEntityInteractionIntent({entityType:50,manhattanDistance:99,nearTargetWord:17,fallbackWord:99});
+ assert.equal(fallback?.nativeAction,'08');assert.equal(fallback?.sourceRuntimeId,99);
+ const scene=sceneObjectInteractionIntent({manhattanDistance:8,runtimeSceneId:333});assert.equal(scene?.nativeAction,'49/04');assert.equal(scene?.sourceRuntimeId,333);
+ assert.equal(sceneObjectInteractionIntent({manhattanDistance:9,runtimeSceneId:333}),null);
+});
 
 test('encounter authority requires an explicit battle zone and does not derive it from field map',()=>{
  const a=createTrainingInteraction(1),b=createTrainingInteraction(999);
