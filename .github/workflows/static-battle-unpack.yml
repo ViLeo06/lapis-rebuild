@@ -40,7 +40,10 @@ jobs:
           "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" > "$RUNNER_TEMP/battle-research/unpack.log" 2>&1
           chmod 0644 "$RUNNER_TEMP/battle-research/neodark-unpacked.bin"
           echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/battle-research/neodark-unpacked.bin" | sha256sum -c -
-          python3 tools/extract/lib_archive.py "$RUNNER_TEMP/extracted/client/Set.lib" --extract-dir "$RUNNER_TEMP/setlib"
+          setlib="$(find "$RUNNER_TEMP/extracted" -type f -iname 'Set.lib' -print -quit)"
+          test -n "$setlib"
+          printf 'setlib=%s\n' "$setlib"
+          python3 tools/extract/lib_archive.py "$setlib" --extract-dir "$RUNNER_TEMP/setlib"
       - name: Inspect decompressed data without loading the program
         shell: bash
         run: |
