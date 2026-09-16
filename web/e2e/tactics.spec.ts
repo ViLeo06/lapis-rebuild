@@ -27,6 +27,12 @@ test('battle movement cannot be redirected or cancelled by attacking during exec
  await expect.poll(async()=>(await snap(page)).actionReady,{timeout:5000}).toBe(true);
  expect((await snap(page)).debugBounds).toBe(false);expect((await snap(page)).routeLineVisible).toBe(false);
 });
+test('hit reaction is presentation and does not invent a command lock',async({page})=>{
+ await ready(page);await page.click('#battle');
+ await expect.poll(async()=>(await snap(page)).hp,{timeout:10000,intervals:[50]}).toBeLessThan(125);
+ await expect.poll(async()=>{const s=await snap(page);return s.slot==='03'&&s.actionReady;},{timeout:3000,intervals:[25]}).toBe(true);
+ const s=await snap(page);expect(s.slot).toBe('03');expect(s.busy).toBe(false);expect(s.actionReady).toBe(true);
+});
 test('battle pause freezes HP meters positions and disallows injected action events',async({page})=>{
  await ready(page);await page.click('#battle');await page.click('#attack');await page.click('#battle-pause');
  const b=await snap(page);await page.waitForTimeout(1100);await page.dispatchEvent('#attack','click');
