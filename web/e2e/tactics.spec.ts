@@ -3,15 +3,17 @@ import type {Page} from '@playwright/test';
 const snap=(p:Page)=>p.evaluate(()=>window.lapisDiagnostics!.snapshot());
 async function ready(p:Page){await p.goto('/');await p.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);}
 async function clickCell(p:Page,c:readonly number[]){const b=await p.locator('canvas').boundingBox();if(!b)throw Error('Missing canvas');const cam=(await snap(p)).camera;await p.mouse.click(b.x+((c[0]+1)*32-cam.x)*cam.zoom,b.y+((c[1]+1)*16-cam.y)*cam.zoom);}
-test('field city enters a different battle map and restores exact field position',async({page})=>{
+test('field interaction resolves an explicit battle entry and restores exact field position',async({page})=>{
  await ready(page);const field=await snap(page);expect(field.mapId).toBe(1);expect(field.inBattleView).toBe(false);expect(field.debugBounds).toBe(false);expect(field.routeLineVisible).toBe(false);
  await page.screenshot({path:'test-results/review-field.png',fullPage:true});
  await page.click('#battle');await expect.poll(async()=>(await snap(page)).mapId).toBe(0);
  const b=await snap(page);expect(b.inBattleView).toBe(true);expect(b.reachable.length).toBeGreaterThan(0);expect(b.fieldReturn?.mapId).toBe(1);
+ expect(b.lastInteraction?.provenance).toBe('RECONSTRUCTION_POLICY');expect(b.battleEntry?.battleZoneId).toBe(0);expect(b.battleEntry?.provenance).toBe('RECONSTRUCTION_POLICY');
+ expect(b.battleZoneId).toBe(0);expect(b.damagePolicy.provenance).toBe('RECONSTRUCTION_POLICY');expect(b.enemies.every(e=>e.aiBinding.provenance==='RECONSTRUCTION_POLICY')).toBe(true);expect(b.timingPolicy).toBe('RETAIL_COMMON');
  expect(b.reachable.every(c=>!b.enemies.some(e=>e.cell[0]===c[0]&&e.cell[1]===c[1]))).toBe(true);
  await expect(page.locator('#save')).toBeDisabled();await expect(page.locator('#map')).toBeDisabled();await expect(page.locator('#action')).toBeDisabled();
  await page.screenshot({path:'test-results/review-battle.png',fullPage:true});await page.click('#battle-pause');
- await page.click('#return');const after=await snap(page);expect(after.mapId).toBe(field.mapId);expect(after.anchor).toEqual(field.anchor);expect(after.direction).toBe(field.direction);expect(after.camera.zoom).toBe(field.camera.zoom);
+ await page.click('#return');const after=await snap(page);expect(after.mapId).toBe(field.mapId);expect(after.anchor).toEqual(field.anchor);expect(after.direction).toBe(field.direction);expect(after.camera.zoom).toBe(field.camera.zoom);expect(after.battleEntry).toBeNull();
 });
 test('battle movement cannot be redirected or cancelled by attacking during execution',async({page})=>{
  await ready(page);await page.click('#battle');const b=await snap(page);
@@ -24,6 +26,12 @@ test('battle movement cannot be redirected or cancelled by attacking during exec
  expect((await snap(page)).battleCell).toEqual(target);
  await expect.poll(async()=>(await snap(page)).actionReady,{timeout:5000}).toBe(true);
  expect((await snap(page)).debugBounds).toBe(false);expect((await snap(page)).routeLineVisible).toBe(false);
+});
+test('hit reaction is presentation and does not invent a command lock',async({page})=>{
+ await ready(page);await page.click('#battle');
+ await expect.poll(async()=>(await snap(page)).hp,{timeout:10000,intervals:[50]}).toBeLessThan(125);
+ await expect.poll(async()=>{const s=await snap(page);return s.slot==='03'&&s.actionReady;},{timeout:3000,intervals:[25]}).toBe(true);
+ const s=await snap(page);expect(s.slot).toBe('03');expect(s.busy).toBe(false);expect(s.actionReady).toBe(true);
 });
 test('battle pause freezes HP meters positions and disallows injected action events',async({page})=>{
  await ready(page);await page.click('#battle');await page.click('#attack');await page.click('#battle-pause');

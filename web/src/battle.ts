@@ -1,9 +1,14 @@
-import { PROVISIONAL as P } from './config.ts';
+import {PROVISIONAL as P} from './config.ts';
 import {RECOVERED_READINESS,SWORDSMAN_BATTLE_PROFILE,magicReadinessCost} from './battle-profile.ts';
 import type {Collision} from './model.ts';
 import type {Cell} from './coordinates.ts';
 import {referenceCellToScreen} from './coordinates.ts';
 import {pixelCell,tileDistance,enemyStep} from './tactics.ts';
+import {TRAINING_DAMAGE_POLICY} from './damage-policy.ts';
+import type {DamagePolicy} from './damage-policy.ts';
+import {trainingAiBinding} from './ai-runtime.ts';
+import type {AiBinding} from './ai-runtime.ts';
+import type {BattleEntry,RuntimeProvenance} from './runtime-boundaries.ts';
 
 export type Skill = {
   skill_id: number;
@@ -24,6 +29,15 @@ export type Enemy = {
   blind: number;
   poison: number;
   action: number;
+  aiBinding:AiBinding;
+};
+
+export type BattleEvent={
+  kind:'hp-loss';
+  target:'player'|string;
+  amount:number;
+  resultingHp:number;
+  provenance:RuntimeProvenance;
 };
 
 export type BattleState = {
@@ -45,6 +59,10 @@ export type BattleState = {
   magicReadinessCost:number;
   enemyClock:number;
   enemies:Enemy[];
+  battleZoneId:number|null;
+  battleEntryProvenance:RuntimeProvenance;
+  damagePolicyId:string;
+  damagePolicyProvenance:RuntimeProvenance;
 };
 
 export function initialState(): BattleState {
@@ -69,18 +87,24 @@ export function initialState(): BattleState {
     magicReadinessCost:magicReadinessCost(profile,actionMax),
     enemyClock:0,
     enemies:[],
+    battleZoneId:null,
+    battleEntryProvenance:'UNVERIFIED',
+    damagePolicyId:TRAINING_DAMAGE_POLICY.id,
+    damagePolicyProvenance:TRAINING_DAMAGE_POLICY.provenance,
   };
 }
 
-export function beginBattle(x:number,y:number): BattleState {
+export function beginBattle(x:number,y:number,entry?:BattleEntry): BattleState {
   const s=initialState();
   s.phase='active';
+  s.battleZoneId=entry?.battleZoneId??P.battleMapId;
+  s.battleEntryProvenance=entry?.provenance??'RECONSTRUCTION_POLICY';
   // Recovered old-client behavior grants control only when current readiness
   // reaches the unit maximum. Starting full keeps the first command immediate.
   s.action=s.actionMax;
   s.enemies=[
-    {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0},
-    {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0},
+    {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0,aiBinding:trainingAiBinding()},
+    {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0,aiBinding:trainingAiBinding()},
   ];
   return s;
 }
@@ -113,7 +137,7 @@ export function useAttack(
   y:number,
   skill:Skill|null,
   bonus=0,
-): {ok:boolean;message:string} {
+): {ok:boolean;message:string;event?:BattleEvent} {
   if(s.phase!=='active')return {ok:false,message:'请先进入战斗画面'};
   if(!actionReady(s))return {ok:false,message:'行动槽尚未蓄满'};
   const cost=skill?.mp_cost??0;
@@ -130,26 +154,32 @@ export function useAttack(
   const readinessCost=skill?s.magicReadinessCost:s.attackReadinessCost;
   if(!consumeAction(s,readinessCost))return {ok:false,message:'行动槽尚未蓄满'};
   s.mp-=cost;
+  let event:BattleEvent|undefined;
   if(sid===1301)s.shield=P.shieldDurationMs;
   else if(sid===19301)s.manaBuff=P.manaBuffDurationMs;
   else if(e){
     if(sid===19101)e.blind=P.blindDurationMs;
     else if(sid===19201){
       e.poison=P.poisonDurationMs;
+      const before=e.hp;
       e.hp=Math.max(0,e.hp-P.poisonInitialDamage);
+      event={kind:'hp-loss',target:e.id,amount:before-e.hp,resultingHp:e.hp,provenance:TRAINING_DAMAGE_POLICY.provenance};
     }else{
-      const damage=sid===1101?P.heavyDamage:sid===1201?P.doubleDamage:P.attackDamage;
-      e.hp=Math.max(0,e.hp-damage-bonus);
+      const damage=TRAINING_DAMAGE_POLICY.playerDamage(sid,bonus);
+      const before=e.hp;
+      e.hp=Math.max(0,e.hp-damage);
+      event={kind:'hp-loss',target:e.id,amount:before-e.hp,resultingHp:e.hp,provenance:TRAINING_DAMAGE_POLICY.provenance};
       if(s.manaBuff>0)s.mp=Math.min(s.maxMp,s.mp+P.manaReturn);
     }
   }
   finish(s);
-  return {ok:true,message:`${skill?.name??'普通攻击'} / damage UNVERIFIED`};
+  return {ok:true,message:`${skill?.name??'普通攻击'} / ${TRAINING_DAMAGE_POLICY.provenance}`,event};
 }
 
-export type TacticalContext={collision:Collision;playerBusy:boolean;reserved:readonly Cell[]};
-export function updateBattle(s:BattleState,delta:number,x:number,y:number,defense=0,context?:TacticalContext):void {
-  if(s.phase!=='active'||![delta,x,y,defense].every(Number.isFinite)||delta<0||defense<0)return;
+export type TacticalContext={collision:Collision;playerBusy:boolean;reserved:readonly Cell[];damagePolicy?:DamagePolicy};
+export function updateBattle(s:BattleState,delta:number,x:number,y:number,defense=0,context?:TacticalContext):BattleEvent[] {
+  const events:BattleEvent[]=[];
+  if(s.phase!=='active'||![delta,x,y,defense].every(Number.isFinite)||delta<0||defense<0)return events;
   const dt=Math.min(250,Math.max(0,delta));
   s.cooldown=Math.max(0,s.cooldown-dt);
 
@@ -174,7 +204,10 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
       e.poison-=dose;
     }
   }
-  // Enemy AI remains an explicitly provisional training implementation.
+  // The current dummy enemies remain reconstruction policy. S2's recovered
+  // source/precedence metadata is carried on each instance, while historical
+  // per-encounter AI payloads remain unavailable.
+  const damagePolicy=context?.damagePolicy??TRAINING_DAMAGE_POLICY;
   for(const e of s.enemies){
     if(e.hp<=0)continue;
     e.action=Math.min(s.actionMax,e.action+s.actionMax*dt/P.enemyIntervalMs);
@@ -183,10 +216,10 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
       const range=e.role==='melee'?P.meleeRadiusPx:P.rangedRadiusPx;
       const inRange=context?tileDistance(pixelCell(e.x,e.y),pixelCell(x,y))<=(e.role==='melee'?1:P.enemyRangedCells):Math.hypot(e.x-x,e.y-y)<=range;
       if(inRange){
-        let damage=Math.max(1,P.enemyDamage-defense);
-        if(e.blind>0)damage*=P.damageReduction;
-        if(s.shield>0)damage*=P.damageReduction;
+        const damage=damagePolicy.enemyDamage(defense,e.blind>0,s.shield>0);
+        const before=s.hp;
         s.hp=Math.max(0,s.hp-damage);
+        if(before>s.hp)events.push({kind:'hp-loss',target:'player',amount:before-s.hp,resultingHp:s.hp,provenance:damagePolicy.provenance});
       }else if(context){
         const occupied=[pixelCell(x,y),...context.reserved,...s.enemies.filter(other=>other!==e&&other.hp>0).map(other=>pixelCell(other.x,other.y))];
         const next=enemyStep(context.collision,pixelCell(e.x,e.y),pixelCell(x,y),occupied);
@@ -195,4 +228,5 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
     }
   }
   finish(s);
+  return events;
 }

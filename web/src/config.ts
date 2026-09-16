@@ -1,6 +1,6 @@
 export const PROVISIONAL = Object.freeze({
   evidence: 'UNVERIFIED' as const,
-  frameDurationMs: 160,
+  frameDurationMs: 160 as number,
   movementPixelsPerSecond: 96,
   attackDamage: 18,
   attackCooldownMs: 700,
