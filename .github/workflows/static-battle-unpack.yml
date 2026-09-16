@@ -7,6 +7,8 @@ on:
       - 'tools/probe_battle_binary.py'
       - 'tools/probe_retail_battle_runtime.py'
       - 'tools/probe_ai_binding.py'
+      - 'tools/probe_damage_binary.py'
+      - 'tools/probe_damage_tables.py'
       - 'tools/probe_story_battles.py'
       - 'tools/extract/lib_archive.py'
       - 'tools/extract/pkware_blast.py'
@@ -39,6 +41,10 @@ jobs:
           "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" > "$RUNNER_TEMP/battle-research/unpack.log" 2>&1
           chmod 0644 "$RUNNER_TEMP/battle-research/neodark-unpacked.bin"
           echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/battle-research/neodark-unpacked.bin" | sha256sum -c -
+          setlib="$(find "$RUNNER_TEMP/extracted" -type f -iname 'Set.lib' -print -quit)"
+          test -n "$setlib"
+          printf 'setlib=%s\n' "$setlib"
+          python3 tools/extract/lib_archive.py "$setlib" --extract-dir "$RUNNER_TEMP/setlib"
       - name: Inspect decompressed data without loading the program
         shell: bash
         run: |
@@ -66,6 +72,8 @@ jobs:
           PY
           python3 tools/probe_retail_battle_runtime.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/retail-battle-runtime.json"
           python3 tools/probe_ai_binding.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/ai-binding.json"
+          python3 tools/probe_damage_binary.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/damage-binary.json"
+          python3 tools/probe_damage_tables.py "$RUNNER_TEMP/setlib" --out "$RUNNER_TEMP/battle-research/damage-tables.json"
           python3 tools/probe_story_battles.py "$RUNNER_TEMP/extracted/client/SGRes" --out "$RUNNER_TEMP/battle-research/story-battle-scenes.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
