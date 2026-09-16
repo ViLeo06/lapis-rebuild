@@ -89,13 +89,31 @@ The HP-loss consumer selects and plays one of these families before entering def
 
 This is a real trigger chain, not a filename heuristic. The exact meaning of the selector values remains unlabelled.
 
-### BGM resource family — VERIFIED template, trigger unresolved
+### BGM — VERIFIED zone-driven selection
 
-The binary contains the code template:
+The current map/battle zone is stored at fixed-hash global `0x004F48B4` when the map loader accepts a new zone ID. The BGM selector at `0x0048FD80` consumes that same value.
 
-`Sound\NDS-8%03d.mid`
+Normal path:
 
-This is sufficient to preserve the BGM resource family. It does not yet prove which map/quest/battle event chooses each numeric MIDI ID or the fade/restart policy.
+1. look up the current `zoneId` in a zone-metadata table;
+2. if a record exists, read its signed track ID at record `+8`;
+3. if no record exists or that value is negative, use fallback track `5`;
+4. format `Sound\NDS-8%03d.mid` with the selected track;
+5. pass the resulting path to the sound manager.
+
+There are verified special-zone overrides:
+
+- zone 1010 → track 7 or 8 depending on a live mode field;
+- zone 1020 → track 7 or 8;
+- zone 1050 → track 7 or 8;
+- zone 1300 → track 7 or 8;
+- zone 2600 retains the normal selected track but has an additional special side path when a specific live object exists.
+
+This establishes a real runtime chain:
+
+`zoneId -> zone metadata track id / special override -> Sound\NDS-8NNN.mid -> sound manager`
+
+The remaining BGM gaps are the source-file schema that populates the zone-metadata table and exact fade/restart/loop policy.
 
 ### Magic SFX family — VERIFIED nearby template, exact stage mapping unresolved
 
@@ -111,12 +129,12 @@ No exact death-SFX trigger or universal attack-impact-SFX trigger is promoted in
 
 ## Reproducible evidence
 
-`tools/probe_visual_fidelity.py` produces the complete fixed-resource inventory and raw SMF/MagicRes distributions. `tools/probe_visual_semantics.py` pins runtime templates and the verified hit-audio chain. `tools/build_s5_visual_preview.py` produces human-checkable character and MagicRes image strips.
+`tools/probe_visual_fidelity.py` produces the complete fixed-resource inventory and raw SMF/MagicRes distributions. `tools/probe_visual_semantics.py` pins runtime templates, ANI/action semantics, the verified hit-audio chain and zone-driven BGM selection. `tools/build_s5_visual_preview.py` produces human-checkable character and MagicRes image strips.
 
 The CI artifact `s5-static-visual-fidelity` contains:
 
 - `visual-fidelity.json`;
-- `visual-semantics.json` after the semantic probe integration;
+- `visual-semantics.json`;
 - static unpack log/hash-pinned binary copy used only for byte inspection;
 - private visual preview HTML and PNGs.
 
