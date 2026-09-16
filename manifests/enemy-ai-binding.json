@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "scope": "Retail 2.2 battle-instance enemy AI binding",
+  "source": {
+    "baseline_commit": "f9c96fc68b7bae7ff1793fc423875d43a08d6cb4",
+    "unpacked_sha256": "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7",
+    "original_program_executed": false
+  },
+  "evidence_levels": [
+    "VERIFIED",
+    "RECOVERED_SECONDARY",
+    "INFERRED",
+    "UNVERIFIED"
+  ],
+  "record_layout": {
+    "status": "VERIFIED",
+    "stride_bytes": 200,
+    "unit_key_offset": "0x00",
+    "category_offset": "0xB8",
+    "behavior_string_offset": "0xC4",
+    "live_unit_id_offset": "0x24",
+    "live_category_offset": "0x2C8",
+    "live_local_program_pointer_offset": "0x344",
+    "raw_wire_behavior_offset": "UNVERIFIED"
+  },
+  "binding_precedence": [
+    {
+      "priority": 1,
+      "status": "VERIFIED",
+      "source": "NETWORK_PROGRAM",
+      "inbound_packet": "6A 69",
+      "lookup": "program.id == live_unit.id",
+      "slot_count": 100,
+      "slot_stride_bytes": 272
+    },
+    {
+      "priority": 2,
+      "status": "VERIFIED",
+      "source": "ROSTER_PROGRAM",
+      "categories": [7, 8],
+      "record_offset": "0xC4",
+      "empty_fallback": "ODNORMAL REST(20),ATTACK(80)"
+    },
+    {
+      "priority": 3,
+      "status": "VERIFIED",
+      "source": "ALTERNATE_HANDLER",
+      "condition": "no network-program match and category is not 7 or 8",
+      "function": "0x00403280"
+    }
+  ],
+  "target_selection": {
+    "status": "VERIFIED",
+    "function": "0x00402A10",
+    "footprint_builder": "0x00403790",
+    "policy": "uniform rand()%candidate_count over all eligible candidates in the generated footprint",
+    "distance_priority_inside_eligible_pool": false,
+    "equal_distance_tie_break": "none; eligible candidates share the same random pool"
+  },
+  "target_descriptors": {
+    "AREA": {
+      "parse_status": "VERIFIED",
+      "kind": 0,
+      "value_offsets": ["+0x0C", "+0x10", "+0x14"],
+      "runtime_semantics": "UNVERIFIED"
+    },
+    "SOILDER": {
+      "parse_status": "VERIFIED",
+      "kind": 1,
+      "value_offset": "+0x18",
+      "runtime_semantics": "UNVERIFIED"
+    },
+    "local_roster_program_parser_consumes_target_descriptor": false
+  },
+  "position_selection": {
+    "status": "INFERRED",
+    "verified_helpers": [
+      "0x00404580",
+      "0x00404940",
+      "0x00406B60",
+      "0x00406E20"
+    ],
+    "verified_boundary": "client computes feasible target-mode-specific coordinate/action data before submission",
+    "exact_cell_priority_or_tie_break": "UNVERIFIED"
+  },
+  "autonomy_boundary": {
+    "program_provision": {
+      "status": "VERIFIED",
+      "direction": "server/session -> client",
+      "packet": "6A 69"
+    },
+    "weighted_action_target_and_position_choice": {
+      "status": "VERIFIED",
+      "direction": "client-local",
+      "executor": "0x00402E30"
+    },
+    "selected_action_submit": {
+      "status": "VERIFIED",
+      "direction": "client -> server",
+      "packet": "6A 89",
+      "builder": "0x004AA050"
+    },
+    "server_validation_and_authoritative_resolution": "UNVERIFIED"
+  },
+  "recovered_secondary": {
+    "status": "RECOVERED_SECONDARY",
+    "claims_promoted": [],
+    "note": "No secondary source was promoted into a concrete per-enemy AI binding in this session."
+  },
+  "concrete_historical_bindings": {
+    "status": "UNVERIFIED",
+    "entries": [],
+    "reason": "No retained live roster/network payload containing historical non-default per-unit programs was found in the available private assets or retained static-research artifact."
+  }
+}
