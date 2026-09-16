@@ -1,86 +1,121 @@
 # Backlog
 
-> 2026-09-16 | Web-first | Plan v2.5 target | `codex/battle-mode-fix` | manual validation v4
+> 2026-09-16 | Web-first | Plan v2.7 | post S1–S5 closure | next: S6 Runtime Integration
 
 ## 已完成基线
 
 - [x] PR #2 Web-first/G2/M3 基线已合并 main。
 - [x] PR #3 2.2 安装包归档登记已合并 main。
-- [x] Vite/TypeScript/Phaser、双地图、B100/B109、MagicRes诊断、装备、存档、离线单HTML。
-- [x] M3 占位任务 `0000 → 0001 → 0000 → complete` 通过真实资源浏览器回归，始终标记 `UNVERIFIED`。
-- [x] 真正 30 分钟墙钟 Web soak：run `34969057806` success。
-- [x] recovered-readiness v4 fixed-hash 2.2 private-original + synthetic smoke：run `35027023563` success；真实资源离线单 HTML 已重新生成。
+- [x] PR #4 Quest/NPC 静态内容与稳定性已合并 main。
+- [x] PR #5 readiness / battle entry / AI grammar / visual fix 等战斗考古收口已合并 main。
+- [x] 第一波 S1–S5：PR #7–#11 已独立审阅、CI 全绿并合并 main。
+- [x] Vite/TypeScript/Phaser、双地图、B100/B109、MagicRes 诊断、装备、存档、离线单 HTML。
+- [x] 30 分钟真实墙钟 Web soak：run `34969057806` success。
+- [x] v4 fixed-hash 2.2 private-original smoke：run `35059120452` success。
 
 ## 人工验证 / 视觉正确性
 
-- [x] 第一轮用户人工验证成功复现：剑士/巫师水平切片错位。
-- [x] 确认 SPR span 首字段是相对 transparent skip，不是 absolute x；修复转换器并补 synthetic regression。
-- [x] 第一轮用户人工验证成功复现：角色移动朝向左右镜像/倒着走。
-- [x] 确认 B100/B109 Body_ raw direction row：`S,SW,W,NW,N,NE,E,SE`；修正 Web direction mapping 并补8方向测试。
-- [x] 修正后 fixed-hash 2.2 private-original + synthetic CI：run `34971954768` success。
-- [x] 用户复测 v2：人物切片和倒走问题均已改正。
-- [x] 第二轮人工反馈：正常移动不应绘制路线指引线；已从常规画面移除。
-- [x] 第二轮人工反馈：角色 SPR bounds/anchor 方框不应默认闪烁；已改成默认隐藏，仅 Debug Panel 手动开启。
-- [x] v4 已切换到恢复出的 20 格行动环、满槽门禁、按行动类型扣点、离散 tick 回 1 点模型；500ms 继续标 `RECOVERED_SECONDARY`。
-- [ ] 用户复测 v4：field→battle 感觉、20格行动槽等待节奏、移动/普攻/技能扣点、战斗返回点、整体是否更接近记忆。
-- [ ] 以后角色/地图/特效/战斗语义重大变化必须增加人工 spot-check，不以 green CI 代替。
+- [x] SPR span 相对 transparent skip 修复，并由用户人工复测确认。
+- [x] B100/B109 Body_ raw direction `S,SW,W,NW,N,NE,E,SE`；east/west 修复并人工复测确认。
+- [x] 正常移动 route polyline 移除；bounds/anchor 默认隐藏，仅 Debug Panel opt-in。
+- [x] v4 使用 20 格 readiness、满槽门禁、MOVE/ATTACK/REST=6/4/5、离散 tick +1；500ms 仍标 `RECOVERED_SECONDARY`。
+- [ ] S6 完成后重新人工试玩：field interaction → battle entry、行动等待、AI、攻击/受击、施法、结算、返回。
+- [ ] S6 视觉整合后重点复核 ANI cadence、hit reaction、BGM、MagicRes 临时策略和遮挡。
 
-## M3 / 战斗架构与静态恢复
+## S1 Encounter — 已收口
 
-- [x] 2003 同期资料交叉确认：原作存在独立的非战斗状态与战斗画面/战斗场景，二者状态 UI 和指令不同。
-- [x] 同期资料确认：战斗不是普通实时砍杀；角色需等待 `行动槽` 蓄满后执行移动/攻击，随后再次等待，属于行动槽驱动的半回合/即时混合战术系统。
-- [x] Web 原型拆分 `field` 与 `battle` 状态；进入战斗保存非战斗地图/锚点，退出后返回原位置。
-- [x] 战斗 UI 增加行动槽；移动/攻击受行动槽门禁，普通地图移动不受战斗行动槽限制。
-- [x] 静态恢复行动槽核心：玩家 20 格环；只有满槽可行动；MOVE/ATTACK/REST authored cost=6/4/5；目标职业 magic rate=100 对 20 格环折算为 10；tick 每次 +1。500ms cadence 仍待动态确认。
-- [x] 战斗移动读取已知职业 move 基线：B100=5，B109=4；“最大移动格”语义已有较强二级恢复依据，但仍需动态/更多原始 xref 校准。
-- [x] Retail AI grammar/core chooser 已恢复：`ODNORMAL/ODATTACK/ODDEFENCE`、`REST/ATTACK/MAGIC`、默认 `ODNORMAL REST(20),ATTACK(80)`、`rand()%100`、三组 HP/MP 阈值、inclusive weighted compare。
-- [x] 客户端伤害边界已确定：普通攻击 `6A/82` 请求不携带 damage；客户端消费 authoritative absolute HP。当前可判定 retail 精确伤害公式至少不在这条客户端 uplink 中。
-- [x] Encounter transport 边界已恢复：近距离场景对象可发 `49/21/01` 请求；battle entry 独立从 session/downlink 获得 battle zone + 可选 grid geometry，然后加载 `sz-%04d.mmf`。
-- [x] 原版 story battle scene 资源开始恢复：`sz-0001/0003/0007/0009/0011/0013/0015.lib` 的 `.SRF/.DEO/.DEE`、formation/recruit 结构已静态 catalog。
-- [x] 战斗中锁定地图/角色切换、禁存档和非战斗任务交互；战斗命令只在 battle mode 出现。
-- [ ] 恢复 **每个具体敌人/战斗 roster → AI program/override** 绑定；继续拆 `AREA/SOILDER` target selection、寻路/目标 tie-break。
-- [ ] 搜索 retired server/私服服务端实现或协议实现，以恢复 exact hit/damage/critical formula；若无服务端证据，正式记录为 reconstruction policy 而不是伪造“原版公式”。
-- [ ] 找到真实 `field encounter / task NPC → battle zone` 的 server predicate/映射来源；当前已确认 battle zone 由 session/downlink 提供，不能再假定有客户端通用 map→battle 公式。
-- [ ] 恢复更多原版 battle zone 的 `.lib` story formations、队伍/副官/龙兵实体和 battle UI/placement。
-- [ ] 校准可移动格显示、攻击范围、ESC/逃跑、胜利结束条件和加入他人战斗规则。
-- [ ] 继续搜索可用原客户端源码/服务端实现；当前尚未找到可信公开原始源码仓库。
+- [x] world entity type `101..103` + Manhattan `<4` → `49 21 01 + uint16(+0x1C)`。
+- [x] 其他 world entity path → `08 + uint16(+0xB4)`；两个字段不是同一个 runtime word。
+- [x] scene object + Manhattan `<9` → `49 04 02 00 + uint16(runtime +0x80)`。
+- [x] inbound `0x98 mode 1` 提供 explicit `battleZoneId` + optional grid geometry；client 加载 `sz-%04d.mmf`。
+- [x] 明确没有证据支持通用客户端 `fieldMapId -> battleZoneId` 公式。
+- [x] `1030->1 / 1070->3 / 1090->7 / 1100->9` 仅保留 `RECOVERED_SECONDARY`，默认不当 retail truth。
+- [ ] 若未来拿到 server source / packet capture / preserved protocol，再恢复真正的 eligibility 与 authoritative field/object/event→battleZone 映射。
 
-## M3 / 真实内容来源
+## S2 Enemy AI — 已收口
 
-- [x] `Quest.lib` 15/15 members 静态提取。
-- [x] `NPCScript.txt`：39 NPC blocks / 125 active / 5 disabled。
-- [x] Quest0–9：10 files / 42 STEP / 179 dialogue commands。
-- [x] 私有 Web pack 从固定 Quest.lib 生成 source-backed Quest/NPC JSON；正文不进 Git。
-- [x] Tutorial：42 TALK blocks / 173 text records；控制 token 已结构化。
-- [x] HelpScript：5 HELP / 14 STEP / 30 records。
-- [x] Neohelp：18 sections / 336 records；引用范围做静态一致性检查。
-- [x] Prologue：19 structural rows / 17 non-empty text rows。
-- [x] `.Tip`：27/27 strict parse / 3547 frames；`NPC350.Tip` 已确认是 sprite library，不是 placement 表。
-- [x] `CombatMap.Tip` 与 battle/training map family 已做静态视觉比对；可证明选择 UI 资源族，不证明普通地图 encounter 映射。
-- [ ] 找到原始 `NPC → map → coordinate → Quest/Program` 绑定来源。
-- [ ] 继续静态检查 Dlg/Tdg、NeoDark.exe xrefs、dispatcher/packet token；不执行原客户端。
-- [ ] 继续 catalog 21/23/25/27、31/33/35/37、41/43、51/53、61/63/65、71/73/75、81、91/93 等后续 story battle `.lib`。
-- [ ] 只有在可证实 ID/trigger 关系后，才逐步替换 `m3-guide`。
+- [x] roster stride `0xC8`；unit key `+0x00`；category `+0xB8`；local behavior string `+0xC4`。
+- [x] 100-slot network AI table / stride `0x110`；入站 `6A69` 安装 program。
+- [x] program precedence：network match > category 7/8 roster program > empty fallback；其他 category 走 alternate handler。
+- [x] eligible target pool 最终使用 `rand()%candidate_count`，没有在 pool 内再做 nearest-distance ranking。
+- [x] client 在发 `6A89` 前完成 action/target/placement 数据准备；server 最终 validation/application 仍未知。
+- [ ] 具体历史 `enemy/roster id -> non-default AI program` 需要真实 roster/session/6A69 capture；当前静态客户端没有保存这些 live payload。
+- [ ] `AREA/SOILDER` 具体游戏语义和多可行格 placement tie-break 仍待独立证据。
 
-## M4 / 行为校准
+## S3 Damage — 已收口
 
-- [ ] ANI timing 单位、攻击/受击/施法前后摇、路径偏好。
-- [ ] 500ms readiness cadence 的原客户端独立动态确认。
-- [ ] MagicRes/FOCUS placement、blend、阶段衔接和 timing。
-- [ ] NPC/Quest 的地图触发、条件分支、奖励、招募、ID绑定。
-- [ ] 原版 UI/输入、死亡、音效和前景遮挡。
-- [ ] 静态证据耗尽后，再准备隔离 Windows VM；不阻塞可继续的静态/Web 工作。
+- [x] `6A/82` 普攻 uplink 不携带最终 damage。
+- [x] `6A/05` 下行 authoritative signed absolute HP；client 直接写 live HP，再算 delta 做表现。
+- [x] ability/item/magic authored hit/evasion/critical/damage/defence/magic 字段已固定位置和哈希。
+- [x] `ability.atr` column 25 `cry` 已证明是受击表现选择字段。
+- [x] 本地 `%9/%5` RNG 位于 HP 结果已知之后，不作为 damage RNG 证据。
+- [x] 正式结论：exact retail physical/magic hit/damage/critical/defence/elemental formula 当前不能从 client path 恢复。
+- [ ] S6 若需要离线可玩数值，只能集中实现显式 `RECONSTRUCTION_POLICY`，authored retail stats 与公式分层保存。
+- [ ] 若未来反推原公式，需 packet/stat/video corpus 做单变量控制和 held-out 验证。
 
-## M5+ 尾项
+## S4 Quest/NPC — 已收口
 
-- [ ] 完整背包/装备规则、等级/转职、技能树、任务链和地图流程。
+- [x] field interaction handler 内无本地 `object -> dialogue/quest/reward/warp/battle` 总表。
+- [x] NPCScript block selector 由 server `0x92` payload 提供。
+- [x] NPCScript numeric tuples 已证明进入 `SetRect`，属于 UI geometry，不是世界 placement。
+- [x] Quest `(questIndex, stepIndex)` 由 `0x2B` / grouped `6A55` 下发给 client presentation loader。
+- [x] Employ confirmation 发送 `0x4E/0x4D`；当前路径未直接完成最终 roster mutation。
+- [x] Warp UI 发送 `A4 02`、随后 `A4 01 + selected`；selection 本身不等于已证明的 client-authoritative map switch。
+- [x] 明确不能用 `SMF object_id == NPCScript blockId` 或 Quest 数字相等关系硬绑。
+- [ ] condition / reward / recruitment / warp acceptance / Quest-driven battle 等旧 server rule 需要重构 policy 或未来服务端证据。
+
+## S5 Visual Fidelity — 已收口
+
+- [x] ANI common consumer：`frame_interval_ms = 1000 / raw_timing`；QPC/Frequency 归一到毫秒。
+- [x] 至少一个 consumer 使用 `1000 / (raw_timing - 1)`；因此保留 raw timing + consumer-specific policy。
+- [x] character action state 数字直接映射 `B%03d_%02d.ani`。
+- [x] authoritative HP loss → hit SFX → action state 3；`_03` runtime-verified 为 hit reaction。
+- [x] zone-driven BGM 选择与 `Sound/NDS-8%03d.mid` 路径已恢复。
+- [x] 全部 1,097 SMF / 178,227 records 的 signed `layer` 都是 `-1`，不能拿它做前景 z-order。
+- [x] FOCUS/_FOCUS 保留原始 row，不套 Body_ direction semantics。
+- [ ] universal death state / exact attacker impact frame。
+- [ ] MagicRes placement / anchor / blend / stage transition / multi-effect composition。
+- [ ] SMF flags → foreground occlusion 语义。
+- [ ] 完整 magic/death/attack SFX trigger，BGM fade/restart/loop。
+
+## S6 Runtime Integration — 下一步
+
+分支建议：`codex/runtime-integration`
+
+- [ ] 建立 `InteractionIntent -> EncounterAuthority -> BattleEntry`，显式传入 `battleZoneId`，禁止 field map 猜 battle map。
+- [ ] 接入 world entity `<4` / scene object `<9` 两套交互 gate，保留不同 runtime id 字段和 provenance。
+- [ ] 建立 AI program source/precedence 数据模型；接入已恢复 candidate selection，不把训练 AI 冒充历史具体 program。
+- [ ] 分开 `RetailAuthoredStats` 与 `ReconstructionDamagePolicy`；所有临时伤害公式集中、可替换、显式 UNVERIFIED。
+- [ ] 建立 Quest/NPC server-selected presentation state + offline reconstruction authority；禁止数字 ID 直连世界实体。
+- [ ] 接入 ANI raw timing policy、state3 hit reaction、zone BGM。
+- [ ] death / MagicRes placement / occlusion 等未知项只做可替换 policy，不写成 VERIFIED。
+- [ ] 形成新的 field → interaction → authority → battle → action → result → return 可玩闭环。
+- [ ] 剑士和巫师都走通普通攻击 + 至少代表技能。
+- [ ] unit tests + Chromium E2E + standalone synthetic preview 全绿。
+- [ ] 整理 S6 integration report / PR；合并前做独立审查。
+
+## S7 Release Validation — S6 后执行
+
+- [ ] fixed-hash 2.2 private-original smoke。
+- [ ] 重新生成 standalone single HTML。
+- [ ] Chromium browser + offline tests。
+- [ ] 人工式完整试玩与人物/地图/战斗/特效/音频 spot-check。
+- [ ] 必要时重新跑 30 分钟真实墙钟 soak。
+- [ ] 检查版权资源没有进入 Git。
+- [ ] 检查 `UNVERIFIED/RECONSTRUCTION_POLICY` 没有误标 original/recovered。
+- [ ] 形成 validation report。
+
+## M5+ 后续
+
+- [ ] 完整背包/装备规则、等级/转职、技能树、正式任务链和地图流程。
 - [ ] 剑士/巫师十阶段职业矩阵。
-- [ ] 公开部署前单独完成访问控制、版权和发布授权审查。
+- [ ] 公开部署前完成访问控制、版权和发布授权审查。
 
 ## 边界
 
-- 本轮变更留在 `codex/battle-mode-fix`；未经明确批准不自动合并 `main`。
-- 原安装器、`NeoDark.exe`、未知 DLL 不在普通环境/CI 执行；UPX 仅对固定哈希文件做离线静态解包。
-- bundled compatibility/reverse-engineering Python 是 `RECOVERED_SECONDARY`，不能自动升级为 retail fact；关键事实必须回到固定 `NeoDark.exe` 字节签名、原始资源或历史资料交叉验证。
-- Story battle `.lib` 能证明 zone 内容/formation，不能自动证明 field→zone 触发映射；offline placements 不是 retail field-spawn table。
-- Client request/absolute-HP boundary不能推出 retired server 的 exact damage formula。
+- 第一波 S1–S5 已关闭，不再向旧分支追加共享运行时改动。
+- 当前旧 server/source/capture 缺失不是“多扫几遍客户端”就一定能解决；缺口必须显式落在 reconstruction policy 层。
+- 原安装器、`NeoDark.exe`、未知 DLL 不在普通环境/CI 执行；UPX 只做固定哈希静态解包。
+- compatibility / reverse-engineering secondary source 不能自动升级为 retail fact。
+- battle scene 内容不等于 field→zone 触发映射；client authored stats 不等于 server formula。
+- 原版正文和大量版权资源不进入 Git，公开发布需单独授权/审查。
