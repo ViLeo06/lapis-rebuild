@@ -1,0 +1,74 @@
+name: Static quest runtime research
+on:
+  push:
+    branches: ['codex/quest-runtime-binding']
+    paths:
+      - '.github/workflows/static-quest-runtime.yml'
+      - 'tools/probe_quest_runtime.py'
+      - 'tools/convert/map_bundle.py'
+      - 'tools/extract/lib_archive.py'
+      - 'tools/extract/pkware_blast.py'
+      - 'tests/parsers/test_quest_runtime.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Synthetic probe tests
+        run: python3 -m unittest discover -s tests/parsers -p 'test_quest_runtime.py' -v
+      - name: Fetch and verify the official decompression tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 60 https://github.com/upx/upx/releases/download/v5.2.1/upx-5.2.1-amd64_linux.tar.xz -o "$RUNNER_TEMP/upx.tar.xz"
+          echo "402162aad30af47e60dbd767fb2e64ca394ace9727ba1f40283641f1d1b91657  $RUNNER_TEMP/upx.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/upx.tar.xz" -C "$RUNNER_TEMP"
+      - name: Extract fixed 2.2 client and Quest.lib without executing client code
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          echo "c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd  $RUNNER_TEMP/extracted/client/NeoDark.exe" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/quest-members" "$RUNNER_TEMP/quest-runtime"
+          python3 tools/extract/lib_archive.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --extract-dir "$RUNNER_TEMP/quest-members" > "$RUNNER_TEMP/quest-runtime/quest-lib-extract.log"
+          "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" > "$RUNNER_TEMP/quest-runtime/unpack.log" 2>&1
+          chmod 0644 "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin"
+          echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" | sha256sum -c -
+      - name: Fixed-hash runtime probe and binary-backed tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          export S4_RETAIL_BINARY="$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin"
+          python3 -m unittest discover -s tests/parsers -p 'test_quest_runtime.py' -v
+          python3 tools/probe_quest_runtime.py \
+            "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" \
+            --quest-dir "$RUNNER_TEMP/quest-members" \
+            --client-root "$RUNNER_TEMP/extracted/client" \
+            --out "$RUNNER_TEMP/quest-runtime/quest-runtime.json"
+          rm -f "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" "$RUNNER_TEMP/quest-runtime/unpack.log" "$RUNNER_TEMP/quest-runtime/quest-lib-extract.log"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads((Path(os.environ['RUNNER_TEMP'])/'quest-runtime'/'quest-runtime.json').read_text())
+          print(json.dumps({
+              'quest_opcode': report['binary']['quest_transport']['downlink']['receive_opcode'],
+              'npc_rect_import': report['binary']['npc_script_runtime']['record_rect_import']['name'],
+              'smf_files_parsed': report['map_entity_candidates']['smf_files_parsed'],
+              'candidate_match_count': report['map_entity_candidates']['candidate_match_count'],
+              'dialogue_text_exported': False,
+          }, indent=2))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: s4-quest-runtime-evidence
+          path: ${{ runner.temp }}/quest-runtime/quest-runtime.json
+          retention-days: 3
+          if-no-files-found: error
