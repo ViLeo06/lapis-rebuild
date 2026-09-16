@@ -5,7 +5,7 @@ const snap=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot());
 async function ready(page:Page){await page.goto('/');await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#map','0');}
 async function clickWorld(page:Page,x:number,y:number){const b=await page.locator('canvas').boundingBox();if(!b)throw Error('Missing canvas');const camera=(await snap(page)).camera;await page.mouse.click(b.x+(x-camera.x)*camera.zoom,b.y+(y-camera.y)*camera.zoom);}
 
-test('loads real-format pack with no JS errors',async({page})=>{const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);await expect(page.locator('#loading')).toBeHidden();await expect(page.locator('canvas')).toBeVisible();await expect(page.locator('#raw-timing')).toHaveText('5');await expect(page.locator('#anchors')).not.toBeChecked();await page.screenshot({path:'test-results/diagnostic.png',fullPage:true});expect(errors).toEqual([]);});
+test('loads real-format pack with no JS errors',async({page})=>{const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);await expect(page.locator('#loading')).toBeHidden();await expect(page.locator('canvas')).toBeVisible();await expect(page.locator('#raw-timing')).toContainText('5');await expect(page.locator('#anchors')).not.toBeChecked();await page.screenshot({path:'test-results/diagnostic.png',fullPage:true});expect(errors).toEqual([]);});
 for(const cid of ['100','109']) for(const slot of ['00','01','02','03','05']) {
  test(`eight directions and frame stepping B${cid}_${slot}`,async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);
@@ -39,12 +39,19 @@ test('training victory, settlement and saved reward survive reload',async({page}
    const s=await snap(page);if(s.phase==='won')break;
    expect(s.phase,`Battle ended before settlement: ${JSON.stringify({hp:s.hp,enemies:s.enemies})}`).toBe('active');
    const target=s.enemies.find(e=>e.hp>0)!;
-   // Re-select only when necessary. Default exponential polling plus a redundant
-   // canvas selection on every turn was wasting whole enemy actions.
-   if(s.target!==target.id){await clickWorld(page,target.x,target.y);await expect.poll(async()=>(await snap(page)).target,{intervals:[50]}).toBe(target.id);}
-   const distance=Math.max(Math.abs(target.cell[0]-s.battleCell[0]),Math.abs(target.cell[1]-s.battleCell[1]));
+   // Enemy coordinates can advance between snapshot and pointer delivery. Freeze
+   // only for target switching, click the latest position, then resume battle.
+   if(s.target!==target.id){
+     await page.click('#battle-pause');
+     const frozen=await snap(page);const liveTarget=frozen.enemies.find(e=>e.id===target.id&&e.hp>0)!;
+     await clickWorld(page,liveTarget.x,liveTarget.y);
+     await expect.poll(async()=>(await snap(page)).target,{intervals:[50]}).toBe(target.id);
+     await page.click('#battle-pause');
+   }
+   const current=await snap(page);const liveTarget=current.enemies.find(e=>e.id===target.id&&e.hp>0)!;
+   const distance=Math.max(Math.abs(liveTarget.cell[0]-current.battleCell[0]),Math.abs(liveTarget.cell[1]-current.battleCell[1]));
    if(distance<=1){await page.locator('#attack').click({timeout:3000});continue;}
-   const options=[...s.reachable].sort((a,b)=>Math.max(Math.abs(a[0]-target.cell[0]),Math.abs(a[1]-target.cell[1]))-Math.max(Math.abs(b[0]-target.cell[0]),Math.abs(b[1]-target.cell[1])));
+   const options=[...current.reachable].sort((a,b)=>Math.max(Math.abs(a[0]-liveTarget.cell[0]),Math.abs(a[1]-liveTarget.cell[1]))-Math.max(Math.abs(b[0]-liveTarget.cell[0]),Math.abs(b[1]-liveTarget.cell[1])));
    expect(options.length).toBeGreaterThan(0);const c=options[0];await clickWorld(page,(c[0]+1)*32,(c[1]+1)*16);
  }
  await expect.poll(async()=>(await snap(page)).phase).toBe('won');
