@@ -72,5 +72,5 @@ jobs:
         with:
           name: private-static-unpacked-battle
           path: ${{ runner.temp }}/battle-research/
-          retention-days: 1
+          retention-days: 3
           if-no-files-found: warn
