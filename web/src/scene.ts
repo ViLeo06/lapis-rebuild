@@ -545,7 +545,7 @@ export class LabScene extends Phaser.Scene {
       g.strokeRect(this.anchor.x+b.left,this.anchor.y+b.top,b.right-b.left,b.bottom-b.top);
       g.lineStyle(2,0x9ce8c4);
       g.lineBetween(this.anchor.x-7,this.anchor.y,this.anchor.x+7,this.anchor.y);
-      g.lineBetween(this.anchor.x,this.anchor.y-7,this.anchor.y+7);
+      g.lineBetween(this.anchor.x,this.anchor.y-7,this.anchor.x,this.anchor.y+7);
     }
     this.enemyLabels.forEach(t=>t.setVisible(false));
     if(this.inBattleView){
