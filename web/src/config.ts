@@ -4,6 +4,10 @@ export const PROVISIONAL = Object.freeze({
   movementPixelsPerSecond: 96,
   attackDamage: 18,
   attackCooldownMs: 700,
+  battleActionMax: 100,
+  battleActionFillMs: 700,
+  swordsmanMoveCells: 5,
+  wizardMoveCells: 4,
   enemyDamage: 7,
   enemyIntervalMs: 1600,
   enemyHp: 90,
@@ -23,7 +27,12 @@ export const PROVISIONAL = Object.freeze({
   manaReturn: 6,
   damageReduction: 0.5,
   reward: 10,
-  revision: 'training-policy-1',
+  battleMapId: 0,
+  defaultFieldMapId: 1,
+  battleSpellRangeCells: 6,
+  enemyRangedCells: 5,
+  revision: 'battle-screen-policy-4',
 });
 export const ACTIONS: Record<string,string> = { '00':'待机', '01':'移动', '02':'攻击 / 施法', '03':'受击', '05':'特殊序列' };
-export const DIRECTIONS = ['南','东南','东','东北','北','西北','西','西南'];
+// Real B100/B109 visual inspection: raw ANI rows run clockwise from south via west.
+export const DIRECTIONS = ['南','西南','西','西北','北','东北','东','东南'];

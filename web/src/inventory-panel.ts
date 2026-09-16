@@ -9,10 +9,10 @@ export function installInventoryPanel(scene:LabScene):void {
  const stats=document.createElement('p');stats.id='equipment-stats';
  panel.append(title,hint,list,stats);document.querySelector('.journal')!.before(panel);
  let signature='';
- function render(){const s=scene.snapshot();const key=JSON.stringify([s.character,s.inventory,s.phase]);if(key===signature)return;signature=key;list.replaceChildren();
+ function render(){const s=scene.snapshot();const key=JSON.stringify([s.character,s.inventory,s.inBattleView]);if(key===signature)return;signature=key;list.replaceChildren();
  for(const slot of ['weapon','armor'] as const){const label=document.createElement('label');label.textContent=slot==='weapon'?'武器':'防具';const select=document.createElement('select');select.id=`equip-${slot}`;select.add(new Option('未装备',''));
  for(const item of CATALOG)if(item.training.slot===slot&&item.training.role===roleFor(s.character)&&s.inventory.owned.includes(item.item_id))select.add(new Option(`${item.name} / #${item.item_id}`,String(item.item_id)));
- select.value=s.inventory[slot]===null?'':String(s.inventory[slot]);select.disabled=s.phase==='active';select.onchange=()=>scene.equipItem(select.value?Number(select.value):null,slot);label.append(select);list.append(label);}
+ select.value=s.inventory[slot]===null?'':String(s.inventory[slot]);select.disabled=s.inBattleView;select.onchange=()=>scene.equipItem(select.value?Number(select.value):null,slot);label.append(select);list.append(label);}
  stats.textContent=`攻击 +${s.equipment.attack} / 防御 +${s.equipment.defense} / UNVERIFIED`;
  }
  window.addEventListener('lapis-state',render);render();

@@ -81,13 +81,21 @@ def parse_spr(path: str | Path, *, strict: bool = True) -> SprData:
                 raise ValueError(f"truncated row {y} in frame {index}")
             span_count = struct.unpack_from("<H", data, pos)[0]
             pos += 2
+            cursor_x = 0
             for _ in range(span_count):
                 if pos + 4 > len(data):
                     raise ValueError(f"truncated span header in frame {index}, row {y}")
-                x, pixel_count = struct.unpack_from("<HH", data, pos)
+                transparent_skip, pixel_count = struct.unpack_from("<HH", data, pos)
                 pos += 4
+                # The first uint16 is not an absolute x coordinate.  It is the
+                # number of transparent pixels to skip from the end of the
+                # previous opaque run (or from x=0 for the first run).
+                x = cursor_x + transparent_skip
                 if strict and x + pixel_count > width:
-                    raise ValueError(f"frame {index}, row {y}: span x={x}, count={pixel_count}, width={width}")
+                    raise ValueError(
+                        f"frame {index}, row {y}: cursor={cursor_x}, skip={transparent_skip}, "
+                        f"count={pixel_count}, width={width}"
+                    )
                 if pos + pixel_count * 2 > len(data):
                     raise ValueError(f"truncated pixels in frame {index}, row {y}")
                 for dx in range(pixel_count):
@@ -96,6 +104,7 @@ def parse_spr(path: str | Path, *, strict: bool = True) -> SprData:
                     if y < height and x + dx < width:
                         out = (y * width + x + dx) * 4
                         rgba[out : out + 4] = _rgb565_to_rgba(pixel)
+                cursor_x = x + pixel_count
 
         consumed = pos - payload_start
         if strict and consumed != payload_size:

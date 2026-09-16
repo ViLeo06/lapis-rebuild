@@ -1,168 +1,157 @@
 # 2.2 客户端静态分析基线
 
 > 基线日期：2026-09-15  
-> 分析方式：纯静态；未执行安装器、登录器、Frida/注入组件或未知 DLL。
+> 分析方式：纯静态；未执行安装器、`NeoDark.exe`、兼容注入组件或未知 DLL。
 
 ## 1. 原始安装包
 
 | 项目 | 值 |
 | --- | --- |
 | 文件名 | `YBCS-Online-Setup-2.2.exe` |
-| 来源 | `https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe` |
 | 大小 | 470,688,152 字节 |
 | SHA-256 | `c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88` |
 | 文件类型 | PE32 / x86 / Nullsoft Installer |
 
-本次从 Google Drive 的 18 个分卷重新拼装，拼装后的大小和 SHA-256 与归档清单完全一致。
+Google Drive 的 18 个分卷可重组得到完全相同的大小和 SHA-256。
 
-## 2. 内嵌 7z
+## 2. 精确内嵌 7z
 
-安装器中只发现一处 7z signature，绝对偏移为 `295909` (`0x483e5`)。
-
-不能简单从该偏移截取到 EXE 末尾，因为 NSIS 末尾仍有 trailer。准确长度由 7z Signature Header 中的 `NextHeaderOffset + NextHeaderSize` 计算：
+唯一 7z signature 位于绝对偏移 `295909` (`0x483e5`)。不能直接截到 EXE 文件尾，因为 NSIS 后部仍有 trailer。
 
 | 项目 | 值 |
 | --- | --- |
 | 7z 偏移 | 295,909 |
 | 精确大小 | 469,089,543 字节 |
 | SHA-256 | `9beb606655d2553c03e80d7eda36a48c135976a3812ce5432d3b2af23e996357` |
-| 安装器尾部非 7z 数据 | 1,302,700 字节 |
+| 非 7z 尾部 | 1,302,700 字节 |
 
-`tools/extract/extract_client.py` 已按上述方式实现精确 carving，并且不会运行安装器。
+`tools/extract/extract_client.py` 按 7z Signature Header 的 `NextHeaderOffset + NextHeaderSize` 精确 carving，全程不运行安装器。
 
-## 3. 展开结果
-
-静态展开结果：
+## 3. 静态展开规模
 
 - archive entries：22,970
 - 普通文件：22,885
 - 目录：85
-- 展开普通文件总字节数：2,699,237,296
+- 普通文件总字节：2,699,237,296
 - `.spr`：7,674
 - `.ani`：6,948
 - `.sgr`：92
 - `.mmf/.smf/.imf`：各 1,097
 
-主要目录包括 `client/Char/`、`client/MagicRes/`、`client/SGRes/`、`client/SOUND/`、`client/Dlg/`、`environment/`、`tools/`。
+主要目录包括 `client/Char/`、`client/MagicRes/`、`client/SGRes/`、`client/SOUND/`、`client/Dlg/`、`client/NRes/`。安装包同时含旧客户端资源和 2026 兼容环境，因此不能把整包简单等同为“2003 国服原始安装盘”。
 
-其中 `environment/` 与部分工具属于 2026 兼容运行环境；`client/NeoDark.exe` 与大量资源保留旧客户端结构。因此该包应视为“旧 NeoDark/Lapis 资源 + 2026 兼容运行时”的混合包，而不是干净的 2003 中国大陆安装介质。
+## 4. `.spr` 格式：2026-09-15 人工复核后修正
 
-## 4. `.spr` 已验证格式
-
-`.spr` 已完成实样解码并在剑士/巫师目标资源上批量验证：
+帧结构：
 
 1. `uint32 frame_count`
-2. `frame_count` 个边界记录：`int32 left, top, right, bottom`
-3. 每帧一个压缩块：
+2. `frame_count × <4i>`：`left, top, right, bottom`，right/bottom exclusive
+3. 每帧：
    - `uint32 payload_size`
    - `uint16 row_count`
    - 每行 `uint16 span_count`
-   - 每个 span：`uint16 x`, `uint16 pixel_count`, 后接 RGB565 像素
-4. span 未覆盖的像素透明。
+   - 每个 span：`uint16 transparent_skip, uint16 pixel_count`
+   - 后接 `pixel_count` 个 RGB565 `uint16`
 
-右/下边界为 exclusive：`width = right-left`，`height = bottom-top`。
+关键修正：**span 首字段不是绝对 x，而是相对上一 opaque run 末端的透明跳过量。**
 
-例如 `B100_00.spr` 第一帧边界 `(-26,-52,17,5)`，实际尺寸为 `43 × 57`。
+每行的正确解码伪代码：
 
-## 5. `.ani` 已验证格式
+```text
+cursor_x = 0
+for each span:
+    x = cursor_x + transparent_skip
+    draw pixel_count RGB565 pixels at x
+    cursor_x = x + pixel_count
+```
 
-本次确认 `.ani` 并非模糊的“固定记录候选”，而是稳定的 1,236 字节结构。客户端内全部 6,948 个 `.ani` 均满足该长度与基本字段布局。
+首个人工 Web 验证包把该字段误作 absolute x，导致剑士和巫师在多 span 行出现明显水平切片/错位。真实 `B100_01.spr`、`B109_01.spr` 的 span header 静态探针证明相对解释能形成合法、不重叠的行布局。
 
-核心：
+代表性真实 B100 walk 行：`[[13,1],[1,32]]`。按 absolute x 会让第二段从 x=1 开始覆盖第一段；按 relative skip 则依次位于 x=13 长1、x=15 长32，落在帧宽内并恢复连续人物图像。
+
+解析器：`tools/convert/spr.py`；证据探针：`tools/inspect_spr_runs.py`；回归：`tests/parsers/test_spr_relative_spans.py`。
+
+`B100_00.spr` 第一帧 bounds `(-26,-52,17,5)`，实际尺寸 `43×57`。
+
+## 5. `.ani` 固定布局
+
+全部 6,948 个 `.ani` 均为 1,236 字节。
 
 | Offset | 类型 | 含义 |
 | ---: | --- | --- |
-| `0x000` | `char[64]` | 生成器/源描述，常见 CP949 |
-| `0x040` | `uint32` | layer count，全部样本为 1 |
+| `0x000` | `char[64]` | generator/source 描述，常见 CP949 |
+| `0x040` | `uint32` | layer count；当前观察为 1 |
 | `0x044` | `char[64]` | layer name |
-| `0x084` | `uint32` | 每方向有效帧槽数 |
-| `0x088` | `uint32[8][32]` | 8 个方向、每方向最多 32 个 frame index |
-| `0x488` | `float32` | 原始 timing/speed 参数，单位待行为验证 |
-| `0x48c` | `uint32` | reserved，观察为 0 |
+| `0x084` | `uint32` | frames per direction |
+| `0x088` | `uint32[8][32]` | 8 行方向槽，每行最多32个 index |
+| `0x488` | `float32` | raw timing/speed，单位未知 |
+| `0x48c` | `uint32` | reserved，观察为0 |
 | `0x490` | `byte[68]` | reserved/stale generator memory |
 
-### 关键陷阱
-
-`uint32[8][32]` 中只有每行前 `frames_per_direction` 个值有效。后续槽位有时包含看似合理的旧 frame index，若错误扫描全部 32 个槽位，会制造假的越界结论。
+只允许读取每行前 `frames_per_direction` 个 active slot；其余槽位可能残留看似合理的 stale frame index。
 
 ## 6. 剑士 / 巫师目标矩阵
 
-已对以下 20 个职业阶段、每阶段 5 个动作槽，共 100 对 `.ani + .spr` 做严格交叉验证：
+阶段：
 
-- 剑士：`100,110,120,130,140,150,160,170,180,190`
-- 巫师：`109,119,129,139,149,159,169,179,189,199`
-- action slot：`_00,_01,_02,_03,_05`
+- 剑士 `100,110,120,130,140,150,160,170,180,190`
+- 巫师 `109,119,129,139,149,159,169,179,189,199`
+- 动作槽 `_00,_01,_02,_03,_05`
 
-结果：
+共 100 对 `.ani + .spr`，严格结构与有效 ANI index 范围通过。目标 `frames_per_direction` 为 4–11；raw timing 主要为 5.0。
 
-- 配对：100
-- `.spr` 严格结构错误：0
-- `.ani` 有效 frame index 越界：0
-- 目标矩阵 `frames_per_direction`：4–11
-- raw timing：95 个 `5.0`，4 个 `10.0`，1 个 `7.0`
+## 7. Body_ 动作与方向
 
-因此剑士/巫师基础角色动画资源已达到批量转换条件。
+高概率动作语义：
 
-## 7. 动作槽视觉语义
+| 后缀 | 当前解释 |
+| --- | --- |
+| `_00` | idle |
+| `_01` | walk |
+| `_02` | attack / cast-attack |
+| `_03` | hit reaction |
+| `_05` | special / class-specific，不统一称 death |
 
-当前高概率映射：
+首轮人工可玩验证暴露旧方向映射左右镜像。重新对真实 B100/B109 walk 帧逐 row 视觉检查，raw ANI row 朝向为：
 
-| 后缀 | 高概率含义 | 依据 |
-| --- | --- | --- |
-| `_00` | idle | 8方向站姿、轻微呼吸/眨眼 |
-| `_01` | walk | 明显循环步态 |
-| `_02` | attack / cast-attack | 剑士挥剑、巫师施法攻击 |
-| `_03` | hit reaction | 夸张受击姿势 |
-| `_05` | special / class-specific | 剑士额外挥砍；巫师为更长特效动作，不能统一称 death |
+| row | 朝向 |
+| ---: | --- |
+| 0 | South |
+| 1 | South-West |
+| 2 | West |
+| 3 | North-West |
+| 4 | North |
+| 5 | North-East |
+| 6 | East |
+| 7 | South-East |
 
-方向槽视觉上高概率按顺时针：`南、东南、东、东北、北、西北、西、西南`。
+因此 Web screen vector（+x 向右、+y 向下）使用该 raw row 顺序；旧的 east→2 / west→6 映射已修为 east→6 / west→2。
 
-在 M2 行为基准前，引擎层保留 `action_slot` 与 `direction_slot` 原始编号，不把推断当成不可修改事实。
+此结论适用于当前已检查的 `Body_` 角色资源，不外推到 `FOCUS` MagicRes 等不同 layer family。
 
-## 8. 地图资源新基线
+## 8. 地图资源
 
-客户端包含 1,097 组 `.mmf/.smf/.imf` 与 92 个共享 `.sgr`。
+客户端包含 1,097 组 `.mmf/.smf/.imf` 与 92 个共享 `.sgr`。92/92 SGR 可完整解析到 EOF。
 
-对全部 92 个 `.sgr` 使用静态结构解析器验证：**92/92 完整解析到文件尾，0 错误**。已确认 SGR 包含三类资源分区：
+首批 Web 地图：
 
-- compact DIB family；
-- middle grid/image family；
-- extended DIB family。
+- `sz-0000` 对练场：1536×768；IMF 47×47。
+- `sz-0001` 布日古斯_外城：2240×1280；IMF 69×79。
 
-作为首张最小测试地图，`sz-0000` 已完成静态依赖解析：
+地图0独立项目渲染曾与兼容参考渲染逐像素一致。当前 Web 使用平面诊断渲染；前景遮挡/z-order仍需继续恢复。
 
-- `Set.lib/zone_name.txt`：地图 0 名称为 **“对练场”**；
-- MMF：24 × 24 tile selector grid；
-- IMF：47 × 47 collision grid；
-- SMF：75 个 scene records；
-- MMF 依赖 SGR：3, 202, 171, 153, 150, 152；
-- 所需资源均存在。
+## 9. Set.lib / Quest.lib / Tip
 
-使用同包 2026 兼容运行时中已恢复的静态资源规则作为交叉证据，已成功离线渲染出 `sz-0000` 的 1536 × 768 完整场景。这使“至少一张地图可静态渲染”从未知变成已证明可行；下一步是把规则收敛为项目自身的独立转换器并导出碰撞数据。
+`NRes/Set.lib` 已恢复目录解密 + PKWARE DCL 解压，包含 ability/item/level/magic/zone 等 12 个成员。
 
-## 9. `Set.lib` 新基线
+`NRes/Quest.lib` 使用同类容器链，可提取 15/15 members，包括 `NPCScript.txt`、Quest0–9、`Tutorial.txt`、`HelpScript.txt`、`Neohelp.txt`、`Prologue.txt`。原始文本只进入私人构建，不提交 Git。
 
-`client/NRes/Set.lib` 已静态展开，容器内 12 个成员，包括：
+`.Tip` 已恢复为 sprite/image library family：27/27 文件严格解析，合计 3547 frames。`NPC350.Tip` 已确认是 3000×1125、50 帧（每帧300×225、10×5）的图像资源，**不是 NPC placement/behavior 数据表**。
 
-- `ability.atr`
-- `itemtbl.atr`
-- `levelabl.atr`
-- `Magictbl.atr`
-- `Magicptn.atr`
-- `solskill.atr`
-- `Effectptn.atr`
-- `zone_name.txt`
+## 10. 当前安全与解释边界
 
-文本数据主体为 GBK/GB18030 中文，而 ANI 头部说明文本常为 CP949；两者编码不能混用。
-
-已直接从 `ability.atr` 再次验证职业名与基础值；从 `levelabl.atr + Magictbl.atr` 验证技能链。例如：
-
-- 剑士起始技能：`1101 重击(Lv1)`；后续有 `1201 连砍`、`1301 强防`；
-- 巫师起始技能：`19101 黑暗之帐(Lv1)`；后续有 `19201 毒雾`、`19301 自然力量`。
-
-## 10. 安全边界
-
-- 未运行 `YBCS-Online-Setup-2.2.exe`。
-- 未运行 `NeoDark.exe`。
-- 未运行兼容层、Frida、注入组件或未知 DLL。
-- 如需 M2 动态行为采集，必须进入一次性 Windows VM / 快照环境，不使用真实账号密码。
+- 未运行安装器、`NeoDark.exe`、未知 DLL、Frida 或兼容注入组件。
+- Quest/NPC 静态文本不等于知道地图 placement、trigger、reward 或 runtime branch。
+- ANI raw timing 单位仍未知。
+- FOCUS MagicRes 的 placement、direction、blend、timing 仍未恢复。
+- 若静态考据不足，原版动态采集只能在一次性、可回滚 Windows VM 中进行。
