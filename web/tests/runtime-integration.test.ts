@@ -4,6 +4,7 @@ import{createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY,verifiedBa
 import{resolveAiBinding,RETAIL_FALLBACK_AI,chooseWeightedAiAction,selectAiCandidate}from'../src/ai-runtime.ts';
 import{frameIntervalMs,sequenceDurationMs}from'../src/animation-policy.ts';
 import{TRAINING_DAMAGE_POLICY}from'../src/damage-policy.ts';
+import{serverQuestPresentation,serverNpcSelection,reconstructionQuestPresentation,warpRequest,recruitmentRequest}from'../src/quest-runtime-boundary.ts';
 import{beginBattle,updateBattle}from'../src/battle.ts';
 import type{BattleEvent}from'../src/battle.ts';
 
@@ -41,6 +42,16 @@ test('ANI common timing consumes authored raw rate without destroying it',()=>{
 
 test('training damage is centralized and explicitly reconstruction policy',()=>{
  assert.equal(TRAINING_DAMAGE_POLICY.provenance,'RECONSTRUCTION_POLICY');assert.equal(TRAINING_DAMAGE_POLICY.playerDamage(undefined,2),20);assert.equal(TRAINING_DAMAGE_POLICY.enemyDamage(0,false,false),7);
+});
+
+test('Quest and NPC presentation remain separate server-selected namespaces',()=>{
+ const q=serverQuestPresentation(3,7);const n=serverNpcSelection(3,7,9);
+ assert.equal(q.questIndex,3);assert.equal(q.stepIndex,7);assert.equal(q.authority,'server-session');
+ assert.equal(n.blockId,3);assert.equal(n.valueA,7);assert.equal(n.authority,'server-session');
+ assert.notDeepEqual(q,n);
+ const offline=reconstructionQuestPresentation(3,7);assert.equal(offline.provenance,'RECONSTRUCTION_POLICY');assert.equal(offline.authority,'offline-reconstruction');
+ assert.equal(warpRequest(12).provenance,'VERIFIED');assert.equal(recruitmentRequest('UNKNOWN_4D').operation,'UNKNOWN_4D');
+ assert.throws(()=>serverNpcSelection(256));
 });
 
 test('battle state carries entry, damage and AI provenance',()=>{
