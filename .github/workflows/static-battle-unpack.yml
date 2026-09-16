@@ -7,6 +7,7 @@ on:
       - 'tools/probe_battle_binary.py'
       - 'tools/probe_retail_battle_runtime.py'
       - 'tools/probe_ai_binding.py'
+      - 'tools/probe_damage_binary.py'
       - 'tools/probe_damage_tables.py'
       - 'tools/probe_story_battles.py'
       - 'tools/extract/lib_archive.py'
@@ -71,6 +72,7 @@ jobs:
           PY
           python3 tools/probe_retail_battle_runtime.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/retail-battle-runtime.json"
           python3 tools/probe_ai_binding.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/ai-binding.json"
+          python3 tools/probe_damage_binary.py "$RUNNER_TEMP/battle-research/neodark-unpacked.bin" --out "$RUNNER_TEMP/battle-research/damage-binary.json"
           python3 tools/probe_damage_tables.py "$RUNNER_TEMP/setlib" --out "$RUNNER_TEMP/battle-research/damage-tables.json"
           python3 tools/probe_story_battles.py "$RUNNER_TEMP/extracted/client/SGRes" --out "$RUNNER_TEMP/battle-research/story-battle-scenes.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
