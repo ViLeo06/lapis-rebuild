@@ -31,6 +31,10 @@ python tools/package_web_preview.py --dist web/dist --pack web/public/game-data 
 
 Open the HTML in a desktop browser. Runtime and assets are embedded without external CDN requests. Keep this file private. IndexedDB on file origins can vary; JSON export/import is the portable fallback. Third-party software licenses are included; original game art remains subject to its own rights.
 
+## Manual validation handoff
+
+For human comparison against memory of the original game, prefer the standalone private HTML rather than asking the reviewer to install Node, Python or Godot. It is a client-side Web application packaged as one offline file: interactive, but requiring no backend or local server. The reviewer should use desktop Chrome or Edge, keep the package private, and report the exact operation, remembered original behavior, observed rebuilt behavior and a screenshot when possible. Current CI exercises the same offline HTML with real decoded resources before it is handed off.
+
 ## Current Web checkpoint
 
 - Maps: `0000 / 对练场` and `0001 / 布日古斯_外城`.

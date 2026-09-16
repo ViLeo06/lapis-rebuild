@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v2.2｜更新：2026-09-15｜Web-first  
+> 版本：v2.3｜更新：2026-09-15｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。优先完整实现剑士与巫师。  
 > 工作规则：AGENTS.md；任务：Backlog.md；证据：docs/evidence-ledger.md。
 
@@ -10,16 +10,19 @@
 
 主线为 Vite + TypeScript + Phaser。已有 Godot 诊断工程仅保留参考，不继续双线实现。
 
-- 当前分支：`codex/m0-ani`；Draft PR #2；未合并 main，未公开部署。
+- PR #2（Web-first G2/M3 基线）和 PR #3（2.2 安装包归档登记）已按用户批准合并 `main`；main 已包含此前 Web-first 成果。
+- 当前下一阶段分支：`codex/m3-content`；Draft PR #4；本阶段围绕真实 NPC/Quest 静态内容和 G3 稳定性推进。
 - M0/G0：可复现静态基线已建立，安装包、精确 payload、全量静态展开和关键解析器都有固定指纹/测试。
 - M1：核心解析通过；100 对目标 ANI/SPR、92 个 SGR、地图/Set.lib/技能数据可复现。MagicRes 已进入可验证诊断序列，音频/UI/字体等继续收口。
 - M2/G2-Web：通过。真实资源与合成资源均完成浏览器回归；动作/方向、地图、碰撞、离线 HTML、异常输入、存档等已由实际 Chromium 验证。
-- M3：两张真实地图、真实 MagicRes 诊断、训练战斗、装备、结算、存档和最小数据驱动 `NPC → 地图切换 → 任务状态 → 存档恢复` 工程闭环已经实现并通过真实资源 smoke；该 M3 引导任务明确为 `UNVERIFIED` 功能占位，不冒充原版任务。
-- 真实资源 CI `34960418543`：synthetic 与 private-original 两个 job 均成功；private-original Playwright 为 `27 expected / 0 unexpected`，其中新增 `M3 guide drives NPC -> map -> quest -> save loop` 通过，`quest-loop.png` 已人工检查。
-- CI 曾发现 Node 22 直接运行 TypeScript 测试时 JSON import 缺少 import attribute；已修正为 `with { type: 'json' }`，后续 synthetic CI `34960053463` 全通过。
-- 地图0001 的 MMF/SMF/IMF 及新增 SGR 依赖已纳入固定 SHA-256 baseline，真实 Web pack 在输入变化时会拒绝生成。
-- 当前下一条证据线已启动：`tools/probe_npc_quest.py` 对 2.2 静态解包目录做受限的 NPC/quest 元数据与关键词计数扫描，不导出文本原文；CI 只做静态读取，不执行原客户端。
-- 30 分钟真实墙钟 soak 尚未完成，因此 G3 仍未通过。
+- M3 工程闭环：两张真实地图、真实 MagicRes 诊断、训练战斗、装备、结算、存档及 `NPC → 地图切换 → 任务状态 → 存档恢复` 已建立；原先 `m3-guide` 仍明确是 `UNVERIFIED` 功能占位。
+- M3 真实内容取得突破：固定 2.2 客户端中的 `NRes/Quest.lib` 已证实可使用现有 `.lib` 解密 + PKWARE DCL 链完整提取，含 15 个成员；其中 `NPCScript.txt`、`Quest0.txt`…`Quest9.TXT`、`Tutorial.txt`、`HelpScript.txt` 等直接提供原始 NPC/任务/教学静态内容。
+- `NPCScript.txt` 已恢复稳定结构：39 个 NPC 块（ID 11–49），125 个 active records、5 个 disabled records，所有声明数量均与实际 active records 一致。
+- Quest0–Quest9 已恢复稳定行语法：10 文件、42 STEP、179 个对话命令；文件原始命令 aggregate 为 `CANCEL=161 / SELECT=9 / SCRIPT=9`。这些 token 是静态文件事实，不自动解释其运行时含义。
+- `manifests/content-source-baseline.json` 已固定 `Quest.lib`、`NPC350.Tip` 及 Quest.lib 15 个成员的大小/SHA-256；原对白正文不提交 Git。
+- 私有 Web pack 构建现在可直接从固定 Quest.lib 生成 source-backed Quest/NPC JSON；Web 加载层会校验这些内容，并提供研发诊断面板。合成 CI 使用纯 synthetic 文本，不夹带原作对白。
+- `NRes/NPC350.Tip` 已定位并固定哈希，但当前只确认其为以 `NORMAL LIBRARY.` 开头的二进制资源；record layout 尚未恢复。
+- G3 仍未通过：30 分钟真实墙钟 Web soak 尚需真正完成；原始 NPC/Quest 与地图实体、触发条件、奖励/分支的运行时绑定也尚未恢复。
 
 ### 0.2 已验证的基线
 
@@ -34,10 +37,13 @@
 | 地图1 | 2240×1280；IMF 69×79；2292 个值为1的可通行格 | `布日古斯_外城`；真实资源浏览器回归通过；源依赖已固定哈希 |
 | 坐标 | 地图0的607个可通行格均满足参考公式往返 | 只在有效偶数奇偶格成立；不声称任意坐标互逆 |
 | MagicRes | 001/002/003/035/036/037/038 可按 SPR 0..N-1 顺序诊断播放 | FOCUS 放置、方向、混合与 timing 单位仍 UNVERIFIED |
-| 输入指纹 | 角色/地图0/地图1固定源指纹 + 独立 MagicRes 基线 | `manifests/web-source-baseline.json`、`web-effects-baseline.json` |
+| Quest.lib | 21,205 bytes；15/15 members 可静态提取 | SHA-256 `23fa...7397`；同类 recovered `.lib` 容器 |
+| NPCScript | 39 NPC blocks / 125 active / 5 disabled | `tools/convert/quest_content.py`；声明数量全部对齐 |
+| Quest0–9 | 10 files / 42 steps / 179 dialogue commands | STEP/NAME/CANCEL/SELECT/SCRIPT 结构已严格解析 |
+| 内容指纹 | Quest.lib、NPC350.Tip、15 个 Quest members 固定哈希 | `manifests/content-source-baseline.json` |
 | 数据 | 剑士/巫师十阶段、各3个技能记录；M3 引导任务数据模型 | 职业/技能来自静态表；`m3-guide.json` 是显式 UNVERIFIED 工程占位 |
-| Web浏览器 | 真实资源 E2E 27 expected / 0 unexpected | CI `34960418543`；含双地图、MagicRes、移动、技能、装备、存档、离线HTML与M3任务闭环 |
-| M3任务闭环 | `0000 → 0001 → 0000 → complete`，完成后存档/刷新/读档仍保持完成 | VERIFIED-ENGINEERING；不代表原版NPC/任务语义 |
+| Web浏览器 | 既有真实资源 E2E 27 expected / 0 unexpected | CI `34960418543`；含双地图、MagicRes、移动、技能、装备、存档、离线HTML与M3任务闭环 |
+| Source-backed Web | 私有 pack 构建时由 Quest.lib 生成结构化 Quest/NPC JSON，Git 不保存正文 | 当前阶段代码；必须由本阶段 synthetic/private-original CI 再验证 |
 
 安装包 SHA-256：`c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88`。
 
@@ -45,8 +51,9 @@
 
 ### 0.3 尚未完成
 
-- 30 分钟真实墙钟连续运行；不能以模拟时钟、普通单元测试或短 E2E 代替。
-- 真实来源的 NPC/任务/对白/触发数据尚未识别并接入；现有 `M3 引导员` 只是工程闭环占位。
+- 真正 30 分钟真实墙钟 Web soak；不能以模拟时钟、普通单元测试或短 E2E 代替。
+- Quest/NPC 静态内容与地图实体、触发点、条件分支、奖励、队友招募等运行时绑定尚未恢复；不能把静态对白直接当成完整任务逻辑。
+- `Tutorial.txt` / `HelpScript.txt` 的标签/步骤语法仍需单独结构化；`NPC350.Tip` 二进制格式尚未恢复。
 - MagicRes/FOCUS 原版放置、混合、阶段衔接和 timing；音效、原版死亡表现、前景遮挡。
 - 真实敌人/NPC/任务行为和原版行为校准；训练木桩仍是 UNVERIFIED 功能占位。
 - 完整背包/装备、升级、成长、任务链、地图流程等核心系统。
@@ -54,7 +61,7 @@
 
 ### 0.4 下一项动作
 
-沿两条互不阻塞的线继续 M3：其一，对 hash-pinned 2.2 静态解包做受限 NPC/quest 候选资源扫描，先定位真实数据来源，再决定解析器与接入范围；其二，在当前 Web 闭环稳定后单独触发并完成 30 分钟真实墙钟 soak。候选扫描只输出路径、哈希、大小和关键词计数，不复制大段原文；30 分钟 soak 只运行派生 Web 预览，不执行原客户端。
+先完成本阶段 CI：synthetic 与 private-original 都必须验证 Quest/NPC parser、私有 source-backed Web pack 和浏览器加载。随后在不再推送代码的稳定检查点触发 `[private-soak]`，完成真实 30 分钟墙钟 Web soak。静态内容方面继续解析 Tutorial/HelpScript，并对 NPC350.Tip 与 Dlg/Tdg 做最小必要逆向；在证据足够前，不猜 Quest 与地图实体/触发条件的绑定。
 
 ## 1. 目标与范围
 
@@ -88,12 +95,12 @@
 ## 2. 技术与资产边界
 
 - 主运行时：Phaser + TypeScript；Vite开发/构建；原生HTML/CSS调试面板，不预先引入React。
-- Python >=3.12：静态提取、SPR/ANI/SGR/MMF/SMF/IMF/Set.lib解析、资源转换、校验。
+- Python >=3.12：静态提取、SPR/ANI/SGR/MMF/SMF/IMF/Set.lib/Quest.lib解析、资源转换、校验。
 - 浏览器消费 PNG/JSON/适配后的音频，不执行原始EXE/DLL，不在前端放密钥。
 - 当前锁定：Phaser3.90.0、Vite7.3.6、TypeScript5.9.3、Playwright1.63.0；以 package-lock.json 为准。
-- GitHub：唯一代码仓库 `ViLeo06/lapis-rebuild`（私有），存代码、文档、工具、数据、清单、测试与合成样本。
+- GitHub：唯一代码仓库 `ViLeo06/lapis-rebuild`（私有），存代码、文档、工具、数据结构、哈希、清单、测试与合成样本。
 - Drive：`lapis-rebuild-assets`，存原包、完整解包、批量转换和大预览。稳定目录ID以 `manifests/storage-locations.json` 为准。
-- `web/public/game-data/`、`game/generated/`、原包、node_modules、测试截图和大文件不进Git。
+- `web/public/game-data/`、`game/generated/`、原包、node_modules、测试截图、大文件及批量原始对白不进Git。
 - 私有原版预览与公开合成测试分开；第三方依赖许可随打包保留；不得分发字体文件。
 - 改动先工作分支/PR，禁止直接更新或擅自合并 main。
 
@@ -108,7 +115,9 @@
 - 原版语义和临时规则分离。时序、移速、攻击伤害、Buff、敌人、奖励集中于 `web/src/config.ts` 等可替换策略。
 - ANI raw timing 原值保留，不自动认定毫秒/FPS；`_05` 不统一当死亡；FOCUS 不盲套 Body_ 八方向语义。
 - MagicRes 目前只把 `ANI 第一有效行 == SPR 0..N-1` 当 VERIFIED；播放时长和放置继续使用诊断策略。
-- M3 引导员、对白与任务节点只用于验证 NPC/地图/任务/存档工程链，始终显示 `UNVERIFIED`；在找到原始数据证据前不得升级为原版内容。
+- M3 引导员、对白与任务节点只用于验证 NPC/地图/任务/存档工程链，始终显示 `UNVERIFIED`；原始 Quest.lib 内容进入独立 source-backed 数据层，不混为同一证据等级。
+- Quest.lib 中的 STEP/NAME/CANCEL/SELECT/SCRIPT 是静态文件 token；在没有调用链/运行时证据前，不给它们扩展超出字面结构的语义。
+- 原始对白正文只在私有构建时从固定 Quest.lib 派生，不提交 Git；Git 仅保存解析器、结构统计和哈希。
 - 锚点使用 SPR bounds，不按各帧中心导致人物抖动。
 - 地图点击函数与格坐标锚点函数分开；偶数奇偶格的往返性质不推广到所有像素。
 - 当前地图切换是 Web 工程能力；在没有动态证据前，不声称菜单/入口/传送点等行为与原版完全一致。
@@ -120,9 +129,9 @@
 | 里程碑 | 交付与验收 | 状态 |
 | --- | --- | --- |
 | M0 基线 | 固定样本、哈希、静态拆包、可复现工具 | G0通过；大镜像归档尾项独立追踪 |
-| M1 资源 | 双职业、地图、技能数据、标准资源与可追溯索引 | 核心通过；MagicRes诊断已接入，音频/UI继续收口 |
+| M1 资源 | 双职业、地图、技能数据、标准资源与可追溯索引 | 核心通过；MagicRes/Quest静态内容已接入，音频/UI继续收口 |
 | M2 Web诊断 | 浏览器地图0/1+B100/B109；动作方向逐帧；调试面板；CI | G2-Web通过；真实资源浏览器/离线回归成功 |
-| M3 可玩切片 | 移动→战斗→结算→NPC/地图→存档；完整闭环；30分钟稳定 | 最小功能闭环已通过真实资源 smoke；真实 NPC/任务数据和30分钟稳定仍未完成 |
+| M3 可玩切片 | 移动→战斗→结算→NPC/地图→存档；真实内容来源；30分钟稳定 | 工程闭环已完成；Quest/NPC source-backed 数据层已建立；运行时绑定和30分钟稳定未完成 |
 | M4 行为校准 | 行动、时序、伤害、输入/UI；录像/静态证据/回归测试 | 静态线索持续积累，动态待隔离VM |
 | M5 核心系统 | 实体、战斗、技能、地图、成长、背包装备、任务、存档迁移 | 未完成 |
 | M6 双职业完整化 | 十阶段职业矩阵逐项通过或明确批准例外 | 未开始 |
@@ -131,7 +140,7 @@
 
 - G0：基线可复现；G1：目标资源和至少一张地图稳定转换。
 - G2-Web：**已通过**。浏览器真实运行、完整诊断组合、异常处理和离线预览已由 synthetic/private-original CI 回归；后续功能继续保持该门禁。
-- G3：Web可玩切片完整验收和30分钟稳定性；当前最小工程闭环已存在，但真实内容替换和30分钟真实墙钟测试仍未完成，所以 **G3 不通过**。
+- G3：Web可玩切片完整验收和30分钟稳定性；当前工程闭环和 source-backed 静态内容层已存在，但原始触发绑定和30分钟真实墙钟测试仍未完成，所以 **G3 不通过**。
 - G4：关键行为有证据或被明确接受的正式替代。
 - G5：双职业矩阵完成或批准例外；未通过不称V1。
 - G6：Web发布/访问控制/版权/构建检查通过，并取得发布授权。
@@ -140,7 +149,7 @@
 
 ### M0/M1持续收口
 
-维护客户端分析、证据台账、安装包及输入/输出指纹；解析器损坏输入显式报错，不静默修补。100目标ANI/SPR、92SGR、Set.lib成员、地图0像素对比持续回归。继续完成MagicRes/FOCUS语义、音频/UI/字体授权、文本编码及资源索引。
+维护客户端分析、证据台账、安装包及输入/输出指纹；解析器损坏输入显式报错，不静默修补。100目标ANI/SPR、92SGR、Set.lib/Quest.lib成员、地图0像素对比持续回归。继续完成MagicRes/FOCUS语义、音频/UI/字体授权、文本编码及资源索引。
 
 完整解包镜像未上传时可用原分卷+完整哈希+工具复现，必须写“镜像未归档”，不得谎称同步完成；不得因一次上传失败反复重建相同文件。
 
@@ -150,11 +159,11 @@
 
 ### M3 Web可玩切片
 
-复用诊断底座，当前已经有角色与敌人状态、目标/范围/伤害/MP/冷却、每职业3技能、两地图、结算、背包装备、存档恢复，以及显式 `UNVERIFIED` 的数据驱动 NPC/任务状态和触发式 0000↔0001 切换。下一步优先从客户端静态资源定位真实 NPC/任务候选，用证据替换占位数据；在替换前，测试必须继续证明占位与原版内容标签不会混淆。采用WASD/点击开发控制不代表原版输入已恢复。
+复用诊断底座，当前已经有角色与敌人状态、目标/范围/伤害/MP/冷却、每职业3技能、两地图、结算、背包装备、存档恢复，以及显式 `UNVERIFIED` 的工程引导任务。现已增加真实 Quest.lib/NPCScript 静态数据层和浏览器诊断入口；下一步是用可证实的 ID/触发关系逐步替换占位内容，而不是把静态对白直接强行绑到地图。采用WASD/点击开发控制不代表原版输入已恢复。
 
 ### M4行为校准
 
-隔离VM快照，最小文件/账号权限，不用真实密码。采集移动、镜头、碰撞、攻击/施法前后摇、命中、死亡、行动推进、升级、装备、NPC/商店/地图切换。网络只被动观察授权样本，不绕过认证或攻击第三方服务。
+隔离VM快照，最小文件/账号权限，不用真实密码。采集移动、镜头、碰撞、攻击/施法前后摇、命中、死亡、行动推进、升级、装备、NPC/商店/地图切换、Quest触发与分支。网络只被动观察授权样本，不绕过认证或攻击第三方服务。
 
 ### M5/M6系统与职业
 
@@ -166,11 +175,12 @@
 
 ## 6. 质量与自动化
 
-- `python3 -m unittest discover -s tests/parsers -v`。
+- `python3 -m unittest discover -s tests/parsers -v`，包含 Quest/NPC synthetic grammar tests。
+- 私有 Quest 内容：`tools/validate/validate_quest_content.py` 必须在固定 Quest.lib 上得到 39 NPC、10 Quest files、42 steps、179 dialogue commands。
 - Web：`npm ci --ignore-scripts`、`npm run typecheck`、`npm test`、`npm run build`、`npm run test:e2e`。
 - 合成样本 CI 不需私有素材；原版 smoke 仅可信工作分支显式标记触发，先哈希后静态提取，凭据不落盘、不运行原包。
-- E2E检查真实画布/动画矩阵/移动/技能/地图切换/MagicRes/装备/任务状态/存档/异常/响应式/离线零外网请求；保留精简JSON报告和截图。
-- 原始内容候选扫描只允许静态、受限读取，默认输出路径/大小/哈希/计数等元数据；发现潜在文本后再做最小必要解析，避免把整份版权文本复制进 Git。
+- E2E检查真实画布/动画矩阵/移动/技能/地图切换/MagicRes/装备/任务状态/存档/source-backed content/异常/响应式/离线零外网请求；保留精简JSON报告和截图。
+- 原始内容扫描只允许静态、受限读取；正文只进入短期私有 artifact 或私有生成 pack，不进入 Git。
 - 浏览器测试失败要修问题或合理拆分测试，不能删除覆盖项或伪造passed。
 - 真实30分钟持续运行与加速逻辑测试分别记录，不混用；当前30分钟 soak 仍待真正触发和完成。
 - IndexedDB可能受浏览器配置影响；JSON备份保留，存档必须校验schema、资源包标识、地图/任务状态与数据范围，错误时不修改当前状态。
@@ -196,4 +206,5 @@
 - 2026-09-14 v1.1：M0基线与Windows/Godot路线。
 - 2026-09-15 v2.0：用户批准Web-first与AGENTS控制，Windows VM只用于行为考据。
 - 2026-09-15 v2.1：Web诊断/训练代码、锁文件、合成与原版CI、免安装HTML、输入哈希和存档；记录首轮11/12失败项，拆分后等待重验，不提前关闭G2。
-- 2026-09-15 v2.2：确认 synthetic/private-original 浏览器回归成功并关闭 G2-Web；纳入地图0001与7组MagicRes诊断；M3 最小 NPC→地图→任务→存档工程闭环已通过真实资源 smoke，后续转向真实 NPC/任务数据静态考据与30分钟 soak；G3仍未关闭。
+- 2026-09-15 v2.2：确认 synthetic/private-original 浏览器回归成功并关闭 G2-Web；纳入地图0001与7组MagicRes诊断；M3 最小 NPC→地图→任务→存档工程闭环通过真实资源 smoke。
+- 2026-09-15 v2.3：PR #2/#3 合并 main；恢复 Quest.lib 15-member 容器、NPCScript 和 Quest0–9 结构；私有 Web pack 引入 source-backed Quest/NPC 数据层；G3 下一门槛为运行时绑定证据与30分钟真实墙钟 soak。

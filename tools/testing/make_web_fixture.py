@@ -14,11 +14,22 @@ def map_payload(out:Path,map_id:int,name:str,width:int,height:int,cw:int,ch:int,
     (out/inspector).write_text(json.dumps({'width':mw,'height':mh,'cells':[{'resource_id':map_id+1,'directory_path':[0,0,0,0]}]*(mw*mh)}))
     return {'id':map_id,'name':name,'png':png,'collision':collision,'inspector':inspector,'render':{'width':width,'height':height},'evidence':'SYNTHETIC'}
 
+def synthetic_content(out:Path)->dict:
+    content=out/'content';quests=content/'quests';quests.mkdir(parents=True)
+    npc={'schema':1,'source':'synthetic','npcs':[{'npc_id':11,'declared_entry_count':1,'name':'Synthetic Guide','entries':[{'line':2,'disabled':False,'record_type':1,'raw_numeric':[150,17,200,12],'text':'Synthetic source-backed NPC line.'}],'active_entry_count':1,'disabled_entry_count':0}],'comments':[],'summary':{'npc_count':1}}
+    quest={'schema':1,'source':'synthetic','steps':[{'number':1,'events':[{'kind':'speaker','speaker':5000},{'kind':'line','command':'CANCEL','speaker':5000,'text':'Synthetic source-backed quest line.'}]}],'summary':{'step_count':1,'dialogue_line_count':1}}
+    summary={'schema':1,'evidence':'SYNTHETIC','scope':'Synthetic content fixture; not original game text.','npc':{'npc_count':1,'active_entry_count':1,'disabled_entry_count':0},'quests':[{'source':'synthetic','step_count':1,'dialogue_line_count':1}]}
+    tutorial={'schema':1,'source':'synthetic','talks':[{'talk_id':1,'line':1,'end_line':5,'events':[{'kind':'speaker','speaker':5000},{'kind':'text','text':'Synthetic tutorial text.'},{'kind':'control','command':'NEXT'}],'transition':{'kind':'Tutorial_NextStep'}}],'comments':[],'summary':{'talk_count':1,'talk_ids':[1],'text_line_count':1,'control_counts':{'NAME':1,'NEXT':1},'transition_counts':{'Tutorial_NextStep':1}}}
+    help_script={'schema':1,'source':'synthetic','helps':[{'help_id':1,'line':1,'steps':[{'number':1,'line':2,'records':[[1,0,0,0]]}]}],'comments':[],'summary':{'help_count':1,'help_ids':[1],'step_count':1,'record_count':1,'comment_count':0}}
+    tutorial_help_summary={'schema':1,'evidence':'SYNTHETIC','tutorial':{'talk_count':1,'talk_ids':[1],'text_line_count':1,'control_counts':{'NAME':1,'NEXT':1},'transition_counts':{'Tutorial_NextStep':1}},'help_script':{'help_count':1,'help_ids':[1],'step_count':1,'record_count':1,'comment_count':0}}
+    (content/'summary.json').write_text(json.dumps(summary));(content/'npc-script.json').write_text(json.dumps(npc));(quests/'quest0.json').write_text(json.dumps(quest));(content/'tutorial.json').write_text(json.dumps(tutorial));(content/'help-script.json').write_text(json.dumps(help_script));(content/'tutorial-help-summary.json').write_text(json.dumps(tutorial_help_summary))
+    return {'evidence':'SYNTHETIC','scope':'Synthetic content fixture; not original game text.','summary':'content/summary.json','npc_script':'content/npc-script.json','quests':{'0':'content/quests/quest0.json'},'tutorial':'content/tutorial.json','help_script':'content/help-script.json','tutorial_help_summary':'content/tutorial-help-summary.json'}
+
 def generate(out:Path):
     if out.exists():raise FileExistsError('Refusing existing pack')
     out.mkdir(parents=True)
     maps={'0':map_payload(out,0,'Synthetic fixture',1536,768,47,47,(38,62,52,255)),'1':map_payload(out,1,'Synthetic city',1024,640,31,39,(49,54,68,255))}
-    manifest={'schema':1,'provenance':{'kind':'synthetic','evidence':'VERIFIED'},'characters':{},'map':maps['0'],'maps':maps,'effects':{}}
+    manifest={'schema':1,'provenance':{'kind':'synthetic','evidence':'VERIFIED'},'characters':{},'map':maps['0'],'maps':maps,'effects':{},'content':synthetic_content(out)}
     for cid,label,color in [(100,'swordsman',(205,185,110,255)),(109,'wizard',(136,139,196,255))]:
         char={'class_id':cid,'label':label,'actions':{}}
         for action in ['00','01','02','03','05']:

@@ -1,8 +1,8 @@
 name: Web and parser validation
 on:
   push:
-    branches: [codex/m0-ani]
-    paths: ['web/**', 'tools/**', 'tests/**', 'data/**', '.github/workflows/web-ci.yml']
+    branches: ['codex/**']
+    paths: ['web/**', 'tools/**', 'tests/**', 'data/**', 'manifests/**', '.github/workflows/web-ci.yml']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -47,7 +47,7 @@ jobs:
   private-original:
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[private-smoke]')
     runs-on: ubuntu-24.04
-    timeout-minutes: 42
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
@@ -64,6 +64,10 @@ jobs:
           python3 tools/inspect_magicres.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/magicres-summary.json
           python3 tools/probe_maps.py --client-root "$RUNNER_TEMP/extracted/client" --start 0 --count 12 --out web/test-results/map-probe.json
           python3 tools/probe_npc_quest.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/npc-quest-probe.json
+          python3 tools/inspect_quest_resources.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/quest-resource-structure.json
+          python3 tools/validate/validate_quest_content.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --out web/test-results/quest-content-summary.json
+          python3 tools/validate/validate_extended_content.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --out web/test-results/extended-content-summary.json
+          python3 tools/validate/validate_tip_assets.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/tip-structure-summary.json
       - name: Publish static evidence early
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -72,7 +76,27 @@ jobs:
             web/test-results/magicres-summary.json
             web/test-results/map-probe.json
             web/test-results/npc-quest-probe.json
+            web/test-results/quest-resource-structure.json
+            web/test-results/quest-content-summary.json
+            web/test-results/extended-content-summary.json
+            web/test-results/tip-structure-summary.json
           retention-days: 3
+          if-no-files-found: error
+      - name: Extract Quest source for private analysis
+        run: python3 tools/extract/lib_archive.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --extract-dir "$RUNNER_TEMP/quest-source"
+      - name: Publish private Quest source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: private-quest-source
+          path: ${{ runner.temp }}/quest-source/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Publish private NPC350 source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: private-npc350-source
+          path: ${{ runner.temp }}/extracted/client/NRes/NPC350.Tip
+          retention-days: 1
           if-no-files-found: error
       - name: Build and browser setup
         working-directory: web
