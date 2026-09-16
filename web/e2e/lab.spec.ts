@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import {pathToFileURL} from 'node:url';
 const snap=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot());
 async function ready(page:Page){await page.goto('/');await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#map','0');}
-async function clickWorld(page:Page,x:number,y:number){const b=await page.locator('canvas').boundingBox();if(!b)throw Error('Missing canvas');const camera=(await snap(page)).camera;await page.mouse.click(b.x+(x-camera.x)*camera.zoom,b.y+(y-camera.y)*camera.zoom);}
+async function clickWorld(page:Page,x:number,y:number){const canvas=page.locator('canvas');await canvas.scrollIntoViewIfNeeded();const camera=(await snap(page)).camera;await canvas.click({position:{x:(x-camera.x)*camera.zoom,y:(y-camera.y)*camera.zoom},force:true});}
 
 test('loads real-format pack with no JS errors',async({page})=>{const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);await expect(page.locator('#loading')).toBeHidden();await expect(page.locator('canvas')).toBeVisible();await expect(page.locator('#raw-timing')).toContainText('5');await expect(page.locator('#anchors')).not.toBeChecked();await page.screenshot({path:'test-results/diagnostic.png',fullPage:true});expect(errors).toEqual([]);});
 for(const cid of ['100','109']) for(const slot of ['00','01','02','03','05']) {
