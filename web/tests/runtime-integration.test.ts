@@ -5,6 +5,7 @@ import{resolveAiBinding,RETAIL_FALLBACK_AI,chooseWeightedAiAction,selectAiCandid
 import{frameIntervalMs,sequenceDurationMs}from'../src/animation-policy.ts';
 import{TRAINING_DAMAGE_POLICY}from'../src/damage-policy.ts';
 import{beginBattle,updateBattle}from'../src/battle.ts';
+import type{BattleEvent}from'../src/battle.ts';
 
 test('encounter authority requires an explicit battle zone and does not derive it from field map',()=>{
  const a=createTrainingInteraction(1),b=createTrainingInteraction(999);
@@ -46,5 +47,6 @@ test('battle state carries entry, damage and AI provenance',()=>{
  const entry=verifiedBattleEntry(3);const s=beginBattle(0,0,entry);
  assert.equal(s.battleZoneId,3);assert.equal(s.battleEntryProvenance,'VERIFIED');assert.equal(s.damagePolicyProvenance,'RECONSTRUCTION_POLICY');
  assert.ok(s.enemies.every(e=>e.aiBinding.provenance==='RECONSTRUCTION_POLICY'));
- const events=updateBattle(s,1600,0,0);assert.ok(events.some(e=>e.target==='player'&&e.provenance==='RECONSTRUCTION_POLICY'));
+ const events:BattleEvent[]=[];for(let i=0;i<16;i++)events.push(...updateBattle(s,100,0,0));
+ assert.ok(events.some(e=>e.target==='player'&&e.provenance==='RECONSTRUCTION_POLICY'));
 });
