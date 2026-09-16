@@ -141,7 +141,10 @@ export class LabScene extends Phaser.Scene {
     if(this.effectId===null||!this.pack.effects[String(this.effectId)])throw new Error('No diagnostic effect selected');
     return this.pack.effects[String(this.effectId)];
   }
-  private busy():boolean{return this.route.length>0||this.timedAction>0;}
+  // State 3 is a recovered hit presentation. It does not, by itself, prove a
+  // retail command lock, so only route execution and non-hit transient actions
+  // gate input in the reconstruction runtime.
+  private busy():boolean{return this.route.length>0||(this.slot!=='03'&&this.timedAction>0);}
   canAct():boolean{return this.inBattleView&&!this.battlePaused&&!document.hidden&&!this.busy()&&actionReady(this.state);}
   private occupiedCells():Cell[]{return this.state.enemies.filter(e=>e.hp>0).map(e=>pixelCell(e.x,e.y));}
   private reachable():Cell[][]{return this.canAct()?[...reachableCells(this.currentMap().collision,pixelCell(this.anchor.x,this.anchor.y),this.battleMoveLimit(),this.occupiedCells()).values()].filter(p=>p.length>1):[];}
@@ -542,7 +545,7 @@ export class LabScene extends Phaser.Scene {
       g.strokeRect(this.anchor.x+b.left,this.anchor.y+b.top,b.right-b.left,b.bottom-b.top);
       g.lineStyle(2,0x9ce8c4);
       g.lineBetween(this.anchor.x-7,this.anchor.y,this.anchor.x+7,this.anchor.y);
-      g.lineBetween(this.anchor.x,this.anchor.y-7,this.anchor.x,this.anchor.y+7);
+      g.lineBetween(this.anchor.x,this.anchor.y-7,this.anchor.y+7);
     }
     this.enemyLabels.forEach(t=>t.setVisible(false));
     if(this.inBattleView){
