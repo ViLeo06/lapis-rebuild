@@ -7,6 +7,7 @@ import{RETAIL_ABILITY_FIELDS,RETAIL_ITEM_FIELDS,RETAIL_COMBAT_FIELD_EVIDENCE,RET
 test('zone BGM normal metadata and fallback paths match recovered selector',()=>{
  const authored=selectZoneBgm(100,12);assert.equal(authored.trackId,12);assert.equal(authored.path,'Sound/NDS-8012.mid');assert.equal(authored.source,'metadata');
  const fallback=selectZoneBgm(100,-1);assert.equal(fallback.trackId,5);assert.equal(fallback.path,bgmPath(5));assert.equal(fallback.source,'fallback');
+ const unavailable=selectZoneBgm(100,undefined);assert.equal(unavailable.trackId,null);assert.equal(unavailable.source,'metadata-unavailable');assert.equal(unavailable.provenance,'UNVERIFIED');
 });
 
 test('special BGM zones refuse to guess without live mode',()=>{
