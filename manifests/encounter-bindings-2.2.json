@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "scope": "S1 encounter binding recovery for fixed YBCS Online 2.2 client",
+  "evidence_policy": {
+    "VERIFIED": "Directly reproduced from hash-pinned retail client bytes/resources.",
+    "VERIFIED-HISTORICAL": "Historical primary evidence independently tied to the original service; none promoted in this manifest.",
+    "RECOVERED_SECONDARY": "Bundled 2026 compatibility/reconstruction behavior, not original-server proof.",
+    "INFERRED": "Best explanation of multiple verified observations, still not direct proof.",
+    "UNVERIFIED": "Open hypothesis or missing join."
+  },
+  "fixed_inputs": {
+    "installer_sha256": "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88",
+    "embedded_7z_sha256": "9beb606655d2553c03e80d7eda36a48c135976a3812ce5432d3b2af23e996357",
+    "packed_neodark_sha256": "c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd",
+    "unpacked_neodark_sha256": "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7",
+    "quest_lib_sha256": "23fa524844be0c553c55e66e071e3c9190337d92b19745f242580008a63e7397",
+    "set_lib_sha256": "ce1bb0425b367289f144e0780147f7c63abb833733035949853ce70dfb3c82fe",
+    "combat_map_tip_sha256": "08d50c0910d04b1d7a6eee209cfb6bb9c4a197cff2a49fd478eeea67fd5f22ce"
+  },
+  "verified_native_boundary": {
+    "classification": "VERIFIED",
+    "interaction_paths": [
+      {
+        "kind": "world_entity_typed_near_action",
+        "entity_types": [101, 102, 103],
+        "distance": "manhattan < 4",
+        "packet": "49 21 01 <entity +0x1c word>",
+        "encounter_semantics": "UNVERIFIED"
+      },
+      {
+        "kind": "world_entity_other_type_action",
+        "packet": "08 <entity +0xb4 word>",
+        "encounter_semantics": "UNVERIFIED"
+      },
+      {
+        "kind": "scene_object_action",
+        "distance": "manhattan < 9",
+        "packet": "49 04 02 00 <runtime scene-object +0x80 id>",
+        "encounter_semantics": "UNVERIFIED"
+      }
+    ],
+    "battle_entry": {
+      "downlink": "0x98 mode 1",
+      "battle_zone_source": "server/session battle-entry payload",
+      "map_format": "sz-%04d.mmf",
+      "optional_geometry": true
+    }
+  },
+  "resource_observations": {
+    "classification": "VERIFIED",
+    "field_map_bundles": {
+      "1030": {
+        "imf_sha256": "0a91a68318f1aac7638c15380a9ec1ca4265e36f3378edd4b0b737ba424f837f",
+        "mmf_sha256": "1b739d3e962014bb8cb2512c30db61127fc1e9ba4290d95d12129d3c99d89c31",
+        "smf_sha256": "1e3f651663a12e06bfca8c90eda0a65af1db2a5c543afdb450c4640066e89217",
+        "note": "contains gate/interaction-shaped native resource evidence"
+      },
+      "1070": {
+        "imf_sha256": "7249acbc7fa740d86f77dcf5dfd7e980664245cc78efdd623f3e5591a293d887",
+        "mmf_sha256": "9d9eb7b120d1f574045f11762490e16e4a6ad9a4d96a09db63c186d87f66a260",
+        "smf_sha256": "472884fb667d13120689ca04a9be40163f42d76689099f089df955d69f2f2f9a",
+        "note": "byte-identical IMF/MMF/SMF bundle to map 1080"
+      },
+      "1080": {
+        "imf_sha256": "7249acbc7fa740d86f77dcf5dfd7e980664245cc78efdd623f3e5591a293d887",
+        "mmf_sha256": "9d9eb7b120d1f574045f11762490e16e4a6ad9a4d96a09db63c186d87f66a260",
+        "smf_sha256": "472884fb667d13120689ca04a9be40163f42d76689099f089df955d69f2f2f9a",
+        "note": "byte-identical IMF/MMF/SMF bundle to map 1070; identity ambiguity remains"
+      },
+      "1090": {
+        "imf_sha256": "20054d9faac316c2ee7f472b1a209fbc2cd307cf27a45694bbea2097eb8a1efc",
+        "mmf_sha256": "24d5734afe8b0ca150a1ebf0db126cd06364df0c2eae450a83841acc00d20d18",
+        "smf_sha256": "994fb2d1fb2ffc3c0a93fe25bfd41cc3e0b6e1fe3d066139e7d6d61991aebae4",
+        "note": "contains gate/interaction-shaped native resource evidence"
+      }
+    },
+    "quest_dialog_scan": {
+      "result": "no direct retail fieldMapId -> battleZoneId binding recovered",
+      "searched_surfaces": ["Quest.lib extracted members", "Dlg/*.Tdg"],
+      "example_terms": ["LOADSCENE", "BATTLE", "COMBAT", "ZONE", "MAP", "WARP", "49/21", "0x98", "sz-"],
+      "boundary": "scoped negative evidence only"
+    }
+  },
+  "candidate_bindings": [
+    {
+      "field_map_id": 1030,
+      "battle_zone_id": 1,
+      "classification": "RECOVERED_SECONDARY",
+      "source": "bundled 2026 offline compatibility encounter policy",
+      "native_corroboration": "gate/interaction-shaped map resources",
+      "retail_verified": false,
+      "s6_default": false,
+      "compatibility_fixture": true
+    },
+    {
+      "field_map_id": 1070,
+      "battle_zone_id": 3,
+      "classification": "RECOVERED_SECONDARY",
+      "source": "bundled 2026 offline compatibility encounter policy",
+      "native_corroboration": "gate/interaction-shaped map resources",
+      "ambiguity": "1070 and 1080 native map bundles are byte-identical",
+      "retail_verified": false,
+      "s6_default": false,
+      "compatibility_fixture": true
+    },
+    {
+      "field_map_id": 1090,
+      "battle_zone_id": 7,
+      "classification": "RECOVERED_SECONDARY",
+      "source": "bundled 2026 offline compatibility encounter policy",
+      "native_corroboration": "gate/interaction-shaped map resources",
+      "retail_verified": false,
+      "s6_default": false,
+      "compatibility_fixture": true
+    },
+    {
+      "field_map_id": 1100,
+      "battle_zone_id": 9,
+      "classification": "RECOVERED_SECONDARY",
+      "source": "bundled 2026 offline compatibility encounter policy",
+      "native_corroboration": "not established at the same level as 1030/1070/1090",
+      "retail_verified": false,
+      "s6_default": false,
+      "compatibility_fixture": false
+    }
+  ],
+  "server_boundary": {
+    "classification": "INFERRED",
+    "statement": "The retired server/session resolved at least part of encounter eligibility and battle-zone choice between client interaction uplink and the explicit 0x98 battle-entry state.",
+    "verified_support": [
+      "client emits object/entity interaction actions",
+      "battle entry later supplies an explicit battle zone",
+      "battle session constructor loads the supplied sz-%04d.mmf zone",
+      "no universal retail field-map to battle-zone mapping has been proved in checked client surfaces"
+    ]
+  },
+  "unverified_joins": [
+    "world action 49/21 specifically means start encounter",
+    "scene action 49/04 specifically means start encounter",
+    "runtime scene-object +0x80 id equals static SMF object id",
+    "any candidate field-map binding above matches original retail server behavior"
+  ]
+}
