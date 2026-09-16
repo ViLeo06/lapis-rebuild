@@ -5,10 +5,12 @@ on:
     paths:
       - '.github/workflows/static-quest-runtime.yml'
       - 'tools/probe_quest_runtime.py'
+      - 'tools/probe_quest_server_boundary.py'
       - 'tools/convert/map_bundle.py'
       - 'tools/extract/lib_archive.py'
       - 'tools/extract/pkware_blast.py'
       - 'tests/parsers/test_quest_runtime.py'
+      - 'tests/parsers/test_quest_server_boundary.py'
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,7 +22,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
       - name: Synthetic probe tests
-        run: python3 -m unittest discover -s tests/parsers -p 'test_quest_runtime.py' -v
+        run: |
+          python3 -m unittest discover -s tests/parsers -p 'test_quest_runtime.py' -v
+          python3 -m unittest discover -s tests/parsers -p 'test_quest_server_boundary.py' -v
       - name: Fetch and verify the official decompression tool
         shell: bash
         run: |
@@ -47,21 +51,30 @@ jobs:
           set -euo pipefail
           export S4_RETAIL_BINARY="$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin"
           python3 -m unittest discover -s tests/parsers -p 'test_quest_runtime.py' -v
+          python3 -m unittest discover -s tests/parsers -p 'test_quest_server_boundary.py' -v
           python3 tools/probe_quest_runtime.py \
             "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" \
             --quest-dir "$RUNNER_TEMP/quest-members" \
             --client-root "$RUNNER_TEMP/extracted/client" \
             --out "$RUNNER_TEMP/quest-runtime/quest-runtime.json"
+          python3 tools/probe_quest_server_boundary.py \
+            "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" \
+            --out "$RUNNER_TEMP/quest-runtime/quest-server-boundary.json"
           rm -f "$RUNNER_TEMP/quest-runtime/neodark-unpacked.bin" "$RUNNER_TEMP/quest-runtime/unpack.log" "$RUNNER_TEMP/quest-runtime/quest-lib-extract.log"
           python3 - <<'PY'
           import json, os
           from pathlib import Path
-          report=json.loads((Path(os.environ['RUNNER_TEMP'])/'quest-runtime'/'quest-runtime.json').read_text())
+          root=Path(os.environ['RUNNER_TEMP'])/'quest-runtime'
+          report=json.loads((root/'quest-runtime.json').read_text())
+          boundary=json.loads((root/'quest-server-boundary.json').read_text())
           print(json.dumps({
               'quest_opcode': report['binary']['quest_transport']['downlink']['receive_opcode'],
               'npc_rect_import': report['binary']['npc_script_runtime']['record_rect_import']['name'],
               'smf_files_parsed': report['map_entity_candidates']['smf_files_parsed'],
               'candidate_match_count': report['map_entity_candidates']['candidate_match_count'],
+              'npc_block_downlink': boundary['npc_messagebox_binding']['downlink_opcode'],
+              'field_interaction_types': boundary['field_interaction_trigger']['special_types'],
+              'quest_server_boundary': boundary['closure']['status'],
               'dialogue_text_exported': False,
           }, indent=2))
           PY
@@ -69,6 +82,8 @@ jobs:
         if: always()
         with:
           name: s4-quest-runtime-evidence
-          path: ${{ runner.temp }}/quest-runtime/quest-runtime.json
+          path: |
+            ${{ runner.temp }}/quest-runtime/quest-runtime.json
+            ${{ runner.temp }}/quest-runtime/quest-server-boundary.json
           retention-days: 3
           if-no-files-found: error
