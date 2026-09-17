@@ -104,13 +104,28 @@ def build_family(client_root: Path, family_id: str, slots: list[str], out: Path)
         if not ani_path or not spr_path:
             continue
         ani = parse_ani(ani_path)
-        spr, spr_decode_status, spr_strict_error = parse_spr_evidence(spr_path)
+        spr, spr_decode_status, spr_strict_error, spr_meta = parse_spr_evidence(spr_path)
         rows = [list(row) for row in ani.directions]
+        semantic, provenance = SEMANTIC.get(slot, (None, "UNVERIFIED"))
+        if spr is None:
+            actions[slot] = {
+                "slot": slot,
+                "semantic": semantic,
+                "semantic_provenance": provenance,
+                "raw_timing": ani.raw_timing,
+                "frame_interval_ms_common_consumer": 1000.0 / ani.raw_timing if ani.raw_timing > 0 else None,
+                "rows": [[] for _ in rows],
+                "bounds": spr_meta["bounds_union"],
+                "contact_sheet": None,
+                "renderable": False,
+                "spr_decode_status": spr_decode_status,
+                "spr_strict_error": spr_strict_error,
+            }
+            continue
         indices = [i for row in rows for i in row]
         slot_dir = out / family_id / slot
         frame_files, bounds = normalized_frames(spr, indices, slot_dir / "frames")
         sheet = compose_sheet(spr, rows, slot_dir / "contact-8rows.png")
-        semantic, provenance = SEMANTIC.get(slot, (None, "UNVERIFIED"))
         actions[slot] = {
             "slot": slot,
             "semantic": semantic,
@@ -120,6 +135,7 @@ def build_family(client_root: Path, family_id: str, slots: list[str], out: Path)
             "rows": [[f"{family_id}/{slot}/frames/{frame_files[i]}" for i in row] for row in rows],
             "bounds": bounds,
             "contact_sheet": f"{family_id}/{slot}/contact-8rows.png",
+            "renderable": True,
             "spr_decode_status": spr_decode_status,
             "spr_strict_error": spr_strict_error,
         }
