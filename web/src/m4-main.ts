@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import './main.ts';
 import './ui/game-shell.css';
 import './m4-runtime.css';
 import type {LabScene} from './scene.ts';
@@ -38,3 +37,8 @@ window.addEventListener('lapis-ready',()=>{
     restore:(raw:unknown)=>runtime.restore(raw),
   };
 });
+
+// Register the M4 bridge before starting the legacy Phaser bootstrap. A static
+// import here can complete the embedded-pack startup before this listener is
+// installed, causing the one-shot lapis-ready event to be missed.
+void import('./main.ts');
