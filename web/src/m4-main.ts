@@ -24,7 +24,8 @@ let installed=false;
 window.addEventListener('lapis-ready',()=>{
   if(installed||!enableM4)return;
   installed=true;
-  const game=Phaser.GAMES.find(candidate=>candidate?.scene?.getScene('lab'));
+  const games=(Phaser as unknown as {GAMES:Phaser.Game[]}).GAMES;
+  const game=games.find((candidate:Phaser.Game)=>candidate?.scene?.getScene('lab'));
   const scene=game?.scene.getScene('lab') as LabScene|undefined;
   if(!scene)throw new Error('M4 runtime could not locate the lab scene');
   const runtime=installM4Runtime(scene);
