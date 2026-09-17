@@ -73,9 +73,10 @@ class MonsterVisualProbeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "outlier.spr"
             write_spr(path, row_count=1)
-            _spr, status, error = probe.parse_spr_evidence(path)
+            _spr, status, error, meta = probe.parse_spr_evidence(path)
             self.assertEqual(status, "NON_STRICT_FALLBACK")
             self.assertIn("row_count=1, height=2", error)
+            self.assertEqual(meta["frame_count"], 1)
 
     def test_report_numeric_match_is_only_correlation(self):
         with tempfile.TemporaryDirectory() as td:
