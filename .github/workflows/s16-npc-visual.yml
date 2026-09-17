@@ -1,0 +1,72 @@
+name: S16 NPC visual recovery
+on:
+  push:
+    branches: ['codex/m5-npc-visual-recovery']
+    paths:
+      - '.github/workflows/s16-npc-visual.yml'
+      - 'tools/npc_visual_core.py'
+      - 'tools/probe_npc_visuals.py'
+      - 'tools/build_npc_visual_gallery.py'
+      - 'tests/parsers/test_npc_visuals.py'
+      - 'web/src/npc/**'
+      - 'web/tests/s16-npc-visual.test.ts'
+      - 'data/manifests/npc-visual-recovery.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Synthetic parser and catalog regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests/parsers/test_npc_visuals.py
+          cd web
+          npm ci --ignore-scripts
+          npm test
+          npm run typecheck
+      - name: Fetch and verify official UPX decompressor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 60 https://github.com/upx/upx/releases/download/v5.2.1/upx-5.2.1-amd64_linux.tar.xz -o "$RUNNER_TEMP/upx.tar.xz"
+          echo "402162aad30af47e60dbd767fb2e64ca394ace9727ba1f40283641f1d1b91657  $RUNNER_TEMP/upx.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/upx.tar.xz" -C "$RUNNER_TEMP"
+      - name: Static extract fixed-hash 2.2 client
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          echo "c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd  $RUNNER_TEMP/extracted/client/NeoDark.exe" | sha256sum -c -
+          "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" >/dev/null
+          echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/neodark-unpacked.bin" | sha256sum -c -
+      - name: Build full S16 inventory and private gallery
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p web/test-results/s16
+          python3 tools/probe_npc_visuals.py             --client-root "$RUNNER_TEMP/extracted/client"             --image "$RUNNER_TEMP/neodark-unpacked.bin"             --out web/test-results/s16/npc-visual-inventory.json
+          python3 tools/build_npc_visual_gallery.py             --client-root "$RUNNER_TEMP/extracted/client"             --inventory web/test-results/s16/npc-visual-inventory.json             --out web/test-results/s16/gallery             --limit 220
+      - name: Capture private gallery screenshots
+        working-directory: web
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium
+          GALLERY="file://$GITHUB_WORKSPACE/web/test-results/s16/gallery/index.html"
+          npx playwright screenshot --browser=chromium --viewport-size=1600,1000 --wait-for-timeout=1200 "$GALLERY" test-results/s16/gallery-overview.png
+          npx playwright screenshot --browser=chromium --viewport-size=1024,768 --wait-for-timeout=1200 "$GALLERY" test-results/s16/gallery-detail.png
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: s16-npc-visual-gallery
+          path: web/test-results/s16/
+          retention-days: 5
+          if-no-files-found: error
