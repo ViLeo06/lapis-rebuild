@@ -55,6 +55,20 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   checkpoints.start={m4:start,scene:await snap(page)};
   await page.screenshot({path:'test-results/s14-01-m4-field.png',fullPage:true});
 
+  // Use the actual M4 menu -> inventory path and the same legal swordsman
+  // loadout already proven by the S7 real-resource acceptance. The authored
+  // item text is retail data; these training bonuses remain reconstruction.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-ui="game-menu"]')).toBeVisible();
+  await m4Action(page,'inventory');
+  await expect(page.locator('.inventory-panel')).toBeVisible();
+  await page.selectOption('#equip-weapon','3');
+  await page.selectOption('#equip-armor','25');
+  await expect.poll(async()=>{const state=await snap(page);return `${state.inventory.weapon}/${state.inventory.armor}/${state.equipment.attack}/${state.equipment.defense}`;}).toBe('3/25/7/2');
+  checkpoints.equipped={m4:await m4(page),scene:await snap(page)};
+  await m4Action(page,'inventory');
+  await page.keyboard.press('Escape');
+
   // Player-facing world flow: E accepts the reconstruction quest and warps to
   // the objective position on the currently validated field map.
   await page.keyboard.press('e');
