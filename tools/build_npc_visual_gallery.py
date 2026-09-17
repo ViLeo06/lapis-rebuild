@@ -60,8 +60,12 @@ def build(client_root: Path, inventory_path: Path, out: Path, limit: int) -> dic
     for visual_id in selected_ids:
         source = family_by_id[visual_id]
         action_rows = []
+        omitted_actions = []
         for action in source["actions"]:
             action_id = int(action["action"])
+            if int(action["dimensions"].get("non_renderable_frame_count", 0)):
+                omitted_actions.append({"action": action_id, "reason": "paired SPR contains non-renderable original frame bounds"})
+                continue
             ani_path = _ci_file(char_dir, f"B{visual_id}_{action_id:02d}.ani")
             spr_path = _ci_file(char_dir, f"B{visual_id}_{action_id:02d}.spr")
             ani = parse_ani(ani_path)
@@ -85,6 +89,7 @@ def build(client_root: Path, inventory_path: Path, out: Path, limit: int) -> dic
             "classification_evidence": "UNVERIFIED_VISUAL_ROLE",
             "directions": list(BODY_DIRECTIONS),
             "actions": action_rows,
+            "omitted_actions": omitted_actions,
             "provenance": {
                 "source": "fixed-hash 2.2 client Char/Bxxxx_NN",
                 "npc_script_binding": "NONE",
