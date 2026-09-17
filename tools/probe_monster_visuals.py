@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import re
+import struct
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -53,15 +54,56 @@ def union_bounds(frames) -> dict[str, int]:
     }
 
 
+def inspect_spr_header(path: Path) -> dict[str, object]:
+    """Read only the frame table so malformed/unrecovered payloads stay inventory-visible."""
+    data = path.read_bytes()
+    if len(data) < 4:
+        raise ValueError(f"truncated .spr: {path}")
+    frame_count = struct.unpack_from("<I", data, 0)[0]
+    table_end = 4 + frame_count * 16
+    if table_end > len(data):
+        raise ValueError(f"frame table exceeds file size: {path}")
+    raw_bounds = [struct.unpack_from("<4i", data, 4 + i * 16) for i in range(frame_count)]
+    valid = [(i, b) for i, b in enumerate(raw_bounds) if b[2] > b[0] and b[3] > b[1]]
+    invalid = [i for i, b in enumerate(raw_bounds) if b[2] <= b[0] or b[3] <= b[1]]
+    union = None
+    max_width = None
+    max_height = None
+    if valid:
+        union = {
+            "left": min(b[0] for _, b in valid),
+            "top": min(b[1] for _, b in valid),
+            "right": max(b[2] for _, b in valid),
+            "bottom": max(b[3] for _, b in valid),
+        }
+        max_width = max(b[2] - b[0] for _, b in valid)
+        max_height = max(b[3] - b[1] for _, b in valid)
+    return {
+        "frame_count": frame_count,
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "bounds_union": union,
+        "max_frame_width": max_width,
+        "max_frame_height": max_height,
+        "invalid_bound_indices": invalid,
+    }
+
+
 def parse_spr_evidence(path: Path):
-    """Prefer the verified strict decoder but preserve structurally readable outliers."""
+    """Prefer verified decoding, then lossy decoding, then header-only structural evidence."""
+    header = inspect_spr_header(path)
     try:
-        return parse_spr(path), "STRICT", None
-    except ValueError as exc:
-        # Full-client inventory contains families outside the B100/B109 strict
-        # corpus. Non-strict mode preserves bounds/RGB565 spans for preview but
-        # is not promoted to fully verified rendering semantics.
-        return parse_spr(path, strict=False), "NON_STRICT_FALLBACK", str(exc)
+        return parse_spr(path), "STRICT", None, header
+    except ValueError as strict_exc:
+        try:
+            # Full-client inventory contains families outside the B100/B109
+            # strict corpus. This mode can still preserve RGB565 span pixels.
+            return parse_spr(path, strict=False), "NON_STRICT_FALLBACK", str(strict_exc), header
+        except ValueError as fallback_exc:
+            # Some resources contain zero/negative frame rectangles. Their
+            # frame table remains evidence, but current pixel semantics are not
+            # sufficiently recovered to render them safely.
+            error = f"strict: {strict_exc}; non-strict: {fallback_exc}"
+            return None, "HEADER_ONLY_UNRENDERED", error, header
 
 
 def story_model_uses(path: Path) -> dict[str, list[dict[str, object]]]:
@@ -98,11 +140,9 @@ def scan_visual_families(client_root: Path) -> list[dict[str, object]]:
         if spr_path is None:
             raise FileNotFoundError(f"missing paired SPR for {ani_path.name}")
         ani = parse_ani(ani_path)
-        spr, spr_decode_status, spr_strict_error = parse_spr_evidence(spr_path)
-        errors = validate_frame_indices(ani, spr.frame_count)
-        if errors:
-            raise ValueError(f"{ani_path.name}: {errors[0]}")
-        bounds = union_bounds(spr.frames)
+        spr, spr_decode_status, spr_strict_error, spr_meta = parse_spr_evidence(spr_path)
+        errors = validate_frame_indices(ani, int(spr_meta["frame_count"]))
+        bounds = spr_meta["bounds_union"]
         grouped[numeric_id].append({
             "slot": slot,
             "semantic": SLOT_SEMANTICS.get(slot, {"label": None, "provenance": "UNVERIFIED"}),
@@ -113,12 +153,14 @@ def scan_visual_families(client_root: Path) -> list[dict[str, object]]:
             "direction_rows": len(ani.directions),
             "raw_timing": ani.raw_timing,
             "active_frame_indices": len({i for row in ani.directions for i in row}),
-            "spr_frame_count": spr.frame_count,
+            "spr_frame_count": spr_meta["frame_count"],
             "bounds_union": bounds,
-            "max_frame_width": max(f.width for f in spr.frames),
-            "max_frame_height": max(f.height for f in spr.frames),
+            "max_frame_width": spr_meta["max_frame_width"],
+            "max_frame_height": spr_meta["max_frame_height"],
+            "invalid_bound_indices": spr_meta["invalid_bound_indices"],
+            "frame_index_errors": errors,
             "ani_sha256": ani.sha256,
-            "spr_sha256": spr.sha256,
+            "spr_sha256": spr_meta["sha256"],
             "spr_decode_status": spr_decode_status,
             "spr_strict_error": spr_strict_error,
         })
