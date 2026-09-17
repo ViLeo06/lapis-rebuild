@@ -240,7 +240,7 @@ export const RECONSTRUCTION_COMBAT_BALANCE_TUNING: CombatBalanceTuning = Object.
     wizard: Object.freeze({
       attack: 18,
       defense: 10,
-      magicAttack: 36,
+      magicAttack: 44,
       magicDefense: 19,
       evasion: 162,
       criticalChance: 0.08,
