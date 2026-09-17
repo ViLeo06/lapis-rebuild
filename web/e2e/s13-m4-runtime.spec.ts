@@ -40,8 +40,17 @@ test('S13 world quest enters explicit battle and exposes S11 skills through S8 H
 
 test('S13 class switch swaps authored vitals and skill roster while keeping reconstruction provenance explicit',async({page})=>{
   await ready(page);
-  await page.locator('[data-action="menu"]').first().click();
-  await page.locator('[data-action="class-wizard"]').click();
+  // The field HUD is intentionally refreshed from live scene snapshots. Open
+  // the menu with its stable keyboard path, then synchronously dispatch the
+  // delegated class action so Playwright does not require the redrawn node to
+  // remain attached across multiple animation frames.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-action="class-wizard"]')).toBeVisible();
+  await page.evaluate(()=>{
+    const button=document.querySelector<HTMLElement>('[data-action="class-wizard"]');
+    if(!button)throw new Error('Missing wizard class action');
+    button.click();
+  });
   await expect.poll(async()=>(await snap(page)).character).toBe('109');
   await page.keyboard.press('e');
   await page.keyboard.press('e');
