@@ -15,7 +15,7 @@ test('S13 M4 player shell replaces developer-first layout',async({page})=>{
   await expect(page.locator('main > aside')).toHaveCSS('opacity','0.001');
   const state=await m4(page);
   expect(state.quest.stage).toBe('not_started');
-  expect(state.world.mapId).toBe(0);
+  expect(state.world.mapId).toBe(1);
   expect(state.progression.level).toBe(1);
 });
 
