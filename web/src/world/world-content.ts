@@ -3,7 +3,10 @@ import type {WorldEntity,WorldState} from './world-model.ts';
 
 export const TRAINING_MAP_ID=0;
 export const OUTER_CITY_MAP_ID=1;
-export const TRAINING_BATTLE_ZONE_ID=1;
+// S13 aligns the reconstruction quest encounter with the existing playable
+// training battle resource. This is reconstruction policy, not a retail map
+// binding recovered from the retired server.
+export const TRAINING_BATTLE_ZONE_ID=0;
 export const TRAINING_QUEST_ID='s9-training-run';
 
 export const TRAINING_GUIDE:NpcDefinition={
