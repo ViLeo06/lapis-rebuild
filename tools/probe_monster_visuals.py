@@ -53,6 +53,17 @@ def union_bounds(frames) -> dict[str, int]:
     }
 
 
+def parse_spr_evidence(path: Path):
+    """Prefer the verified strict decoder but preserve structurally readable outliers."""
+    try:
+        return parse_spr(path), "STRICT", None
+    except ValueError as exc:
+        # Full-client inventory contains families outside the B100/B109 strict
+        # corpus. Non-strict mode preserves bounds/RGB565 spans for preview but
+        # is not promoted to fully verified rendering semantics.
+        return parse_spr(path, strict=False), "NON_STRICT_FALLBACK", str(exc)
+
+
 def story_model_uses(path: Path) -> dict[str, list[dict[str, object]]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     uses: dict[str, list[dict[str, object]]] = defaultdict(list)
@@ -87,7 +98,7 @@ def scan_visual_families(client_root: Path) -> list[dict[str, object]]:
         if spr_path is None:
             raise FileNotFoundError(f"missing paired SPR for {ani_path.name}")
         ani = parse_ani(ani_path)
-        spr = parse_spr(spr_path)
+        spr, spr_decode_status, spr_strict_error = parse_spr_evidence(spr_path)
         errors = validate_frame_indices(ani, spr.frame_count)
         if errors:
             raise ValueError(f"{ani_path.name}: {errors[0]}")
@@ -108,6 +119,8 @@ def scan_visual_families(client_root: Path) -> list[dict[str, object]]:
             "max_frame_height": max(f.height for f in spr.frames),
             "ani_sha256": ani.sha256,
             "spr_sha256": spr.sha256,
+            "spr_decode_status": spr_decode_status,
+            "spr_strict_error": spr_strict_error,
         })
     families = []
     for numeric_id, slots in sorted(grouped.items()):
@@ -173,6 +186,9 @@ def build_report(client_root: Path, story_manifest: Path) -> dict[str, object]:
         })
     matched = [row for row in correlations if row["same_numeric_visual_family"]]
     action_sets = Counter(",".join(row["action_slots"]) for row in families)
+    decode_statuses = Counter(
+        slot["spr_decode_status"] for family in families for slot in family["slots"]
+    )
     return {
         "schema": 1,
         "scope": "S17 Monster Visual Recovery: fixed-client resource inventory and battle-script correlation only",
@@ -192,6 +208,7 @@ def build_report(client_root: Path, story_manifest: Path) -> dict[str, object]:
             "same_numeric_story_visual_count": len(matched),
             "story_tokens_without_same_numeric_visual": len(numeric_story) - len(matched),
             "action_slot_sets": dict(sorted(action_sets.items(), key=lambda item: (-item[1], item[0]))),
+            "spr_decode_statuses": dict(sorted(decode_statuses.items())),
         },
         "story_model_correlations": correlations,
         "preview_candidate_visual_ids": [row["same_numeric_visual_family"] for row in matched],
