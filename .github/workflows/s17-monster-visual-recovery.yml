@@ -5,8 +5,10 @@ on:
     paths:
       - '.github/workflows/s17-monster-visual-recovery.yml'
       - 'tools/probe_monster_visuals.py'
+      - 'tools/probe_monster_visual_binding.py'
       - 'tools/build_s17_monster_preview.py'
       - 'tests/parsers/test_monster_visual_probe.py'
+      - 'tests/parsers/test_monster_visual_binding.py'
       - 'web/src/content/monsters/**'
       - 'web/tests/monster-visual-catalog.test.ts'
   pull_request:
@@ -25,7 +27,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
       - name: S17 probe unit tests
-        run: python3 -m unittest -v tests/parsers/test_monster_visual_probe.py
+        run: python3 -m unittest -v tests/parsers/test_monster_visual_probe.py tests/parsers/test_monster_visual_binding.py
       - name: Fetch and verify official UPX decompressor
         shell: bash
         run: |
@@ -45,6 +47,7 @@ jobs:
           "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d -o "$RUNNER_TEMP/s17/neodark-unpacked.bin" "$RUNNER_TEMP/extracted/client/NeoDark.exe" > "$RUNNER_TEMP/s17/unpack.log" 2>&1
           chmod 0644 "$RUNNER_TEMP/s17/neodark-unpacked.bin"
           echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/s17/neodark-unpacked.bin" | sha256sum -c -
+          python3 tools/probe_monster_visual_binding.py "$RUNNER_TEMP/s17/neodark-unpacked.bin" --out "$RUNNER_TEMP/s17/monster-visual-binding.json"
       - name: Capture static visual-binding disassembly windows
         shell: bash
         run: |
