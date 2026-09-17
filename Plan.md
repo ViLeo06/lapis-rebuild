@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v2.7｜更新：2026-09-16｜Web-first  
+> 版本：v3.0｜更新：2026-09-18｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -16,7 +16,9 @@
 - M2/G2-Web：通过。SPR 横向切片、角色左右方向、正常画面路线线条和 bounds 调试叠层已经过人工校准。
 - M3：Web 已采用 **FIELD → 独立 BATTLE → RETURN** 结构，并使用行动槽驱动战术移动/攻击，不再把普通地图实时训练当成原作战斗模型。
 - 第一波 S1–S5 已完成并合并。最重要的结果不是“所有旧服务器规则都找到了”，而是把 **客户端能证明什么、服务器曾经决定什么、哪些只能做重构策略** 分清了。
-- 下一阶段切换到 **S6 Runtime Integration**：把第一波已经证明的数据边界真正装进 Web，同时用显式 `RECONSTRUCTION_POLICY` 补齐退役服务器缺失的部分。
+- S6 Runtime Integration 与 S7 Release Validation 已完成：Encounter/AI/Damage/Quest-NPC/ANI 等证据边界已经接入运行时，并通过 fixed-hash 2.2 单 HTML 验证。
+- M4 第二波 S8–S12（Game UI、World/Quest、Battle Presentation、Swordsman/Wizard、Progression/Save）已全部合并；S13 已统一接入 M4 玩家运行时。
+- S14 Release Validation 已完成：final run `35281047574` 的 synthetic、private-original Chromium/offline 与新版 M4 30 分钟真实墙钟 soak 全部 success。最终 HTML SHA-256 为 `28ef2dcadeb0e3e7216f9b21cff44e725b54b2854944230df0db7c5433fd462c`。
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -129,6 +131,9 @@ S4 已到达明确的 client evidence boundary：
 | 浏览器稳定性 | 30 分钟真实墙钟 soak 成功 | run `34969057806`，旧检查点 |
 | v4 private-original | fixed-hash smoke 成功 | run `35059120452` |
 | 第一波 S1–S5 主 CI | 五个 PR head 均 success | PR #7–#11 |
+| S13 M4 runtime | 玩家 HUD/任务/职业/成长/表现统一接入 | merge `8b437124cc5d2242af080191ef8ca92764a47615` |
+| S14 final private-original | fixed-hash 2.2 browser/offline + M4 acceptance + 30min soak 全通过 | run `35281047574` |
+| M4 最终单 HTML | 8,709,711 bytes | SHA-256 `28ef2dca...fd462c` |
 
 ### 0.5 当前真正没解决的东西
 
@@ -147,17 +152,17 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-当前不再继续开五条静态考古线。下一阶段是 **S6 Runtime Integration**：
+M4 **Playable Nostalgia Slice** 已通过 S14 收口。下一阶段进入 **M5 Content Depth / Playtest Iteration**，由用户真实试玩反馈驱动，不再为了“多考古”本身扩张范围：
 
-1. 新建 `codex/runtime-integration`，从第一波全部合并后的最新 `main` 开始；
-2. 建立明确的 `EncounterAuthority / BattleEntry` 边界，battle zone 必须是显式输入，不能从 field map 猜；
-3. 把 AI program source/precedence、candidate selection 和客户端/服务端 split 接入数据模型；
-4. 把伤害处理拆成“authored retail stats”与“offline reconstruction damage policy”，严禁混在一起；
-5. 把 Quest/NPC 建成 server-selected presentation state + reconstruction rule layer，不做数字 ID 直连；
-6. 把 ANI raw timing、hit reaction state 3、zone BGM 等 S5 已证实内容接入表现层；
-7. 仍未恢复的 death/MagicRes placement/occlusion 等保持可替换策略；
-8. 补 unit + Chromium E2E，形成新的 field → interaction → authority → battle → return 可玩切片；
-9. S6 合并后进入 S7 Release Validation，重新生成 private-original single HTML 并人工试玩。
+1. 先收集 M4 HTML 的人工试玩问题，按“阻断 / 明显违和 / 可后置”分级；
+2. 清理剩余开发态视觉痕迹（包括旧 footer build label），继续把默认界面向正常游戏靠拢；
+3. 扩充第二个可靠 field map、NPC/Quest 片段和连续地图流程，但所有退役服务器缺口继续走 reconstruction authority；
+4. 深化剑士/巫师技能、装备、成长与表现，不伪造 exact retail damage/progression 公式；
+5. 在证据允许时启用真实音频链；无法证明的 fade/loop/trigger 继续隔离为可替换策略；
+6. 每个可玩里程碑继续执行 synthetic -> fixed-hash private-original -> single HTML -> 人工试玩；重大运行时改动再跑真实墙钟 soak；
+7. 只有拿到旧服务端、packet capture、录像或其他独立证据时，才重新打开被标记为 server-boundary 的原版语义问题。
+
+S14 的详细验收记录见 `docs/validation/s14-m4-release-20260918.md`。
 
 ---
 
