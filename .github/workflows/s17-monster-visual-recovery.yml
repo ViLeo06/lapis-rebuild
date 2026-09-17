@@ -9,6 +9,8 @@ on:
       - 'tests/parsers/test_monster_visual_probe.py'
       - 'web/src/content/monsters/**'
       - 'web/tests/monster-visual-catalog.test.ts'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
