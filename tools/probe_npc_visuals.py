@@ -166,6 +166,8 @@ def _body_inventory(client_root: Path) -> tuple[list[dict], dict]:
                     "max_frame_width": spr["max_frame_width"],
                     "max_frame_height": spr["max_frame_height"],
                     "empty_frame_count": spr["empty_frame_count"],
+                    "inverted_frame_count": spr["inverted_frame_count"],
+                    "non_renderable_frame_count": spr["non_renderable_frame_count"],
                 },
             }
             actions[action] = action_meta
