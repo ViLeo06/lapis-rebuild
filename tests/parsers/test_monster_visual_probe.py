@@ -24,13 +24,13 @@ def write_ani(path: Path, *, slot_frame: int = 0) -> None:
     path.write_bytes(data)
 
 
-def write_spr(path: Path) -> None:
+def write_spr(path: Path, *, row_count: int = 2) -> None:
     data = bytearray()
     data += struct.pack("<I", 1)
     data += struct.pack("<4i", -1, -2, 1, 0)
     payload = bytearray()
-    payload += struct.pack("<H", 2)
-    for _ in range(2):
+    payload += struct.pack("<H", row_count)
+    for _ in range(row_count):
         payload += struct.pack("<H", 1)
         payload += struct.pack("<HH", 0, 2)
         payload += struct.pack("<HH", 0xFFFF, 0x07E0)
@@ -68,6 +68,14 @@ class MonsterVisualProbeTests(unittest.TestCase):
             self.assertEqual(by_slot["05"]["semantic"]["provenance"], "UNVERIFIED")
             self.assertIsNone(family["death_semantic"]["slot"])
             self.assertEqual(family["direction_semantics"]["status"], "UNVERIFIED_FOR_UNCHECKED_FAMILY")
+
+    def test_non_strict_spr_fallback_is_explicit(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "outlier.spr"
+            write_spr(path, row_count=1)
+            _spr, status, error = probe.parse_spr_evidence(path)
+            self.assertEqual(status, "NON_STRICT_FALLBACK")
+            self.assertIn("row_count=1, height=2", error)
 
     def test_report_numeric_match_is_only_correlation(self):
         with tempfile.TemporaryDirectory() as td:
