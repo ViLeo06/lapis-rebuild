@@ -72,4 +72,7 @@ test('graph/controller reject missing edge triggers and stale commits',()=>{
   assert.throws(()=>controller.commit(request),/Stale/);
   const bypass=new SceneTransitionController(policy.graph,policy.triggers);bypass.start({mapId:1,cell:[7,7]});
   assert.throws(()=>bypass.update({mapId:2,cell:[2,2]}),/without transition commit/);
+  const drift=new SceneTransitionController(policy.graph,policy.triggers);drift.start({mapId:1,cell:[7,7]});
+  const original=drift.update({mapId:1,cell:[8,8]}).transition!;
+  assert.throws(()=>drift.commit({...original,to:{...original.to,cell:[3,3]}}),/drift/);
 });
