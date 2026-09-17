@@ -1,13 +1,19 @@
 import type {NpcDefinition} from './npc-model.ts';
 import type {WorldEntity,WorldState} from './world-model.ts';
 
-export const TRAINING_MAP_ID=0;
+// The current S7/S13 playable pack exposes map 1 as the validated field map
+// and map 0 as the playable battle resource. Until another field map is wired
+// with equivalent validation, the M4 quest uses two locations on map 1 rather
+// than pretending the battle map is an ordinary field map.
+export const TRAINING_MAP_ID=1;
 export const OUTER_CITY_MAP_ID=1;
-export const TRAINING_BATTLE_ZONE_ID=1;
+// Reconstruction binding to the existing playable training battle resource.
+// This is not a recovered retail field-map -> battle-zone mapping.
+export const TRAINING_BATTLE_ZONE_ID=0;
 export const TRAINING_QUEST_ID='s9-training-run';
 
 export const TRAINING_GUIDE:NpcDefinition={
-  entity:{id:'training-guide',kind:'npc',mapId:TRAINING_MAP_ID,x:32,y:32,displayName:'训练引导员',interactionRadius:2,provenance:'RECONSTRUCTION_POLICY'},
+  entity:{id:'training-guide',kind:'npc',mapId:TRAINING_MAP_ID,x:22,y:24,displayName:'训练引导员',interactionRadius:2,provenance:'RECONSTRUCTION_POLICY'},
   questId:TRAINING_QUEST_ID,
   shortDialogue:{
     available:['外城附近有一场训练战斗。先去确认路线，再回来汇报。'],
@@ -19,11 +25,11 @@ export const TRAINING_GUIDE:NpcDefinition={
 };
 
 export const OUTER_CITY_OBJECTIVE:WorldEntity={
-  id:'outer-city-training-marker',kind:'encounter',mapId:OUTER_CITY_MAP_ID,x:48,y:48,displayName:'外城训练点',interactionRadius:1,provenance:'RECONSTRUCTION_POLICY',
+  id:'outer-city-training-marker',kind:'encounter',mapId:OUTER_CITY_MAP_ID,x:26,y:24,displayName:'外城训练点',interactionRadius:1,provenance:'RECONSTRUCTION_POLICY',
 };
 
-export const START_STATE:WorldState={mapId:TRAINING_MAP_ID,x:32,y:33};
-export const OUTER_CITY_ENTRY:WorldState={mapId:OUTER_CITY_MAP_ID,x:47,y:48};
-export const TRAINING_RETURN:WorldState={mapId:TRAINING_MAP_ID,x:32,y:33};
+export const START_STATE:WorldState={mapId:TRAINING_MAP_ID,x:22,y:24};
+export const OUTER_CITY_ENTRY:WorldState={mapId:OUTER_CITY_MAP_ID,x:26,y:24};
+export const TRAINING_RETURN:WorldState={mapId:TRAINING_MAP_ID,x:22,y:24};
 
 export const WORLD_ENTITIES:readonly WorldEntity[]=[TRAINING_GUIDE.entity,OUTER_CITY_OBJECTIVE];
