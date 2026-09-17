@@ -104,7 +104,7 @@ test('deterministic simulations cover 1v1 and 2v1 swordsman/wizard playability t
   const wizard2=simulateCombatBatch({playerClassId:109,enemyCount:2},400,1);
   for(const sample of [sword1,sword2,wizard1,wizard2]){
     assert.equal(sample.provenance,'RECONSTRUCTION_POLICY');
-    assert.equal(sample.deathRate,1-sample.winRate);
+    assert.ok(Math.abs(sample.deathRate-(1-sample.winRate))<1e-12);
     assert.ok(sample.meanDurationSeconds>=4&&sample.meanDurationSeconds<=20);
     assert.ok(sample.p90DurationSeconds<=25);
     assert.ok(sample.meanPlayerActions>=2&&sample.meanPlayerActions<=20);
