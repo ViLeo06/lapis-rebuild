@@ -1,8 +1,9 @@
-// A real wall-clock browser soak, not a simulated-time test.
+// A real wall-clock M4 browser soak, not a simulated-time test.
 import {chromium} from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {performance} from 'node:perf_hooks';
 import {pathToFileURL} from 'node:url';
+
 const preview=process.env.LAPIS_OFFLINE_PREVIEW;
 if(!preview)throw new Error('LAPIS_OFFLINE_PREVIEW required');
 const durationMs=30*60*1000;
@@ -10,45 +11,118 @@ await mkdir('test-results/soak',{recursive:true});
 const browser=await chromium.launch();
 const page=await browser.newPage({viewport:{width:1440,height:1080}});
 const errors=[],external=[],samples=[];
-page.on('pageerror',e=>errors.push(e.message));page.on('crash',()=>errors.push('page crashed'));
-page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});
+page.on('pageerror',error=>errors.push(error.message));
+page.on('crash',()=>errors.push('page crashed'));
+page.on('request',request=>{if(/^https?:/.test(request.url()))external.push(request.url());});
+
+async function clickAction(action){
+ await page.evaluate(value=>{
+  const button=document.querySelector(`[data-action="${value}"]`);
+  if(!(button instanceof HTMLButtonElement))throw new Error(`Missing M4 action ${value}`);
+  button.click();
+ },action);
+}
+
+async function switchClass(character){
+ const action=character==='100'?'class-swordsman':'class-wizard';
+ await clickAction(action);
+ await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,character);
+}
+
+async function equipLoadout(character){
+ const gear=character==='100'?{weapon:'3',armor:'25'}:{weapon:'12',armor:'31'};
+ await clickAction('inventory');
+ await page.waitForFunction(()=>document.body.classList.contains('m4-inventory-open'));
+ await page.waitForFunction(({weapon,armor})=>{
+  const w=document.querySelector('#equip-weapon');
+  const a=document.querySelector('#equip-armor');
+  if(!(w instanceof HTMLSelectElement)||!(a instanceof HTMLSelectElement))return false;
+  return [...w.options].some(option=>option.value===weapon)&&[...a.options].some(option=>option.value===armor);
+ },gear);
+ await page.selectOption('#equip-weapon',gear.weapon);
+ await page.selectOption('#equip-armor',gear.armor);
+ await clickAction('inventory');
+ await page.waitForFunction(()=>!document.body.classList.contains('m4-inventory-open'));
+ return gear;
+}
+
+async function setDiagnostics(enabled){
+ await page.evaluate(value=>{
+  const toggle=document.querySelector('[data-action="dev-toggle"]');
+  if(!(toggle instanceof HTMLInputElement))throw new Error('Missing developer diagnostics toggle');
+  toggle.checked=value;
+  toggle.dispatchEvent(new Event('change',{bubbles:true}));
+ },enabled);
+ await page.waitForFunction(value=>document.body.classList.contains('m4-dev-enabled')===value,enabled);
+}
+
 let started=0;
 try{
- await page.goto(pathToFileURL(preview).href);
- await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);
- const maps=await page.locator('#map option').evaluateAll(opts=>opts.map(o=>o.value));
- const effects=await page.locator('#effect option').evaluateAll(opts=>opts.map(o=>o.value));
- if(maps.length<2)throw new Error('Soak requires at least two maps');
- if(effects.length<1)throw new Error('Soak requires at least one effect');
+ const url=pathToFileURL(preview);
+ url.searchParams.set('m4','1');
+ await page.goto(url.href);
+ await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready&&!!window.lapisM4);
+ await page.waitForFunction(()=>document.body.classList.contains('m4-active'));
  started=performance.now();
  let cycle=0;
  while(performance.now()-started<durationMs){
-  const cid=cycle%2?'109':'100';
-  await page.selectOption('#character',cid);
-  await page.selectOption('#action',['00','01','02','03','05'][cycle%5]);
-  await page.selectOption('#direction',String(cycle%8));
-  await page.selectOption('#map',maps[cycle%maps.length]);
-  await page.selectOption('#effect',effects[cycle%effects.length]);
-  await page.click('#effect-play');
-  await page.check('#anchors');
-  await page.locator('#grid').setChecked(cycle%2===0);
-  await page.locator('#collision').setChecked(cycle%3===0);
-  const snap=await page.evaluate(()=>window.lapisDiagnostics.snapshot());
-  if(!snap.playing)await page.click('#play');
-  const duration=Math.min(30000,durationMs-(performance.now()-started));
-  if(duration>0)await page.waitForTimeout(duration);
-  const after=await page.evaluate(()=>window.lapisDiagnostics.snapshot());
-  if(!after.ready||!Number.isFinite(after.anchor.x)||after.frame<0||after.cursor>=after.length)throw new Error('Invalid live state');
-  if(!maps.includes(String(after.mapId)))throw new Error('Invalid map state');
-  if(!after.effect||!effects.includes(String(after.effect.id))||after.effect.frame<0||after.effect.frame>=after.effect.length)throw new Error('Invalid effect state');
+  const character=cycle%2?'109':'100';
+  await switchClass(character);
+  const gear=await equipLoadout(character);
+  const developerMode=cycle%2===0;
+  await setDiagnostics(developerMode);
+
+  // Exercise the public M4 persistence surface repeatedly while staying on
+  // the field. Combat/quest completion is covered by S14 browser acceptance.
+  await page.evaluate(async()=>{await window.lapisM4.save();await window.lapisM4.load();});
+
+  const remaining=durationMs-(performance.now()-started);
+  const pause=Math.min(30000,Math.max(0,remaining));
+  if(pause>0)await page.waitForTimeout(pause);
+
+  const state=await page.evaluate(()=>({
+   scene:window.lapisDiagnostics.snapshot(),
+   m4:window.lapisM4.snapshot(),
+   save:JSON.parse(window.lapisM4.exportJson()),
+   bodyClass:document.body.className,
+  }));
+  if(!state.scene.ready||state.scene.inBattleView)throw new Error('Invalid M4 field state');
+  if(state.scene.character!==character)throw new Error('M4 class switch did not persist');
+  if(state.scene.inventory.weapon!==Number(gear.weapon)||state.scene.inventory.armor!==Number(gear.armor))throw new Error('M4 equipment did not persist');
+  if(state.save.version!==2||state.save.character!==character)throw new Error('Invalid M4 SaveV2 state');
+  if(state.m4.developerMode!==developerMode)throw new Error('M4 diagnostics toggle did not persist');
+  if(!Number.isFinite(state.scene.anchor.x)||!Number.isFinite(state.scene.anchor.y)||state.scene.frame<0)throw new Error('Invalid live render state');
   if(errors.length||external.length)throw new Error('Browser error or external request');
-  samples.push({elapsedMs:Math.round(performance.now()-started),mapId:after.mapId,character:after.character,slot:after.slot,direction:after.direction,frame:after.frame,effectId:after.effect.id,effectFrame:after.effect.frame,fps:after.fps});
-  console.log(JSON.stringify(samples.at(-1)));cycle++;
+  const sample={
+   elapsedMs:Math.round(performance.now()-started),
+   character,
+   mapId:state.scene.mapId,
+   frame:state.scene.frame,
+   fps:state.scene.fps,
+   weapon:state.scene.inventory.weapon,
+   armor:state.scene.inventory.armor,
+   developerMode:state.m4.developerMode,
+   questStage:state.m4.quest.stage,
+   saveVersion:state.save.version,
+  };
+  samples.push(sample);
+  console.log(JSON.stringify(sample));
+  cycle+=1;
  }
  await page.screenshot({path:'test-results/soak/end.png',fullPage:true});
  const elapsedMs=Math.round(performance.now()-started);
  if(elapsedMs<durationMs)throw new Error('Wall-clock interval incomplete');
- await writeFile('test-results/soak/report.json',JSON.stringify({status:'passed',scope:'30-minute real-time browser diagnostic soak across character animation, two maps, collision overlays and FOCUS SPR-order playback; not combat or broad-browser certification',elapsedMs,samples,errors,external},null,2));
-}catch(e){
- await writeFile('test-results/soak/report.json',JSON.stringify({status:'failed',elapsedMs:started?Math.round(performance.now()-started):0,error:String(e),samples,errors,external},null,2));throw e;
-}finally{await browser.close();}
+ await writeFile('test-results/soak/report.json',JSON.stringify({
+  status:'passed',
+  scope:'30-minute real-time M4 field soak across player HUD, swordsman/wizard class switching, M4 inventory/equipment, SaveV2 save/load and opt-in diagnostics. Combat and quest completion are covered separately by S14 manual-style browser acceptance.',
+  elapsedMs,
+  samples,
+  errors,
+  external,
+ },null,2));
+}catch(error){
+ await writeFile('test-results/soak/report.json',JSON.stringify({status:'failed',elapsedMs:started?Math.round(performance.now()-started):0,error:String(error),samples,errors,external},null,2));
+ throw error;
+}finally{
+ await browser.close();
+}
