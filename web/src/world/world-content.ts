@@ -23,7 +23,7 @@ export const OUTER_CITY_OBJECTIVE:WorldEntity={
 };
 
 export const START_STATE:WorldState={mapId:TRAINING_MAP_ID,x:32,y:33};
-export const OUTER_CITY_ENTRY:WorldState={mapId:OUTER_CITY_MAP_ID,x:46,y:48};
+export const OUTER_CITY_ENTRY:WorldState={mapId:OUTER_CITY_MAP_ID,x:47,y:48};
 export const TRAINING_RETURN:WorldState={mapId:TRAINING_MAP_ID,x:32,y:33};
 
 export const WORLD_ENTITIES:readonly WorldEntity[]=[TRAINING_GUIDE.entity,OUTER_CITY_OBJECTIVE];
