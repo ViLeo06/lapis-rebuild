@@ -69,6 +69,11 @@
 | WEB-058 | VERIFIED-STATIC-ORIGINAL | BGM selection is zone-driven and formats `Sound/NDS-8%03d.mid`; all 178,227 parsed SMF records have signed `layer=-1`, so that field is not recovered foreground z-order | S5 BGM/map/audio probe; SMF flags→occlusion remains unresolved |
 | WEB-059 | VERIFIED-ENGINEERING | S1–S5 PR heads (#7–#11) all passed Web/parser CI before merge; dedicated fixed-hash static workflows used by S2/S3/S4/S5 also reported success | 2026-09-16 coordinated review before merge |
 
+| WEB-060 | VERIFIED-ENGINEERING | M4 S8–S12 modules are merged and S13 connects player UI, reconstruction world/quest authority, battle presentation, swordsman/wizard class data and progression/SaveV2 to the validated Phaser runtime | S13 merge `8b437124cc5d2242af080191ef8ca92764a47615`; integration note `docs/integration-notes/s13-m4-runtime-integration.md` |
+| WEB-061 | VERIFIED-ENGINEERING | S14 fixed-hash 2.2 release run passed synthetic and private-original build, standalone HTML, Chromium and offline acceptance, including player-facing swordsman quest and wizard magic paths | run `35281047574`; executable head `84d625bf613fa4d5437ab453caaf14f266b12ec6` |
+| WEB-062 | VERIFIED-ENGINEERING | New M4 wall-clock soak completed for 1,800,543 ms with 59 samples, repeated swordsman/wizard switching, legal equipment, SaveV2 save/load and diagnostics toggling; report recorded zero page errors and zero external HTTP(S) requests | run `35281047574`, `soak/report.json` in `private-original-validation` |
+| WEB-063 | VERIFIED-ENGINEERING | Final M4 private single HTML is 8,709,711 bytes with SHA-256 `28ef2dcadeb0e3e7216f9b21cff44e725b54b2854944230df0db7c5433fd462c` | artifact `10523033653` from run `35281047574`; fixed-hash 2.2 asset pipeline |
+
 ## Interpretation boundaries
 
 - `Body_` direction evidence applies to checked character families; it must not be mechanically applied to `FOCUS` MagicRes or other layer families.

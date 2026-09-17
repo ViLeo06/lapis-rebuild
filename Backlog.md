@@ -1,6 +1,6 @@
 # Backlog
 
-> 2026-09-16 | Web-first | Plan v2.7 | post S1–S5 closure | next: S6 Runtime Integration
+> 2026-09-18 | Web-first | Plan v3.0 | M4 S8–S14 closure | next: M5 playtest iteration
 
 ## 已完成基线
 
@@ -19,8 +19,8 @@
 - [x] B100/B109 Body_ raw direction `S,SW,W,NW,N,NE,E,SE`；east/west 修复并人工复测确认。
 - [x] 正常移动 route polyline 移除；bounds/anchor 默认隐藏，仅 Debug Panel opt-in。
 - [x] v4 使用 20 格 readiness、满槽门禁、MOVE/ATTACK/REST=6/4/5、离散 tick +1；500ms 仍标 `RECOVERED_SECONDARY`。
-- [ ] S6 完成后重新人工试玩：field interaction → battle entry、行动等待、AI、攻击/受击、施法、结算、返回。
-- [ ] S6 视觉整合后重点复核 ANI cadence、hit reaction、BGM、MagicRes 临时策略和遮挡。
+- [x] S6/S7 后已重新人工式试玩：field interaction → battle entry、行动等待、AI、攻击/受击、施法、结算、返回。
+- [x] S6/S7/S14 已复核 ANI cadence、hit reaction、MagicRes 临时策略与可玩表现；未恢复的 retail placement/occlusion/audio 语义继续保留边界。
 
 ## S1 Encounter — 已收口
 
@@ -78,32 +78,40 @@
 - [ ] SMF flags → foreground occlusion 语义。
 - [ ] 完整 magic/death/attack SFX trigger，BGM fade/restart/loop。
 
-## S6 Runtime Integration — 下一步
+## S6 Runtime Integration — 已收口
 
-分支建议：`codex/runtime-integration`
+- [x] 建立 InteractionIntent / BattleEntry 显式权威边界。
+- [x] 接入 world/scene-object interaction gate 与 provenance。
+- [x] AI program source/precedence 与训练 reconstruction AI 分层。
+- [x] RetailAuthoredStats 与 ReconstructionDamagePolicy 分层。
+- [x] Quest/NPC server-selected presentation boundary + offline reconstruction authority。
+- [x] ANI raw timing、state3 hit reaction、zone BGM selector 接入。
+- [x] death / MagicRes placement / occlusion 等未知项保留可替换 policy。
+- [x] field → battle → action/result → return 可玩闭环。
+- [x] 剑士、巫师代表动作/技能通过浏览器回归。
 
-- [ ] 建立 `InteractionIntent -> EncounterAuthority -> BattleEntry`，显式传入 `battleZoneId`，禁止 field map 猜 battle map。
-- [ ] 接入 world entity `<4` / scene object `<9` 两套交互 gate，保留不同 runtime id 字段和 provenance。
-- [ ] 建立 AI program source/precedence 数据模型；接入已恢复 candidate selection，不把训练 AI 冒充历史具体 program。
-- [ ] 分开 `RetailAuthoredStats` 与 `ReconstructionDamagePolicy`；所有临时伤害公式集中、可替换、显式 UNVERIFIED。
-- [ ] 建立 Quest/NPC server-selected presentation state + offline reconstruction authority；禁止数字 ID 直连世界实体。
-- [ ] 接入 ANI raw timing policy、state3 hit reaction、zone BGM。
-- [ ] death / MagicRes placement / occlusion 等未知项只做可替换 policy，不写成 VERIFIED。
-- [ ] 形成新的 field → interaction → authority → battle → action → result → return 可玩闭环。
-- [ ] 剑士和巫师都走通普通攻击 + 至少代表技能。
-- [ ] unit tests + Chromium E2E + standalone synthetic preview 全绿。
-- [ ] 整理 S6 integration report / PR；合并前做独立审查。
+## S7 Release Validation — 已收口
 
-## S7 Release Validation — S6 后执行
+- [x] fixed-hash 2.2 private-original smoke。
+- [x] standalone single HTML。
+- [x] Chromium browser + offline tests。
+- [x] 人工式完整试玩。
+- [x] provenance / copyright boundary 复核。
 
-- [ ] fixed-hash 2.2 private-original smoke。
-- [ ] 重新生成 standalone single HTML。
-- [ ] Chromium browser + offline tests。
-- [ ] 人工式完整试玩与人物/地图/战斗/特效/音频 spot-check。
-- [ ] 必要时重新跑 30 分钟真实墙钟 soak。
-- [ ] 检查版权资源没有进入 Git。
-- [ ] 检查 `UNVERIFIED/RECONSTRUCTION_POLICY` 没有误标 original/recovered。
-- [ ] 形成 validation report。
+## M4 S8–S14 — 已收口
+
+- [x] S8 Game UI：默认玩家 HUD / Battle HUD / menu；Developer diagnostics opt-in。
+- [x] S9 World/Quest：数据驱动 reconstruction quest slice 与 world authority。
+- [x] S10 Battle Presentation：attack/hit/death/magic/audio presentation policy 分层。
+- [x] S11 Swordsman/Wizard：职业目录、合法装备、代表技能、MP/range/effect 数据。
+- [x] S12 Progression/Save：inventory/equipment/reward/EXP/SaveV2/migration。
+- [x] S13 Runtime Integration：五条模块统一接入旧 S7 Phaser runtime；merge `8b437124cc5d2242af080191ef8ca92764a47615`。
+- [x] S14 manual-style swordsman quest path：quest complete / 15 gold / 300 EXP / Lv3 / SaveV2。
+- [x] S14 wizard：authored HP/MP + visible magic + diagnostics opt-in。
+- [x] S14 fixed-hash final run `35281047574`：synthetic + private-original 全成功。
+- [x] S14 新版 M4 30 分钟真实墙钟 soak：`1,800,543 ms`、59 samples、0 page error、0 external request。
+- [x] 最终 HTML：8,709,711 bytes；SHA-256 `28ef2dcadeb0e3e7216f9b21cff44e725b54b2854944230df0db7c5433fd462c`。
+- [x] 验收报告：`docs/validation/s14-m4-release-20260918.md`。
 
 ## M5+ 后续
 
