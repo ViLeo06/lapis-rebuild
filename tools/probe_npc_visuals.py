@@ -165,6 +165,7 @@ def _body_inventory(client_root: Path) -> tuple[list[dict], dict]:
                     "bounds_union": spr["bounds_union"],
                     "max_frame_width": spr["max_frame_width"],
                     "max_frame_height": spr["max_frame_height"],
+                    "empty_frame_count": spr["empty_frame_count"],
                 },
             }
             actions[action] = action_meta
