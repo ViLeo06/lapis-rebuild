@@ -140,7 +140,9 @@ def scan_visual_families(client_root: Path) -> list[dict[str, object]]:
         if spr_path is None:
             raise FileNotFoundError(f"missing paired SPR for {ani_path.name}")
         ani = parse_ani(ani_path)
-        spr, spr_decode_status, spr_strict_error, spr_meta = parse_spr_evidence(spr_path)
+        spr_meta = inspect_spr_header(spr_path)
+        spr_decode_status = "HEADER_TABLE_ONLY"
+        spr_strict_error = None
         errors = validate_frame_indices(ani, int(spr_meta["frame_count"]))
         bounds = spr_meta["bounds_union"]
         grouped[numeric_id].append({
@@ -228,9 +230,7 @@ def build_report(client_root: Path, story_manifest: Path) -> dict[str, object]:
         })
     matched = [row for row in correlations if row["same_numeric_visual_family"]]
     action_sets = Counter(",".join(row["action_slots"]) for row in families)
-    decode_statuses = Counter(
-        slot["spr_decode_status"] for family in families for slot in family["slots"]
-    )
+    decode_statuses = Counter(slot["spr_decode_status"] for family in families for slot in family["slots"])
     return {
         "schema": 1,
         "scope": "S17 Monster Visual Recovery: fixed-client resource inventory and battle-script correlation only",
@@ -250,13 +250,14 @@ def build_report(client_root: Path, story_manifest: Path) -> dict[str, object]:
             "same_numeric_story_visual_count": len(matched),
             "story_tokens_without_same_numeric_visual": len(numeric_story) - len(matched),
             "action_slot_sets": dict(sorted(action_sets.items(), key=lambda item: (-item[1], item[0]))),
-            "spr_decode_statuses": dict(sorted(decode_statuses.items())),
+            "spr_inventory_statuses": dict(sorted(decode_statuses.items())),
         },
         "story_model_correlations": correlations,
         "preview_candidate_visual_ids": [row["same_numeric_visual_family"] for row in matched],
         "tip_libraries": tips,
         "visual_families": families,
         "warnings": [
+            "Full inventory reads ANI semantics plus SPR frame-table/hash only; pixel decoding is deliberately limited to preview candidates.",
             "This report does not decide which visual family is a monster. Human visual review and/or an independent runtime binding is required.",
             "Do not bind battle roster IDs, story CHARPOS model tokens, NPCScript IDs or world entity IDs to visual families solely because numbers match.",
             "Death remains unresolved; any fade/collapse fallback must be labelled RECONSTRUCTION_POLICY.",
