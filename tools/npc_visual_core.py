@@ -184,19 +184,22 @@ def fast_spr_metadata(path: Path) -> dict:
     if end > len(data):
         raise ValueError(f"SPR frame table exceeds file: {path}")
     bounds = [struct.unpack_from("<4i", data, 4 + i * 16) for i in range(count)]
-    if any(r <= l or b <= t for l, t, r, b in bounds):
-        raise ValueError(f"SPR invalid frame bounds: {path}")
-    widths = [r - l for l, t, r, b in bounds]
-    heights = [b - t for l, t, r, b in bounds]
+    if any(r < l or b < t for l, t, r, b in bounds):
+        raise ValueError(f"SPR inverted frame bounds: {path}")
+    nonempty = [(l, t, r, b) for l, t, r, b in bounds if r > l and b > t]
+    empty_frame_count = len(bounds) - len(nonempty)
+    widths = [r - l for l, t, r, b in nonempty]
+    heights = [b - t for l, t, r, b in nonempty]
     return {
         "frame_count": count,
         "size": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
+        "empty_frame_count": empty_frame_count,
         "bounds_union": {
-            "left": min((x[0] for x in bounds), default=0),
-            "top": min((x[1] for x in bounds), default=0),
-            "right": max((x[2] for x in bounds), default=0),
-            "bottom": max((x[3] for x in bounds), default=0),
+            "left": min((x[0] for x in nonempty), default=0),
+            "top": min((x[1] for x in nonempty), default=0),
+            "right": max((x[2] for x in nonempty), default=0),
+            "bottom": max((x[3] for x in nonempty), default=0),
         },
         "max_frame_width": max(widths, default=0),
         "max_frame_height": max(heights, default=0),
