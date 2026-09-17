@@ -1,0 +1,57 @@
+name: S17 monster visual recovery
+on:
+  push:
+    branches: ['codex/m5-monster-visual-recovery']
+    paths:
+      - '.github/workflows/s17-monster-visual-recovery.yml'
+      - 'tools/probe_monster_visuals.py'
+      - 'tools/build_s17_monster_preview.py'
+      - 'tests/parsers/test_monster_visual_probe.py'
+      - 'web/src/content/monsters/**'
+      - 'web/tests/monster-visual-catalog.test.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: s17-monster-visual-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fixed-client-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: S17 probe unit tests
+        run: python3 -m unittest -v tests/parsers/test_monster_visual_probe.py
+      - name: Fetch and statically extract fixed-hash 2.2 client
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          mkdir -p "$RUNNER_TEMP/s17"
+      - name: Inventory visual families and cross-check story battle model tokens
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/probe_monster_visuals.py             --client-root "$RUNNER_TEMP/extracted/client"             --story-manifest manifests/story-battle-scenes.json             --out "$RUNNER_TEMP/s17/monster-visual-inventory.json"
+          python3 tools/build_s17_monster_preview.py             --client-root "$RUNNER_TEMP/extracted/client"             --report "$RUNNER_TEMP/s17/monster-visual-inventory.json"             --out "$RUNNER_TEMP/s17/gallery"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'s17'
+          report=json.loads((root/'monster-visual-inventory.json').read_text(encoding='utf-8'))
+          gallery=json.loads((root/'gallery'/'gallery-data.json').read_text(encoding='utf-8'))
+          print(json.dumps(report['summary'],ensure_ascii=False,indent=2))
+          print('preview families', [row['visual_id'] for row in gallery['families']])
+          print('warnings', report['warnings'])
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: s17-monster-visual-recovery
+          path: ${{ runner.temp }}/s17/
+          retention-days: 7
+          if-no-files-found: error
