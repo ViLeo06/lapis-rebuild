@@ -15,8 +15,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "convert"))
+sys.path.insert(0, str(ROOT / "tools"))
 from ani import parse_ani  # type: ignore
-from spr import parse_spr, write_png  # type: ignore
+from spr import write_png  # type: ignore
+from probe_monster_visuals import parse_spr_evidence  # type: ignore
 
 SEMANTIC = {
     "00": ("idle", "RECOVERED_SECONDARY"),
@@ -101,7 +103,8 @@ def build_family(client_root: Path, family_id: str, slots: list[str], out: Path)
         spr_path = files.get((stem + ".spr").lower())
         if not ani_path or not spr_path:
             continue
-        ani, spr = parse_ani(ani_path), parse_spr(spr_path)
+        ani = parse_ani(ani_path)
+        spr, spr_decode_status, spr_strict_error = parse_spr_evidence(spr_path)
         rows = [list(row) for row in ani.directions]
         indices = [i for row in rows for i in row]
         slot_dir = out / family_id / slot
@@ -117,6 +120,8 @@ def build_family(client_root: Path, family_id: str, slots: list[str], out: Path)
             "rows": [[f"{family_id}/{slot}/frames/{frame_files[i]}" for i in row] for row in rows],
             "bounds": bounds,
             "contact_sheet": f"{family_id}/{slot}/contact-8rows.png",
+            "spr_decode_status": spr_decode_status,
+            "spr_strict_error": spr_strict_error,
         }
         sheets.append({"slot": slot, "semantic": semantic, "provenance": provenance, "path": f"{family_id}/{slot}/contact-8rows.png", **sheet})
     return {
