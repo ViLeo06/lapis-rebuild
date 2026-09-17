@@ -61,7 +61,16 @@ export class SceneTransitionController{
     const edge=this.graph.transitions.find(candidate=>candidate.id===request.edgeId);
     if(!edge)throw new Error('Unknown scene transition edge');
     const arrival=arrivalForEdge(this.graph,edge);
-    if(arrival.scene.id!==request.to.sceneId||arrival.scene.mapId!==request.to.mapId||arrival.spawn.id!==request.to.spawnId)throw new Error('Scene transition request drift');
+    const sameCell=request.to.cell[0]===arrival.spawn.cell[0]&&request.to.cell[1]===arrival.spawn.cell[1];
+    if(
+      edge.fromSceneId!==request.from.sceneId||
+      arrival.scene.id!==request.to.sceneId||
+      arrival.scene.mapId!==request.to.mapId||
+      arrival.spawn.id!==request.to.spawnId||
+      !sameCell||
+      arrival.spawn.direction!==request.to.direction||
+      edge.provenance!==request.provenance
+    )throw new Error('Scene transition request drift');
     const destination:SpatialPosition={mapId:arrival.scene.mapId,cell:arrival.spawn.cell};
     this.runtime.prime(destination);
     this.position={mapId:destination.mapId,cell:[...destination.cell] as Cell};
