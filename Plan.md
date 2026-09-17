@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.0｜更新：2026-09-18｜Web-first  
+> 版本：v3.1｜更新：2026-09-18｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -19,6 +19,7 @@
 - S6 Runtime Integration 与 S7 Release Validation 已完成：Encounter/AI/Damage/Quest-NPC/ANI 等证据边界已经接入运行时，并通过 fixed-hash 2.2 单 HTML 验证。
 - M4 第二波 S8–S12（Game UI、World/Quest、Battle Presentation、Swordsman/Wizard、Progression/Save）已全部合并；S13 已统一接入 M4 玩家运行时。
 - S14 Release Validation 已完成：final run `35281047574` 的 synthetic、private-original Chromium/offline 与新版 M4 30 分钟真实墙钟 soak 全部 success。最终 HTML SHA-256 为 `28ef2dcadeb0e3e7216f9b21cff44e725b54b2854944230df0db7c5433fd462c`。
+- 2026-09-18 人工试玩反馈确认：**M4 虽已工程跑通，但距离“可玩”仍明显不足**。当前最高优先级不是继续扩大技术验证，而是恢复完整视角操作、可见 NPC、可见怪物、相机跟随、自动场景切换，并为旧服务器缺失的战斗数值建立稳定可玩的 reconstruction balance。
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -137,32 +138,55 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.5 当前真正没解决的东西
 
-下面这些不应该继续假装“再扫一次客户端就一定能找到”：
+需要区分两类问题。
 
-- 旧服务器真正的 encounter eligibility / map-event→battleZone 决策；
-- 历史 live roster / `6A69` payload，因此缺具体敌人实例的真实 AI program；
-- 旧服务器 exact hit/damage/critical/elemental 公式；
+**A. 客户端资产/表现仍应继续恢复，因为它们直接决定能不能像游戏：**
+
+- NPC 图像、方向、动作、动画族，以及 NPC 形象如何绑定到世界实体；
+- 怪物图像、方向、攻击/受击/死亡动作，以及 battle roster/unit 如何绑定具体怪物外观；
+- fullscreen、zoom in/out、viewport resize 与角色中心相机跟随；
+- field/building/interior 等场景的空间触发和自动切换，不再由玩家手点调试框；
+- 第二个及更多可靠 field/interior map 的实际可走区域、入口/出口、NPC 放置；
+- death、MagicRes placement/blend/stage、foreground occlusion、完整音效触发等仍影响体验的视觉表现。
+
+其中已有明确线索：`NPC350.Tip` 已验证为 sprite library，但还没有完成“图像/动作 → NPC archetype → 地图实体”的运行时恢复。
+
+**B. 旧服务器缺失后不能再等原始公式，必须以可替换 reconstruction policy 补齐：**
+
+- encounter eligibility / event→battleZone 最终决策；
+- 历史 live `6A69` 具体 enemy AI program；
+- exact hit/damage/critical/defence/magic/elemental formula；
 - Quest/NPC 的真实 condition、reward、recruitment、warp acceptance、battle decision；
-- 500ms readiness cadence 的原客户端动态独立确认；
-- death、attacker impact frame、MagicRes placement/blend/stage、foreground occlusion、完整音效触发；
-- 完整背包/装备、成长/转职、正式任务链和更多地图流程；
-- 公开 Web 预览的访问控制与版权审查。
+- 原版成长曲线和完整职业数值。
 
-如果后续拿到旧服务端、packet capture、录像、韩/日服实现或其他独立证据，可以重新打开这些问题。否则 S6 必须把缺口建模成 **可替换的 reconstruction authority/policy**，而不是把猜测包装成原版事实。
+这类问题的目标改为：**保留原客户端 authored stats，建立合理、稳定、可调、可测的离线数值体系，优先保证可玩性；绝不把替代数值标成原版恢复。**
+
+公开 Web 预览的访问控制与版权审查继续留到发布阶段。
 
 ### 0.6 下一步
 
-M4 **Playable Nostalgia Slice** 已通过 S14 收口。下一阶段进入 **M5 Content Depth / Playtest Iteration**，由用户真实试玩反馈驱动，不再为了“多考古”本身扩张范围：
+下一阶段改为 **M5 Playable Recovery / 可玩性恢复**。完成标准不再是“模块存在”，而是玩家打开单 HTML 后可以自然操作和理解游戏。
 
-1. 先收集 M4 HTML 的人工试玩问题，按“阻断 / 明显违和 / 可后置”分级；
-2. 清理剩余开发态视觉痕迹（包括旧 footer build label），继续把默认界面向正常游戏靠拢；
-3. 扩充第二个可靠 field map、NPC/Quest 片段和连续地图流程，但所有退役服务器缺口继续走 reconstruction authority；
-4. 深化剑士/巫师技能、装备、成长与表现，不伪造 exact retail damage/progression 公式；
-5. 在证据允许时启用真实音频链；无法证明的 fade/loop/trigger 继续隔离为可替换策略；
-6. 每个可玩里程碑继续执行 synthetic -> fixed-hash private-original -> single HTML -> 人工试玩；重大运行时改动再跑真实墙钟 soak；
-7. 只有拿到旧服务端、packet capture、录像或其他独立证据时，才重新打开被标记为 server-boundary 的原版语义问题。
+本轮明确解决人工试玩暴露出的六个核心问题：
 
-S14 的详细验收记录见 `docs/validation/s14-m4-release-20260918.md`。
+1. **视角操作**：恢复全屏、窗口自适应、放大/缩小；角色移动时相机平滑跟随，地图大于 viewport 时不再把玩家走出屏幕。
+2. **NPC 可见且可交互**：系统普查客户端 NPC sprite/ANI/Tip 资源，优先从已验证的 `NPC350.Tip` 和相关资源族恢复 NPC 形象/动作；建立 NPC archetype catalog，再绑定到 reconstruction world entity/quest。
+3. **怪物可见且有动作**：系统普查 battle/ANI/SPR/Tip/roster 相关资源，恢复怪物外观、待机/移动/攻击/受击/死亡，并建立 battle unit → visual archetype 绑定。
+4. **空间驱动场景切换**：例如走到训练屋入口就自动进入训练屋 interior；走到出口自动回 field。对原版 server/session 缺失的 trigger 使用明确 `RECONSTRUCTION_POLICY`，但交互方式必须像游戏，不再依赖手动选择调试框。
+5. **可玩战斗数值**：既然 exact server formula 无法恢复，就建立正式 `ReconstructionCombatBalance`：角色/怪物 HP、攻击、防御、魔攻、魔防、命中、暴击、技能倍率、EXP/reward 都有合理默认值、等级缩放、上下界和自动平衡测试。
+6. **自然任务闭环**：玩家看到 NPC → 走近/交互 → 接任务 → 自动场景/遇敌 → 看到怪物并战斗 → 回 NPC 交任务。任何一步都不能依赖 Developer diagnostics 才能完成。
+
+并行拆分为五个 Session：
+
+- **S15 Viewport / Camera / Fullscreen**
+- **S16 NPC Visual Recovery**
+- **S17 Monster Visual Recovery**
+- **S18 World Scene Transition / Spatial Interaction**
+- **S19 Reconstruction Combat Balance**
+
+五条线继续冻结共享核心文件，优先交付独立模块、资产索引、tests 与 integration note。五个 PR 全部完成后，由协调 Session 统一接入 `scene.ts / main.ts / battle.ts` 并重新生成 private-original single HTML 做人工试玩。
+
+详细要求见 **5.5 M5 Playable Recovery — S15–S19**。
 
 ---
 
@@ -177,14 +201,16 @@ S14 的详细验收记录见 `docs/validation/s14-m4-release-20260918.md`。
 ### 1.2 MVP 验收
 
 1. 浏览器启动并选择剑士/巫师。
-2. 非战斗地图正常自由移动；交互请求与 battle entry 分离建模，进入战斗时使用显式 battle zone。
-3. 战斗采用 readiness 驱动的战术移动/攻击框架；未知规则明确标记 reconstruction policy。
-4. 待机、移动、方向、攻击、受击、施法、死亡表现；未知项明确标注。
-5. 每职业普通攻击和至少 3 个代表技能；敌人、伤害、死亡、结算形成闭环。
-6. NPC 对话、地图切换、基础背包和装备。
-7. IndexedDB 存读档，JSON 导入导出作为备份。
-8. Debug Panel 保持 opt-in；正常玩家画面不显示 route polyline / bounds overlay。
-9. fixed-hash 可重复构建、Chromium 回归、真实资源人工复核和必要的 wall-clock soak。
+2. 支持全屏、窗口自适应、放大/缩小；人物移动时相机跟随，地图可连续探索。
+3. 非战斗地图正常自由移动；玩家能直接看到 NPC，并通过空间接近/交互接任务。
+4. 走到建筑/入口/出口等空间触发区时自动切换 field/interior scene，不依赖调试下拉框。
+5. 战斗采用 readiness 驱动的战术移动/攻击框架；敌人必须使用恢复出的怪物图像和动作，而不是抽象占位。
+6. 待机、移动、方向、攻击、受击、施法、死亡表现；未知项明确标注。
+7. 每职业普通攻击和至少 3 个代表技能；在原公式缺失时使用明确的 ReconstructionCombatBalance，保证 HP/攻击/防御/技能/怪物强度可玩且可调。
+8. NPC 对话、任务、地图切换、怪物战斗、奖励、基础背包和装备形成自然闭环。
+9. IndexedDB 存读档，JSON 导入导出作为备份。
+10. Debug Panel 保持 opt-in；正常玩家无需 Developer diagnostics 即可完成任务和战斗。
+11. fixed-hash 可重复构建、Chromium 回归、真实资源人工复核和必要的 wall-clock soak。
 
 仅有自动测试、按钮或占位训练逻辑，不足以宣布原版还原正确。
 
@@ -243,9 +269,9 @@ S14 的详细验收记录见 `docs/validation/s14-m4-release-20260918.md`。
 | M0 基线 | 固定样本、哈希、静态拆包 | **G0 通过** |
 | M1 资源 | 双职业、地图、技能、内容容器与格式转换 | **核心通过，持续收口** |
 | M2 Web 诊断 | 地图、角色、逐帧/方向/碰撞/Debug/离线 HTML | **G2-Web 通过** |
-| M3 Web 可玩切片 | field→battle→return→NPC/地图→存档 | **工程结构已建立；等待 S6 用新证据重构核心运行时** |
-| M4 行为校准 | readiness、AI、damage、encounter、Quest/NPC、visual | **第一波客户端静态考古完成；server-boundary 已明确** |
-| M5 核心系统 | 实体、战斗、技能、成长、任务、背包、存档迁移 | **S6 开始进入运行时整合** |
+| M3 Web 可玩切片 | field→battle→return→NPC/地图→存档 | **工程闭环通过** |
+| M4 行为校准/玩家壳 | readiness、AI、damage boundary、Quest/NPC、UI、双职业、SaveV2 | **S14 工程验收通过，但人工试玩确认仍不足以称“可玩”** |
+| M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **S15–S19 开始** |
 | M6 双职业完整化 | 十阶段职业矩阵 | 未开始 |
 | M7 Web 发布 | 性能、兼容、访问控制、版权、回滚 | 未开始 |
 | M8 可选联网 | 单机稳定后的独立权威服务端 | 暂缓 |
@@ -253,8 +279,9 @@ S14 的详细验收记录见 `docs/validation/s14-m4-release-20260918.md`。
 门禁：
 
 - **G0 / G1 / G2-Web：已通过。**
-- **G3：部分通过。** field/battle/readiness 工程结构已存在，但第一波证据尚未整合进统一运行时。
-- **G4：部分通过。** 大量 client behavior 已固定；旧服务器规则需要 reconstruction policy 或未来独立证据。
+- **G3：工程通过，玩法未通过。** field/battle/readiness/M4 runtime 已整合，但人工试玩仍缺 viewport/NPC/monster/scene transition。
+- **G4：部分通过。** 大量 client behavior 已固定；旧服务器规则继续由 reconstruction policy 补齐。
+- **M5 Playability Gate：未通过。** 必须完成 S15–S19，并由用户实际试玩确认基础探索、任务、场景切换和战斗自然可用。
 - **G5：**双职业矩阵完成或批准例外；否则不称 V1。
 - **G6：**公开发布前完成访问控制、版权、构建检查并取得发布授权。
 
@@ -274,38 +301,77 @@ S14 的详细验收记录见 `docs/validation/s14-m4-release-20260918.md`。
 
 第一波使用“冻结共享运行时文件、各自新增 probe/docs/tests”的方式并行完成，五个 PR 无交叉冲突。这一策略验证有效。
 
-### 5.2 第二波 S6 Runtime Integration — 下一步
+### 5.2 S6–S7 Runtime Integration / Release Validation — 已完成
 
-分支：`codex/runtime-integration`
+S6 已把第一波考古边界接入运行时；S7 已完成 fixed-hash private-original single HTML 与人工式验证。
 
-S6 是当前唯一需要集中修改 `web/src/scene.ts`、`web/src/main.ts`、`web/src/battle.ts` 等共享运行时的 Session。
+关键原则继续沿用：
 
-核心要求：
+- interaction intent、authority decision、battle entry 分层；
+- AI / damage / quest / visual policy 都带 provenance；
+- server 缺失规则集中为可替换 reconstruction policy；
+- 不把“测试能跑”直接等于“玩家能玩”。
 
-- 不追求“把所有未知都变成 VERIFIED”，而是把已恢复事实和 reconstruction policy 分层；
-- interaction intent、authority decision、battle entry 分开；
-- AI program source / authored stats / Quest state / visual timing 都带 provenance；
-- server-side 缺失规则集中放在可替换 policy/adapter，不散落硬编码；
-- 先完成一个剑士/巫师都能进入、行动、攻击/施法、受击、结算、返回的可验证切片；
-- S6 必须补 tests 和 integration note，不能只“看起来能玩”。
+### 5.3 M4 S8–S14 Player Shell / 双职业切片 — 已完成工程验收
 
-### 5.3 第三波 S7 Release Validation
+M4 已完成玩家 HUD、World/Quest reconstruction、Battle Presentation、剑士/巫师、Progression/SaveV2，以及 S13 集成、S14 fixed-hash 验收。
 
-分支：`codex/release-validation`
+最终 S14 HTML 自动/人工式验证均通过，但 2026-09-18 用户实际试玩指出：当前版本仍缺少决定“能不能玩”的基础体验——可控视角、可见 NPC、可见怪物、相机跟随、空间驱动场景切换和可信的离线战斗数值。
 
-S7 不开发新玩法，只做验收和必要测试修复：
+因此 M4 被视为 **工程验证完成**，不是玩法完成。
 
-- fixed-hash 2.2 private-original smoke；
-- standalone single HTML；
-- Chromium browser/offline tests；
-- 人工式逐步试玩；
-- 人物/地图/战斗/特效/音频 spot-check；
-- 必要时重新跑 30 分钟真实墙钟 soak；
-- 检查版权资源没有误进 Git；
-- 检查 `UNVERIFIED/RECONSTRUCTION_POLICY` 没有被误标成 original/recovered；
-- 形成 validation report。
+### 5.4 M5 Playable Recovery — 当前阶段
 
-### 5.4 PR 合并规则
+本阶段只做能显著缩短“距离真正可玩还有多远”的工作，不继续用调试功能替代游戏功能。
+
+### 5.5 M5 Playable Recovery — S15–S19
+
+统一基线：`main@22f46efe3e55a7126647f7edc4ac59f43bb65442`。
+
+五条并行线：
+
+| Session | 主任务 | 关键交付 |
+| --- | --- | --- |
+| S15 | Viewport / Camera / Fullscreen | Fullscreen API、responsive viewport、zoom、camera follow/clamp、输入坐标换算、测试 |
+| S16 | NPC Visual Recovery | 全客户端 NPC 资产普查、NPC sprite/ANI/Tip catalog、方向/动作恢复、NPC archetype preview |
+| S17 | Monster Visual Recovery | 全客户端怪物资产普查、battle unit visual catalog、idle/move/attack/hit/death 动作与 preview |
+| S18 | World Scene Transition | spatial trigger、door/entrance/exit、field↔interior 自动切换、NPC interaction zone、world graph |
+| S19 | Reconstruction Combat Balance | HP/ATK/DEF/MATK/MDEF/hit/crit/skill/enemy scaling/reward 数值体系、模拟与平衡测试 |
+
+并行期间原则上禁止直接修改共享核心：
+
+- `web/src/scene.ts`
+- `web/src/main.ts`
+- `web/src/battle.ts`
+- `Plan.md`
+- `Backlog.md`
+- `docs/evidence-ledger.md`
+
+各 Session 优先新增独立模块、工具、tests、asset manifests、preview harness 和 `docs/integration-notes/s15..s19`。
+
+资产恢复要求：
+
+- 必须对 fixed-hash 2.2 客户端做系统 inventory，不允许只凭文件名猜 NPC/怪物身份；
+- `NPC350.Tip` 已确认是 sprite library，可作为 S16 明确入口；
+- 怪物如果没有现成总表，S17 必须从 ANI/SPR/Tip/CombatMap/battle roster 等多源交叉建立 visual family；
+- 先恢复“这个资源族是什么、有哪些方向/动作/帧”，再做 ID 绑定；
+- 不能把 NPCScript block id、SMF object id、battle roster id 因数字相同就直接绑定。
+
+数值替代要求：
+
+- authored retail stat 字段原样保留；
+- 所有公式放入一个 `ReconstructionCombatBalance` 层；
+- 数值目标是稳定可玩，而不是伪造“原版公式”；
+- 至少用自动模拟验证：普通怪 1v1、2v1、剑士/巫师、装备前后、技能 MP 成本、战斗时长、死亡率、奖励增长；
+- 避免“一刀秒”或“打不死”的极端，保留集中调参表。
+
+五个 PR 完成后由协调 Session 统一接入共享核心，验收必须实际走：
+
+`启动 → 全屏/缩放 → 角色移动且镜头跟随 → 看见 NPC → 接任务 → 走进训练屋自动换场景 → 看见怪物 → 战斗 → HP/伤害合理 → 返回 NPC 交任务`
+
+之后重新执行 fixed-hash private-original single HTML、Chromium/offline、人工试玩；这一链路没通过前不再宣布“可玩”。
+
+### 5.6 PR 合并规则
 
 - S1–S5 已关闭，不再往旧分支追加共享运行时改动。
 - S6 从第一波全部收口后的最新 `main` 新建。
@@ -369,3 +435,5 @@ CI 不运行原安装器、`NeoDark.exe`、未知 DLL、兼容注入或 Frida �
 - 2026-09-15 v2.5：依据同期资料纠正为 field/battle 分离 + readiness 战术模式，并完成视觉叠层校准。
 - 2026-09-16 v2.6：PR #4/#5 收口；批准 S1–S5 并行考古 → S6 整合 → S7 验收。
 - **2026-09-16 v2.7：S1–S5 / PR #7–#11 全部审阅并合并。恢复 encounter 客户端边界、AI instance binding precedence、damage authored fields/server authority、Quest/NPC server-selected runtime boundary、ANI timing/hit/BGM 语义；第一波静态考古收口，项目正式进入 S6 Runtime Integration。**
+
+- **2026-09-18 v3.1：依据 S14 后真实人工试玩反馈，将 M5 重新定义为 Playable Recovery。新增 S15–S19 五条并行主线：viewport/camera/fullscreen、NPC visual、monster visual、world scene transition、reconstruction combat balance。明确 NPC350.Tip 是可继续恢复的 sprite library；旧服务端数值不再等待 exact formula，而以独立可替换的平衡层保证可玩性。**
