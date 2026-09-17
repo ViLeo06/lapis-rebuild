@@ -184,10 +184,10 @@ def fast_spr_metadata(path: Path) -> dict:
     if end > len(data):
         raise ValueError(f"SPR frame table exceeds file: {path}")
     bounds = [struct.unpack_from("<4i", data, 4 + i * 16) for i in range(count)]
-    if any(r < l or b < t for l, t, r, b in bounds):
-        raise ValueError(f"SPR inverted frame bounds: {path}")
+    inverted_frame_count = sum(1 for l, t, r, b in bounds if r < l or b < t)
+    empty_frame_count = sum(1 for l, t, r, b in bounds if r == l or b == t)
     nonempty = [(l, t, r, b) for l, t, r, b in bounds if r > l and b > t]
-    empty_frame_count = len(bounds) - len(nonempty)
+    non_renderable_frame_count = len(bounds) - len(nonempty)
     widths = [r - l for l, t, r, b in nonempty]
     heights = [b - t for l, t, r, b in nonempty]
     return {
@@ -195,6 +195,8 @@ def fast_spr_metadata(path: Path) -> dict:
         "size": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
         "empty_frame_count": empty_frame_count,
+        "inverted_frame_count": inverted_frame_count,
+        "non_renderable_frame_count": non_renderable_frame_count,
         "bounds_union": {
             "left": min((x[0] for x in nonempty), default=0),
             "top": min((x[1] for x in nonempty), default=0),
