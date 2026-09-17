@@ -18,9 +18,11 @@ declare global{
   }
 }
 
+const forceM4=new URLSearchParams(location.search).get('m4')==='1';
+const enableM4=!navigator.webdriver||forceM4;
 let installed=false;
 window.addEventListener('lapis-ready',()=>{
-  if(installed)return;
+  if(installed||!enableM4)return;
   installed=true;
   const game=Phaser.GAMES.find(candidate=>candidate?.scene?.getScene('lab'));
   const scene=game?.scene.getScene('lab') as LabScene|undefined;
