@@ -20,6 +20,7 @@ import {VisualActor} from './visual-actor.ts';
 
 type FieldReturn = {mapId:number;anchor:{x:number;y:number};direction:number;camera:{x:number;y:number;zoom:number}};
 export type WorldVisualSpec={id:string;mapId:number;cell:Cell;resourceId:number;label:string;kind:'npc'|'encounter'};
+export type WorldMarkerSpec={id:string;mapId:number;cell:Cell;label:string};
 
 export class LabScene extends Phaser.Scene {
   pack: LoadedPack;
@@ -61,6 +62,7 @@ export class LabScene extends Phaser.Scene {
   private cameraFollowEnabled=false;
   private reconstructionBattleSetup?:ReconstructionBattleSetup;
   private worldVisualActors=new Map<string,{spec:WorldVisualSpec;actor:VisualActor;label:Phaser.GameObjects.Text}>();
+  private worldMarkers=new Map<string,{spec:WorldMarkerSpec;label:Phaser.GameObjects.Text}>();
   private enemyVisualActors=new Map<string,VisualActor>();
   private overlay!: Phaser.GameObjects.Graphics;
   private guideLabel!:Phaser.GameObjects.Text;
@@ -169,6 +171,7 @@ export class LabScene extends Phaser.Scene {
 
   private updateGuideLabel(){
     if(!this.guideLabel)return;
+    if(this.worldVisualActors.size){this.guideLabel.setVisible(false);return;}
     const preferred:Cell=this.mapId===0?[26,23]:[34,39];
     const cell=closestWalkable(this.currentMap().collision,preferred);
     const p=referenceCellToScreen(cell);
@@ -225,6 +228,17 @@ export class LabScene extends Phaser.Scene {
     this.refreshRecoveredVisualVisibility();
   }
 
+  configureWorldMarkers(specs:readonly WorldMarkerSpec[]){
+    for(const row of this.worldMarkers.values())row.label.destroy();
+    this.worldMarkers.clear();
+    for(const spec of specs){
+      const [x,y]=referenceCellToScreen(spec.cell);
+      const label=this.add.text(x,y-12,spec.label,{fontFamily:'sans-serif',fontSize:'13px',color:'#fff0b8',backgroundColor:'#4b3828dd',padding:{x:6,y:3}}).setOrigin(.5,1).setDepth(50);
+      this.worldMarkers.set(spec.id,{spec:{...spec},label});
+    }
+    this.refreshRecoveredVisualVisibility();
+  }
+
   private ensureEnemyVisualActors(){
     const bindings:[string,string][]=[['dummy-melee','4524'],['dummy-ranged','4544']];
     for(const [id,resource] of bindings){
@@ -239,6 +253,7 @@ export class LabScene extends Phaser.Scene {
       const visible=!this.inBattleView&&row.spec.mapId===this.mapId;
       row.actor.setVisible(visible);row.label.setVisible(visible);
     }
+    for(const row of this.worldMarkers.values())row.label.setVisible(!this.inBattleView&&row.spec.mapId===this.mapId);
     for(const actor of this.enemyVisualActors.values())actor.setVisible(this.inBattleView);
   }
 
