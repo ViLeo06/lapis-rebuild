@@ -42,18 +42,23 @@ export async function loadPack(progress: (s: string)=>void): Promise<LoadedPack>
   }
   const primary=maps[String(manifest.map.id)];assert(primary,'Primary map missing after load');
   const animations: LoadedPack['animations']={};
-  for(const [id, c] of Object.entries(manifest.characters)) {
-    animations[id]={};
-    for(const [slot,paths] of Object.entries(c.actions)) {
-      const a=validateAnimation(await json(paths.animation)); animations[id][slot]=a;
-      for(const index of new Set(a.directions.flat())) images[textureKey(id,slot,index)]=assetUrl(frameFile(paths.frames_dir,index));
+  const loadActors=async(defs:typeof manifest.characters)=>{
+    for(const [id,c] of Object.entries(defs)){
+      if(animations[id])throw new Error(`Duplicate visual resource B${id}`);
+      animations[id]={};
+      for(const [slot,paths] of Object.entries(c.actions)){
+        const a=validateAnimation(await json(paths.animation));animations[id][slot]=a;
+        for(const index of new Set(a.directions.flat()))images[textureKey(id,slot,index)]=assetUrl(frameFile(paths.frames_dir,index));
+      }
     }
-  }
+  };
+  await loadActors(manifest.characters);
+  if(manifest.visuals)await loadActors(manifest.visuals);
   const effects=manifest.effects??{};
   for(const effect of Object.values(effects))for(const index of effect.sequence)images[effectTextureKey(effect.resource_id,index)]=assetUrl(frameFile(effect.frames_dir,index));
   const loadedContent=await content(manifest);
   const pack:LoadedPack={manifest,collision:primary.collision,inspector:primary.inspector,maps,effects,animations,images,content:loadedContent,digest:manifest.provenance?.pack_sha256??manifest.provenance?.installer_sha256??'synthetic-fixture-v1'};
   installSourcePanel(pack);
-  progress(`已校验 ${Object.keys(images).length} 个图像资源引用${loadedContent?` / ${loadedContent.summary.quests.length} 组任务内容${loadedContent.tutorial?` / ${loadedContent.tutorial.summary.talk_count} TALK`:''}`:''}`);
+  progress(`已校验 ${Object.keys(images).length} 个图像资源引用${manifest.visuals?` / ${Object.keys(manifest.visuals).length} 个 M5 world visual`:''}${loadedContent?` / ${loadedContent.summary.quests.length} 组任务内容${loadedContent.tutorial?` / ${loadedContent.tutorial.summary.talk_count} TALK`:''}`:''}`);
   return pack;
 }
