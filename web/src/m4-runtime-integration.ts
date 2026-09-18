@@ -535,7 +535,7 @@ export class M4RuntimeIntegration{
       this.setNotice(committed.mapId===this.m5World.content.objectiveMapId?'已自动进入训练屋 / RECONSTRUCTION_POLICY':'已离开训练屋，返回外城 / RECONSTRUCTION_POLICY');
       this.lastSnapshot=null;this.render(this.scene.snapshot());return true;
     }
-    if(this.world.quest.stage==='objective'&&actor.mapId===this.m5World.content.objectiveMapId&&!this.pendingEncounter&&canInteract(this.m5World.content.objective,actor)){
+    if(this.world.quest.stage==='objective'&&actor.mapId===this.m5World.content.objectiveMapId&&!this.pendingEncounter&&!this.scene.route.length&&canInteract(this.m5World.content.objective,actor)){
       const resolved=this.worldAuthority.interact(this.world,{entityId:this.m5World.content.objective.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
       this.world=resolved.state;
       if(resolved.result.encounter){
