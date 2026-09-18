@@ -75,10 +75,19 @@ def build(client_root: Path, inventory_path: Path, out: Path, limit: int) -> dic
                 continue
             ani_path = _ci_file(char_dir, f"B{visual_id}_{action_id:02d}.ani")
             spr_path = _ci_file(char_dir, f"B{visual_id}_{action_id:02d}.spr")
-            ani = parse_ani(ani_path)
-            spr = parse_spr(spr_path)
             filename = f"B{visual_id}_{action_id:02d}.png"
-            atlas = build_action_atlas(ani, spr, atlas_dir / filename)
+            try:
+                ani = parse_ani(ani_path)
+                spr = parse_spr(spr_path)
+                atlas = build_action_atlas(ani, spr, atlas_dir / filename)
+            except ValueError as exc:
+                omitted_actions.append({
+                    "action": action_id,
+                    "reason": "strict original ANI/SPR preview parse failed; preserved in inventory and skipped",
+                    "error_type": type(exc).__name__,
+                    "error": str(exc)[:240],
+                })
+                continue
             semantics = body_action_semantic(action_id)
             action_rows.append({
                 **semantics,
