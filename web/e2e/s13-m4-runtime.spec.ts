@@ -21,6 +21,7 @@ test('S13 M4 player shell replaces developer-first layout',async({page})=>{
 
 test('S13 world quest enters explicit battle and exposes S11 skills through S8 HUD',async({page})=>{
   await ready(page);
+  test.skip((await m4(page)).playableRecovery===true,'M5 private pack uses the spatial training-house flow covered by m5-playable-recovery.spec.ts.');
   await page.keyboard.press('e');
   await expect.poll(async()=>(await m4(page)).quest.stage).toBe('accepted');
   await expect.poll(async()=>(await snap(page)).mapId).toBe(1);
@@ -40,6 +41,7 @@ test('S13 world quest enters explicit battle and exposes S11 skills through S8 H
 
 test('S13 class switch swaps authored vitals and skill roster while keeping reconstruction provenance explicit',async({page})=>{
   await ready(page);
+  test.skip((await m4(page)).playableRecovery===true,'M5 private pack uses the spatial battle entry covered by the M5 acceptance path.');
   // The field HUD is intentionally refreshed from live scene snapshots. Open
   // the menu with its stable keyboard path, then synchronously dispatch the
   // delegated class action so Playwright does not require the redrawn node to
@@ -70,5 +72,5 @@ test('S13 M4 save export uses v2 schema',async({page})=>{
   expect(save.kind).toBe('lapis-rebuild-save');
   expect(save.version).toBe(2);
   expect(save.progression.policyId).toBe('m4-linear-100x-level-v1');
-  expect(save.quest.questId).toBe('s9-training-run');
+  expect(save.quest.questId).toBe((await m4(page)).playableRecovery?'m5-training-house':'s9-training-run');
 });
