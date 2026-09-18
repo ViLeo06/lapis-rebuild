@@ -139,6 +139,8 @@ def _body_inventory(client_root: Path) -> tuple[list[dict], dict]:
     action_set_counts: Counter[tuple[int, ...]] = Counter()
     duplicate_groups: dict[str, list[int]] = defaultdict(list)
     range_counts = Counter()
+    ani_index_error_action_count = 0
+    ani_index_error_family_ids: set[int] = set()
     for visual_id in sorted(grouped):
         actions = {}
         for action, ani_path in sorted(grouped[visual_id]):
@@ -149,7 +151,8 @@ def _body_inventory(client_root: Path) -> tuple[list[dict], dict]:
             spr = fast_spr_metadata(spr_path)
             errors = validate_frame_indices(ani, int(spr["frame_count"]))
             if errors:
-                raise ValueError(f"ANI/SPR index errors for {ani_path.name}: {errors[:3]}")
+                ani_index_error_action_count += 1
+                ani_index_error_family_ids.add(visual_id)
             semantics = body_action_semantic(action)
             action_meta = {
                 **semantics,
@@ -161,6 +164,9 @@ def _body_inventory(client_root: Path) -> tuple[list[dict], dict]:
                 "frames_per_direction": ani.frames_per_direction,
                 "spr_frame_count": spr["frame_count"],
                 "raw_timing": ani.raw_timing,
+                "ani_index_error_count": len(errors),
+                "ani_index_errors": errors[:16],
+                "renderability": "SKIP_UNSAFE_ORIGINAL_RESOURCE" if errors or int(spr["non_renderable_frame_count"]) else "RENDERABLE",
                 "dimensions": {
                     "bounds_union": spr["bounds_union"],
                     "max_frame_width": spr["max_frame_width"],
@@ -218,6 +224,9 @@ def _body_inventory(client_root: Path) -> tuple[list[dict], dict]:
         "range_distribution": dict(sorted(range_counts.items())),
         "duplicate_visual_fingerprint_group_count": len(duplicates),
         "duplicate_visual_fingerprint_groups": sorted(duplicates, key=lambda x: (-len(x), x))[:300],
+        "ani_index_error_action_count": ani_index_error_action_count,
+        "ani_index_error_family_count": len(ani_index_error_family_ids),
+        "ani_index_error_family_ids": sorted(ani_index_error_family_ids),
     }
     return families, stats
 
