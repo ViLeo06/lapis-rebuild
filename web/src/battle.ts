@@ -9,6 +9,8 @@ import type {DamagePolicy} from './damage-policy.ts';
 import {trainingAiBinding} from './ai-runtime.ts';
 import type {AiBinding} from './ai-runtime.ts';
 import type {BattleEntry,RuntimeProvenance} from './runtime-boundaries.ts';
+import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
+import type {CombatantStats,EquipmentCombatBonuses,EnemyRank} from './combat/reconstruction-combat-balance.ts';
 
 export type Skill = {
   skill_id: number;
@@ -30,14 +32,27 @@ export type Enemy = {
   poison: number;
   action: number;
   aiBinding:AiBinding;
+  combatStats?:CombatantStats;
+  poisonTickDamage:number;
+  poisonTicks:number;
+  poisonClock:number;
 };
 
 export type BattleEvent={
   kind:'hp-loss';
   target:'player'|string;
+  source?:'player'|string;
   amount:number;
   resultingHp:number;
   provenance:RuntimeProvenance;
+};
+
+export type ReconstructionBattleSetup={
+  playerClassId:string|number;
+  level:number;
+  equipment?:EquipmentCombatBonuses;
+  enemyLevel?:number;
+  enemyRank?:EnemyRank;
 };
 
 export type BattleState = {
@@ -63,6 +78,8 @@ export type BattleState = {
   battleEntryProvenance:RuntimeProvenance;
   damagePolicyId:string;
   damagePolicyProvenance:RuntimeProvenance;
+  combatPlayerStats:CombatantStats|null;
+  rngState:number;
 };
 
 export function initialState(): BattleState {
@@ -91,10 +108,12 @@ export function initialState(): BattleState {
     battleEntryProvenance:'UNVERIFIED',
     damagePolicyId:TRAINING_DAMAGE_POLICY.id,
     damagePolicyProvenance:TRAINING_DAMAGE_POLICY.provenance,
+    combatPlayerStats:null,
+    rngState:0x6d325a91,
   };
 }
 
-export function beginBattle(x:number,y:number,entry?:BattleEntry): BattleState {
+export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:ReconstructionBattleSetup): BattleState {
   const s=initialState();
   s.phase='active';
   s.battleZoneId=entry?.battleZoneId??P.battleMapId;
@@ -102,10 +121,26 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry): BattleState {
   // Recovered old-client behavior grants control only when current readiness
   // reaches the unit maximum. Starting full keeps the first command immediate.
   s.action=s.actionMax;
-  s.enemies=[
-    {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0,aiBinding:trainingAiBinding()},
-    {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0,aiBinding:trainingAiBinding()},
-  ];
+  if(setup){
+    const balance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE;
+    const player=balance.playerStats(setup.playerClassId,setup.level,setup.equipment);
+    const enemyLevel=setup.enemyLevel??setup.level;
+    const rank=setup.enemyRank??'normal';
+    const melee=balance.enemyStats({id:'dummy-melee',level:enemyLevel,rank,role:'melee'});
+    const ranged=balance.enemyStats({id:'dummy-ranged',level:enemyLevel,rank,role:'ranged'});
+    s.combatPlayerStats=player;
+    s.hp=player.maxHp;s.maxHp=player.maxHp;s.mp=player.maxMp;s.maxMp=player.maxMp;
+    s.damagePolicyId=balance.id;s.damagePolicyProvenance=balance.provenance;
+    s.enemies=[
+      {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+    ];
+  }else{
+    s.enemies=[
+      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+    ];
+  }
   return s;
 }
 
@@ -120,6 +155,11 @@ export function consumeAction(s:BattleState,cost=s.moveReadinessCost): boolean {
   s.action=Math.max(0,s.action-cost);
   s.cooldown=0;
   return true;
+}
+
+function nextBattleRandom(s:BattleState):number{
+  s.rngState=(Math.imul(s.rngState,1664525)+1013904223)>>>0;
+  return s.rngState/0x100000000;
 }
 
 function finish(s: BattleState) {
@@ -157,23 +197,36 @@ export function useAttack(
   let event:BattleEvent|undefined;
   if(sid===1301)s.shield=P.shieldDurationMs;
   else if(sid===19301)s.manaBuff=P.manaBuffDurationMs;
-  else if(e){
+  else if(e&&s.combatPlayerStats&&e.combatStats){
+    const balance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE;
+    const resolution=skill
+      ?balance.resolveSkillAttack(s.combatPlayerStats,e.combatStats,skill.skill_id,()=>nextBattleRandom(s))
+      :balance.resolveAttack(s.combatPlayerStats,e.combatStats,{kind:'physical',multiplier:1,hits:1},()=>nextBattleRandom(s));
+    if(sid===19101)e.blind=P.blindDurationMs;
+    if(sid===19201&&resolution.dotTicks>0){
+      e.poison=P.poisonDurationMs;e.poisonTickDamage=resolution.dotDamagePerTick;e.poisonTicks=resolution.dotTicks;e.poisonClock=0;
+    }
+    const before=e.hp;
+    e.hp=Math.max(0,e.hp-resolution.totalDamage);
+    if(before>e.hp)event={kind:'hp-loss',target:e.id,source:'player',amount:before-e.hp,resultingHp:e.hp,provenance:balance.provenance};
+    if(s.manaBuff>0&&resolution.totalDamage>0)s.mp=Math.min(s.maxMp,s.mp+P.manaReturn);
+  }else if(e){
     if(sid===19101)e.blind=P.blindDurationMs;
     else if(sid===19201){
       e.poison=P.poisonDurationMs;
       const before=e.hp;
       e.hp=Math.max(0,e.hp-P.poisonInitialDamage);
-      event={kind:'hp-loss',target:e.id,amount:before-e.hp,resultingHp:e.hp,provenance:TRAINING_DAMAGE_POLICY.provenance};
+      event={kind:'hp-loss',target:e.id,source:'player',amount:before-e.hp,resultingHp:e.hp,provenance:TRAINING_DAMAGE_POLICY.provenance};
     }else{
       const damage=TRAINING_DAMAGE_POLICY.playerDamage(sid,bonus);
       const before=e.hp;
       e.hp=Math.max(0,e.hp-damage);
-      event={kind:'hp-loss',target:e.id,amount:before-e.hp,resultingHp:e.hp,provenance:TRAINING_DAMAGE_POLICY.provenance};
+      event={kind:'hp-loss',target:e.id,source:'player',amount:before-e.hp,resultingHp:e.hp,provenance:TRAINING_DAMAGE_POLICY.provenance};
       if(s.manaBuff>0)s.mp=Math.min(s.maxMp,s.mp+P.manaReturn);
     }
   }
   finish(s);
-  return {ok:true,message:`${skill?.name??'普通攻击'} / ${TRAINING_DAMAGE_POLICY.provenance}`,event};
+  return {ok:true,message:`${skill?.name??'普通攻击'} / ${s.damagePolicyProvenance}`,event};
 }
 
 export type TacticalContext={collision:Collision;playerBusy:boolean;reserved:readonly Cell[];damagePolicy?:DamagePolicy};
@@ -199,9 +252,18 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   for(const e of s.enemies){
     e.blind=Math.max(0,e.blind-dt);
     if(e.poison>0&&e.hp>0){
-      const dose=Math.min(e.poison,dt);
-      e.hp=Math.max(0,e.hp-dose*P.poisonDamagePerMs);
-      e.poison-=dose;
+      if(e.combatStats&&e.poisonTicks>0&&e.poisonTickDamage>0){
+        e.poison=Math.max(0,e.poison-dt);e.poisonClock+=dt;
+        while(e.poisonClock>=1000&&e.poisonTicks>0&&e.hp>0){
+          e.poisonClock-=1000;e.poisonTicks-=1;
+          const before=e.hp;e.hp=Math.max(0,e.hp-e.poisonTickDamage);
+          if(before>e.hp)events.push({kind:'hp-loss',target:e.id,source:'poison',amount:before-e.hp,resultingHp:e.hp,provenance:'RECONSTRUCTION_POLICY'});
+        }
+      }else{
+        const dose=Math.min(e.poison,dt);
+        e.hp=Math.max(0,e.hp-dose*P.poisonDamagePerMs);
+        e.poison-=dose;
+      }
     }
   }
   // The current dummy enemies remain reconstruction policy. S2's recovered
@@ -216,10 +278,17 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
       const range=e.role==='melee'?P.meleeRadiusPx:P.rangedRadiusPx;
       const inRange=context?tileDistance(pixelCell(e.x,e.y),pixelCell(x,y))<=(e.role==='melee'?1:P.enemyRangedCells):Math.hypot(e.x-x,e.y-y)<=range;
       if(inRange){
-        const damage=damagePolicy.enemyDamage(defense,e.blind>0,s.shield>0);
+        let damage:number,provenance:RuntimeProvenance;
+        if(s.combatPlayerStats&&e.combatStats){
+          const defender=s.shield>0?{...s.combatPlayerStats,defense:Math.round(s.combatPlayerStats.defense*1.45),magicDefense:Math.round(s.combatPlayerStats.magicDefense*1.45)}:s.combatPlayerStats;
+          const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(e.combatStats,defender,{kind:'physical',multiplier:1,hits:1,accuracyModifier:e.blind>0?-0.15:0},()=>nextBattleRandom(s));
+          damage=resolution.totalDamage;provenance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.provenance;
+        }else{
+          damage=damagePolicy.enemyDamage(defense,e.blind>0,s.shield>0);provenance=damagePolicy.provenance;
+        }
         const before=s.hp;
         s.hp=Math.max(0,s.hp-damage);
-        if(before>s.hp)events.push({kind:'hp-loss',target:'player',amount:before-s.hp,resultingHp:s.hp,provenance:damagePolicy.provenance});
+        if(before>s.hp)events.push({kind:'hp-loss',target:'player',source:e.id,amount:before-s.hp,resultingHp:s.hp,provenance});
       }else if(context){
         const occupied=[pixelCell(x,y),...context.reserved,...s.enemies.filter(other=>other!==e&&other.hp>0).map(other=>pixelCell(other.x,other.y))];
         const next=enemyStep(context.collision,pixelCell(e.x,e.y),pixelCell(x,y),occupied);
