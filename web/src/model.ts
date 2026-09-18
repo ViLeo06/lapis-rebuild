@@ -5,7 +5,7 @@ export type ActorPack = { class_id: number; label: string; actions: Record<strin
 export type MapAsset = { id:number; name:string; png:string; collision:string; inspector?:string; render:{width:number;height:number}; evidence?:string };
 export type EffectAsset = { resource_id:number; layer_name:string; raw_timing:number; frame_count:number; sequence:number[]; frames_dir:string; frame_bounds:Bounds[]; sequence_evidence:string; timing_semantics:string; placement_semantics:string; warning:string };
 export type ContentAsset = { evidence:string; scope:string; summary:string; npc_script:string; quests:Record<string,string>; tutorial?:string; help_script?:string; tutorial_help_summary?:string };
-export type Manifest = { schema: number; provenance?: { kind: string; installer_sha256?: string; pack_sha256?: string; evidence: Evidence; scope?:string }; characters: Record<string, ActorPack>; map: MapAsset; maps?:Record<string,MapAsset>; effects?:Record<string,EffectAsset>; content?:ContentAsset };
+export type Manifest = { schema: number; provenance?: { kind: string; installer_sha256?: string; pack_sha256?: string; evidence: Evidence; scope?:string }; characters: Record<string, ActorPack>; visuals?:Record<string,ActorPack>; map: MapAsset; maps?:Record<string,MapAsset>; effects?:Record<string,EffectAsset>; content?:ContentAsset };
 export type Collision = { width: number; height: number; grid_order: string; grid: number[] };
 export type Inspector = { width: number; height: number; cells: { resource_id: number; directory_path: number[] }[] };
 export type LoadedMap = { manifest:MapAsset; collision:Collision; inspector:Inspector|null };
@@ -49,11 +49,9 @@ export function validateManifest(raw: unknown): Manifest {
   assert(m.schema === 1, 'Unsupported pack schema');
   validateMap(m.map);
   if(m.maps){const entries=Object.entries(m.maps);assert(entries.length>0&&entries.length<=20,'Invalid map count');for(const [id,map] of entries){validateMap(map);assert(/^\d+$/.test(id)&&map.id===Number(id),'Map key/id mismatch');}assert(!!m.maps[String(m.map.id)],'Primary map missing from maps');}
-  assert(m.characters && Object.keys(m.characters).length > 0 && Object.keys(m.characters).length <= 20, 'Invalid character count');
-  for (const [id, c] of Object.entries(m.characters)) {
-    assert(/^\d+$/.test(id) && c.class_id === Number(id) && c.actions && c.actions['00'] && c.actions['01'] && c.actions['02'] && Object.keys(c.actions).length > 0, 'Invalid character');
-    for (const [slot, a] of Object.entries(c.actions)) { assert(/^\d{2}$/.test(slot), 'Invalid action slot'); safePath(a.animation); safePath(a.frames_dir); }
-  }
+  const validateActors=(actors:Record<string,ActorPack>,limit:number,label:string)=>{const entries=Object.entries(actors);assert(entries.length>0&&entries.length<=limit,`Invalid ${label} count`);for(const [id,c] of entries){assert(/^\d+$/.test(id)&&c.class_id===Number(id)&&c.actions&&c.actions['00']&&c.actions['01']&&c.actions['02']&&Object.keys(c.actions).length>0,`Invalid ${label}`);for(const [slot,a] of Object.entries(c.actions)){assert(/^\d{2}$/.test(slot),'Invalid action slot');safePath(a.animation);safePath(a.frames_dir);}}};
+  assert(m.characters,'Missing characters');validateActors(m.characters,20,'character');
+  if(m.visuals)validateActors(m.visuals,100,'visual');
   if(m.effects){const entries=Object.entries(m.effects);assert(entries.length<=100,'Invalid effect count');for(const [id,e] of entries){assert(/^\d+$/.test(id)&&e.resource_id===Number(id),'Effect key/id mismatch');assert(typeof e.layer_name==='string'&&e.layer_name.length<=64,'Invalid effect layer');assert(Number.isFinite(e.raw_timing),'Invalid effect timing');assert(integer(e.frame_count)&&e.frame_count>=1&&e.frame_count<=4096,'Invalid effect frame count');assert(Array.isArray(e.sequence)&&e.sequence.length===e.frame_count&&e.sequence.every((v,i)=>integer(v)&&v===i),'Effect sequence must be verified sequential file order');safePath(e.frames_dir);assert(Array.isArray(e.frame_bounds)&&e.frame_bounds.length===e.frame_count,'Effect bounds mismatch');e.frame_bounds.forEach((b,i)=>{assert(b.index===i&&[b.left,b.top,b.right,b.bottom].every(integer),'Invalid effect bounds');assert(b.right>b.left&&b.bottom>b.top,'Invalid effect dimensions');});}}
   if(m.content)validateContentDef(m.content);
   return m;
