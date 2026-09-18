@@ -139,3 +139,7 @@ VERIFIED / recovered inputs are kept separate from reconstruction bindings.
 - all S19 final arithmetic/rewards: RECONSTRUCTION_POLICY
 
 Passing the acceptance proves a playable reconstruction path. It does not promote any of those reconstruction choices to retail truth.
+
+## Validation retry
+
+The final acceptance rerun includes the Phaser logical-scroll adapter fix and compatibility gating for pre-M5 private-world assertions. Pointer conversion remains player-facing input; no test-only runtime shortcut was added.
