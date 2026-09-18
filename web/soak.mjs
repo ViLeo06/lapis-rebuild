@@ -1,4 +1,4 @@
-// A real wall-clock M4 browser soak, not a simulated-time test.
+// A real wall-clock M5 browser soak, not a simulated-time test.
 import {chromium} from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {performance} from 'node:perf_hooks';
@@ -72,8 +72,9 @@ try{
   const developerMode=cycle%2===0;
   await setDiagnostics(developerMode);
 
-  // Exercise the public M4 persistence surface repeatedly while staying on
-  // the field. Combat/quest completion is covered by S14 browser acceptance.
+  // Exercise the public M5 persistence/player shell repeatedly while staying on
+  // the field. The full NPC -> door -> monster -> battle -> turn-in loop is
+  // covered by the private M5 playable-recovery browser acceptance.
   await page.evaluate(async()=>{await window.lapisM4.save();await window.lapisM4.load();});
 
   const remaining=durationMs-(performance.now()-started);
@@ -86,7 +87,10 @@ try{
    save:JSON.parse(window.lapisM4.exportJson()),
    bodyClass:document.body.className,
   }));
-  if(!state.scene.ready||state.scene.inBattleView)throw new Error('Invalid M4 field state');
+  if(!state.scene.ready||state.scene.inBattleView)throw new Error('Invalid M5 field state');
+  if(state.m4.playableRecovery!==true)throw new Error('M5 playable recovery runtime not active');
+  if(state.scene.cameraFollow!==true)throw new Error('M5 camera follow not active');
+  if(!state.scene.worldVisuals?.some(row=>row.resourceId===1001&&row.visible))throw new Error('Recovered M5 guide visual missing');
   if(state.scene.character!==character)throw new Error('M4 class switch did not persist');
   if(state.scene.inventory.weapon!==Number(gear.weapon)||state.scene.inventory.armor!==Number(gear.armor))throw new Error('M4 equipment did not persist');
   if(state.save.version!==2||state.save.character!==character)throw new Error('Invalid M4 SaveV2 state');
@@ -103,6 +107,9 @@ try{
    armor:state.scene.inventory.armor,
    developerMode:state.m4.developerMode,
    questStage:state.m4.quest.stage,
+   playableRecovery:state.m4.playableRecovery,
+   cameraFollow:state.scene.cameraFollow,
+   guideVisible:state.scene.worldVisuals?.some(row=>row.resourceId===1001&&row.visible)??false,
    saveVersion:state.save.version,
   };
   samples.push(sample);
@@ -114,7 +121,7 @@ try{
  if(elapsedMs<durationMs)throw new Error('Wall-clock interval incomplete');
  await writeFile('test-results/soak/report.json',JSON.stringify({
   status:'passed',
-  scope:'30-minute real-time M4 field soak across player HUD, swordsman/wizard class switching, M4 inventory/equipment, SaveV2 save/load and opt-in diagnostics. Combat and quest completion are covered separately by S14 manual-style browser acceptance.',
+  scope:'30-minute real-time M5 field soak across player HUD, swordsman/wizard class switching, M5 inventory/equipment, SaveV2 save/load, camera follow, recovered B1001 guide visibility and opt-in diagnostics. Full spatial quest/battle completion is covered separately by the M5 private-original playable-recovery acceptance.',
   elapsedMs,
   samples,
   errors,
