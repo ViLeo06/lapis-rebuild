@@ -99,7 +99,7 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   await expect.poll(async()=>(await snap(page)).inBattleView,{timeout:30000,intervals:[100]}).toBe(true);
   const entered=await snap(page);
   expect(entered.battleZoneId).toBe(0);
-  expect(entered.damagePolicy.id).toBe('m5-reconstruction-combat-balance-v1');
+  expect(entered.damagePolicy.id).toBe('m5-reconstruction-combat-balance-v2');
   expect(entered.damagePolicy.provenance).toBe('RECONSTRUCTION_POLICY');
   expect(entered.enemies.map(row=>row.visualResourceId)).toEqual([4524,4544]);
   expect(entered.enemies.every(row=>row.maxHp>0)).toBe(true);
