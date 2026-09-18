@@ -58,7 +58,7 @@ export class ReconstructionWorldAuthority{
       };
     }
     if(state.quest.stage==='ready_to_turn_in'){
-      const quest=applyQuestEvent(state.quest,{type:'turn_in'},TRAINING_BATTLE_ZONE_ID);
+      const quest=applyQuestEvent(state.quest,{type:'turn_in'},this.content.battleZoneId);
       return{state:{world:{...state.world},quest},result:{accepted:true,dialogue:presentation.dialogue,provenance:'RECONSTRUCTION_POLICY'}};
     }
     return{state,result:{accepted:true,dialogue:presentation.dialogue,provenance:'RECONSTRUCTION_POLICY'}};
