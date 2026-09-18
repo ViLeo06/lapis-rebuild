@@ -136,6 +136,10 @@ export class M4RuntimeIntegration{
     this.applyWorldState(initial);
     if(this.m5World){
       this.scene.configureWorldVisuals(this.m5World.visuals);
+      this.scene.configureWorldMarkers([
+        {id:'training-house-door',mapId:this.m5World.content.trainingMapId,cell:this.m5World.doorCell,label:'训练屋入口'},
+        {id:'training-house-exit',mapId:this.m5World.content.objectiveMapId,cell:this.m5World.interiorExit,label:'出口'},
+      ]);
       this.scene.setPlayerCameraFollow(true);
       this.scene.focusPlayer();
       this.spatial?.start({mapId:initial.mapId,cell:[initial.x,initial.y]});
