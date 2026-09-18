@@ -7,7 +7,7 @@ import { referenceCellToScreen, referenceScreenToCell, closestWalkable, rawCell,
 import type { Cell } from './coordinates.ts';
 import { PROVISIONAL as P } from './config.ts';
 import { initialState, beginBattle, updateBattle, useAttack, actionReady, consumeAction } from './battle.ts';
-import type { Skill } from './battle.ts';
+import type { Skill,ReconstructionBattleSetup } from './battle.ts';
 import { validateSave, writeSave, readSave } from './save.ts';
 import type { Save } from './save.ts';
 import {initialQuestState,advanceGuide} from './quest.ts';
@@ -15,8 +15,11 @@ import {chooseBattleLayout,reachableCells,tacticalRoute,pixelCell,tileDistance,c
 import {frameIntervalMs,sequenceDurationMs} from './animation-policy.ts';
 import {createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY} from './runtime-boundaries.ts';
 import type {BattleEntry,InteractionIntent} from './runtime-boundaries.ts';
+import {ViewportController,BrowserFullscreenPort} from './view/viewport-controller.ts';
+import {VisualActor} from './visual-actor.ts';
 
 type FieldReturn = {mapId:number;anchor:{x:number;y:number};direction:number;camera:{x:number;y:number;zoom:number}};
+export type WorldVisualSpec={id:string;mapId:number;cell:Cell;resourceId:number;label:string;kind:'npc'|'encounter'};
 
 export class LabScene extends Phaser.Scene {
   pack: LoadedPack;
@@ -54,6 +57,11 @@ export class LabScene extends Phaser.Scene {
   private mapImage!:Phaser.GameObjects.Image;
   private sprite!: Phaser.GameObjects.Image;
   private effectSprite?:Phaser.GameObjects.Image;
+  private viewport?:ViewportController;
+  private cameraFollowEnabled=false;
+  private reconstructionBattleSetup?:ReconstructionBattleSetup;
+  private worldVisualActors=new Map<string,{spec:WorldVisualSpec;actor:VisualActor;label:Phaser.GameObjects.Text}>();
+  private enemyVisualActors=new Map<string,VisualActor>();
   private overlay!: Phaser.GameObjects.Graphics;
   private guideLabel!:Phaser.GameObjects.Text;
   private enemyLabels: Phaser.GameObjects.Text[]=[];
@@ -88,24 +96,26 @@ export class LabScene extends Phaser.Scene {
       this.notice(`缺失 ${missing.length} 张图片，停止初始化`);
       return;
     }
-    this.mapImage=this.add.image(0,0,mapTextureKey(this.mapId)).setOrigin(0);
+    this.mapImage=this.add.image(0,0,mapTextureKey(this.mapId)).setOrigin(0).setDepth(0);
     this.resetPosition();
-    this.sprite=this.add.image(0,0,textureKey(this.character,'00',0)).setOrigin(0);
+    this.sprite=this.add.image(0,0,textureKey(this.character,'00',0)).setOrigin(0).setDepth(20);
     if(this.effectId!==null){
       const e=this.effect();
       const eb=e.frame_bounds[0];
-      this.effectSprite=this.add.image(this.anchor.x+eb.left,this.anchor.y+eb.top,effectTextureKey(e.resource_id,0)).setOrigin(0).setVisible(false);
+      this.effectSprite=this.add.image(this.anchor.x+eb.left,this.anchor.y+eb.top,effectTextureKey(e.resource_id,0)).setOrigin(0).setDepth(30).setVisible(false);
     }
-    this.overlay=this.add.graphics();
+    this.overlay=this.add.graphics().setDepth(40);
     this.guideLabel=this.add.text(0,0,'M3 引导员\nRECONSTRUCTION',{
       fontFamily:'sans-serif',fontSize:'11px',color:'#f1d39a',backgroundColor:'#172322cc',align:'center',padding:{x:5,y:3}
-    }).setOrigin(.5,1);
+    }).setOrigin(.5,1).setDepth(50);
     this.updateGuideLabel();
     for(let i=0;i<2;i++)this.enemyLabels.push(this.add.text(0,0,'',{
       fontFamily:'sans-serif',fontSize:'13px',color:'#ffe0a0',backgroundColor:'#182120'
-    }).setOrigin(.5,1));
+    }).setOrigin(.5,1).setDepth(50));
+    this.setupViewport();
+    this.ensureEnemyVisualActors();
     this.fit();
-    this.scale.on('resize',()=>this.fit());
+    this.scale.on('resize',()=>this.viewport?.reclamp());
     this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
       this.hover={x:Math.round(world.x),y:Math.round(world.y)};
@@ -122,7 +132,7 @@ export class LabScene extends Phaser.Scene {
       }
       this.moveTo(world.x,world.y);
     });
-    this.input.on('wheel',(_p:unknown,_o:unknown,_x:number,dy:number)=>this.zoom(dy>0?.9:1.1));
+    this.input.on('wheel',(_p:unknown,_o:unknown,_x:number,dy:number)=>{if(this.viewport)this.viewport.handleWheel(dy);else this.zoom(dy>0?.9:1.1);});
     this.events.once('shutdown',()=>this.scale.removeAllListeners('resize'));
     this.notice(this.pack.manifest.provenance?.kind==='synthetic'
       ?'合成测试样本已加载。不是原版美术。'
@@ -165,13 +175,72 @@ export class LabScene extends Phaser.Scene {
     this.guideLabel.setPosition(p[0],p[1]-18).setVisible(!this.inBattleView&&this.state.phase==='safe');
   }
 
+  private setupViewport(){
+    const target=document.querySelector<HTMLElement>('.world')??document.getElementById('canvas-host');
+    const port={
+      viewportSize:()=>({width:this.scale.width,height:this.scale.height}),
+      worldBounds:()=>({x:0,y:0,width:this.currentMap().manifest.render.width,height:this.currentMap().manifest.render.height}),
+      cameraState:()=>({scrollX:this.cameras.main.scrollX,scrollY:this.cameras.main.scrollY,zoom:this.cameras.main.zoom}),
+      resize:(width:number,height:number)=>{if(this.scale.width!==width||this.scale.height!==height)this.scale.resize(width,height);},
+      setZoom:(zoom:number)=>void this.cameras.main.setZoom(zoom),
+      setScroll:(scrollX:number,scrollY:number)=>void this.cameras.main.setScroll(scrollX,scrollY),
+    };
+    this.viewport=new ViewportController(port,target?new BrowserFullscreenPort(document,target):undefined);
+  }
   fit(){
     if(!this.cameras?.main)return;
+    if(this.viewport){
+      if(this.inBattleView&&this.battleFocus){this.viewport.frameRect(this.battleFocus);return;}
+      this.viewport.fitWorld();return;
+    }
     if(this.inBattleView&&this.battleFocus){const f=this.battleFocus;this.cameras.main.setZoom(Math.min(this.scale.width/f.width,this.scale.height/f.height)*.96).centerOn(f.x,f.y);return;}
     const {width,height}=this.currentMap().manifest.render;
     this.cameras.main.setZoom(Math.min(this.scale.width/width,this.scale.height/height)*.98).centerOn(width/2,height/2);
   }
-  zoom(mult:number){this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom*mult,.25,3));}
+  focusPlayer(){
+    if(this.viewport){this.viewport.resetZoom();this.viewport.centerOn(this.anchor);}
+    else this.cameras.main.setZoom(1).centerOn(this.anchor.x,this.anchor.y);
+  }
+  setPlayerCameraFollow(enabled:boolean){this.cameraFollowEnabled=enabled;if(enabled)this.viewport?.centerOn(this.anchor);}
+  zoom(mult:number){if(this.viewport)this.viewport.setZoom(this.cameras.main.zoom*mult);else this.cameras.main.setZoom(Phaser.Math.Clamp(this.cameras.main.zoom*mult,.25,3));}
+  zoomIn(){return this.viewport?.zoomIn()??this.zoom(1.25)}
+  zoomOut(){return this.viewport?.zoomOut()??this.zoom(.8)}
+  resetZoom(){if(this.viewport)return this.viewport.resetZoom();this.cameras.main.setZoom(1);return 1;}
+  async toggleFullscreen(){return this.viewport?.toggleFullscreen()??false}
+  viewportSnapshot(){return this.viewport?.snapshot()??null}
+
+  setReconstructionBattleSetup(setup:ReconstructionBattleSetup|undefined){this.reconstructionBattleSetup=setup;}
+
+  configureWorldVisuals(specs:readonly WorldVisualSpec[]){
+    for(const row of this.worldVisualActors.values()){row.actor.destroy();row.label.destroy();}
+    this.worldVisualActors.clear();
+    for(const spec of specs){
+      if(!this.pack.animations[String(spec.resourceId)])continue;
+      const [x,y]=referenceCellToScreen(spec.cell);
+      const actor=new VisualActor(this,this.pack,String(spec.resourceId),x,y,0);actor.image.setDepth(10);
+      const label=this.add.text(x,y-58,spec.label,{fontFamily:'sans-serif',fontSize:'12px',color:'#f4e6bd',backgroundColor:'#14201dcc',padding:{x:4,y:2}}).setOrigin(.5,1).setDepth(50);
+      this.worldVisualActors.set(spec.id,{spec:{...spec},actor,label});
+    }
+    if(this.worldVisualActors.size)this.guideLabel.setVisible(false);
+    this.refreshRecoveredVisualVisibility();
+  }
+
+  private ensureEnemyVisualActors(){
+    const bindings:[string,string][]=[['dummy-melee','4524'],['dummy-ranged','4544']];
+    for(const [id,resource] of bindings){
+      if(this.enemyVisualActors.has(id)||!this.pack.animations[resource])continue;
+      const actor=new VisualActor(this,this.pack,resource,0,0,0);actor.image.setDepth(12);actor.setVisible(false);
+      this.enemyVisualActors.set(id,actor);
+    }
+  }
+
+  private refreshRecoveredVisualVisibility(){
+    for(const row of this.worldVisualActors.values()){
+      const visible=!this.inBattleView&&row.spec.mapId===this.mapId;
+      row.actor.setVisible(visible);row.label.setVisible(visible);
+    }
+    for(const actor of this.enemyVisualActors.values())actor.setVisible(this.inBattleView);
+  }
 
   setMap(id:number){
     const next=this.pack.maps[String(id)];
@@ -185,6 +254,7 @@ export class LabScene extends Phaser.Scene {
     this.effectSprite?.setVisible(false);
     this.effectPlaying=false;
     this.updateGuideLabel();
+    this.refreshRecoveredVisualVisibility();
     this.fit();
     this.notice(`已切换非战斗地图 ${String(id).padStart(4,'0')} / ${next.manifest.name}`);
   }
@@ -314,7 +384,7 @@ export class LabScene extends Phaser.Scene {
     this.battleFocus=layout.focus;
     const pos=referenceCellToScreen(layout.player);this.anchor={x:pos[0],y:pos[1]};
     this.route=[];
-    this.state=beginBattle(this.anchor.x,this.anchor.y,entry);
+    this.state=beginBattle(this.anchor.x,this.anchor.y,entry,this.reconstructionBattleSetup);
     layout.enemies.forEach((cell,i)=>{const xy=referenceCellToScreen(cell);this.state.enemies[i].x=xy[0];this.state.enemies[i].y=xy[1];});
     this.fit();
     this.selectedEnemy='dummy-melee';
@@ -322,6 +392,7 @@ export class LabScene extends Phaser.Scene {
     this.effectSprite?.setVisible(false);
     this.effectPlaying=false;
     this.updateGuideLabel();
+    this.refreshRecoveredVisualVisibility();
     this.notice(`已进入 battleZone ${entry.battleZoneId} / ${entry.provenance}。训练 encounter authority 仍为离线重构策略。`);
   }
 
@@ -347,6 +418,7 @@ export class LabScene extends Phaser.Scene {
     this.effectSprite?.setVisible(false);
     this.effectPlaying=false;
     this.updateGuideLabel();
+    this.refreshRecoveredVisualVisibility();
     if(back)this.cameras.main.setZoom(back.camera.zoom).centerOn(back.camera.x,back.camera.y);else this.fit();
     this.notice('已退出战斗画面，返回非战斗地图');
   }
@@ -365,6 +437,7 @@ export class LabScene extends Phaser.Scene {
       this.setTransientAction('02');
       this.route=[];
       this.effectUntil=P.effectDurationMs;
+      if(result.event&&result.event.target!=='player')this.enemyVisualActors.get(result.event.target)?.playTransient('03');
       const rid=skill?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
       if(rid&&this.pack.effects[String(rid)]){
         this.setEffect(rid);
@@ -429,7 +502,7 @@ export class LabScene extends Phaser.Scene {
     const e=this.effectId===null?null:this.effect();
     const cam=this.cameras.main,origin=cam.getWorldPoint(0,0);
     return {
-      camera:{x:origin.x,y:origin.y,zoom:cam.zoom},
+      camera:{x:origin.x,y:origin.y,zoom:cam.zoom},viewport:this.viewportSnapshot(),cameraFollow:this.cameraFollowEnabled,
       debugBounds:this.showBounds,routeLineVisible:false,busy:this.busy(),battlePaused:this.battlePaused,
       battleCell:pixelCell(this.anchor.x,this.anchor.y),
       reachable:this.reachable().map(p=>p.at(-1)!),
@@ -445,7 +518,8 @@ export class LabScene extends Phaser.Scene {
       cooldown:this.state.cooldown,action:this.state.action,actionMax:this.state.actionMax,actionReady:this.canAct(),moveLimit:this.battleMoveLimit(),
       phase:this.state.phase,hp:Math.ceil(this.state.hp),mp:this.state.mp,gold:this.gold,
       battleZoneId:this.state.battleZoneId,battleEntryProvenance:this.state.battleEntryProvenance,damagePolicy:{id:this.state.damagePolicyId,provenance:this.state.damagePolicyProvenance},
-      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
+      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),visualResourceId:enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null,aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
+      worldVisuals:[...this.worldVisualActors.values()].map(row=>({id:row.spec.id,mapId:row.spec.mapId,resourceId:row.spec.resourceId,visible:row.actor.image.visible,cell:row.spec.cell})),
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,duration:this.effectDuration,timingPolicy:'RETAIL_COMMON' as const,playing:this.effectPlaying}:null,
       fps:Math.round(this.game.loop.actualFps)
     };
@@ -467,6 +541,7 @@ export class LabScene extends Phaser.Scene {
         this.anchor.y+=dy/d*step;
       }
     }
+    if(!this.inBattleView&&this.cameraFollowEnabled)this.viewport?.follow(this.anchor,dt);
     if(this.timedAction>0){
       this.timedAction=Math.max(0,this.timedAction-dt);
       if(this.timedAction<=0)this.setAction('00');
@@ -499,6 +574,16 @@ export class LabScene extends Phaser.Scene {
     const events=updateBattle(this.state,dt,this.anchor.x,this.anchor.y,equipmentBonus(this.inventory,this.character).defense,
       this.inBattleView?{collision:this.currentMap().collision,playerBusy:this.busy(),reserved:this.route}:undefined);
     if(events.some(event=>event.kind==='hp-loss'&&event.target==='player')&&this.state.phase==='active')this.setTransientAction('03');
+    for(const event of events){
+      if(event.target==='player'&&event.source)this.enemyVisualActors.get(event.source)?.playTransient('02');
+      else if(event.target!=='player')this.enemyVisualActors.get(event.target)?.playTransient('03');
+    }
+    for(const row of this.worldVisualActors.values())row.actor.update(dt);
+    for(const enemy of this.state.enemies){
+      const actor=this.enemyVisualActors.get(enemy.id);if(!actor)continue;
+      actor.setVisible(this.inBattleView&&enemy.hp>0).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(enemy.hp>0?1:.25);
+      actor.update(dt);
+    }
     if(before!==this.state.phase){
       this.route=[];
       this.updateGuideLabel();
@@ -551,12 +636,14 @@ export class LabScene extends Phaser.Scene {
     if(this.inBattleView){
       this.state.enemies.forEach((e,j)=>{
         if(e.hp<=0)return;
-        g.fillStyle(e.id===this.selectedEnemy?0xa06b45:0x685440,1);
-        g.fillRect(e.x-13,e.y-38,26,36);
-        g.fillCircle(e.x,e.y-45,12);
-        g.lineStyle(3,0xd3b387,1);
-        g.lineBetween(e.x-23,e.y-24,e.x+23,e.y-24);
-        g.lineBetween(e.x,e.y-35,e.x,e.y+4);
+        if(!this.enemyVisualActors.has(e.id)){
+          g.fillStyle(e.id===this.selectedEnemy?0xa06b45:0x685440,1);
+          g.fillRect(e.x-13,e.y-38,26,36);
+          g.fillCircle(e.x,e.y-45,12);
+          g.lineStyle(3,0xd3b387,1);
+          g.lineBetween(e.x-23,e.y-24,e.x+23,e.y-24);
+          g.lineBetween(e.x,e.y-35,e.x,e.y+4);
+        }
         g.fillStyle(0x2b3332);
         g.fillRect(e.x-24,e.y-66,48,5);
         g.fillStyle(0xe39168);
