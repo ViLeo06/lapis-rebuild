@@ -132,7 +132,10 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   }
   await expect.poll(async()=>(await snap(page)).phase,{timeout:12000}).toBe('won');
   expect(moved).toBe(true);expect(attacked).toBe(true);
-  checkpoints.victory=await snap(page);
+  const victory=await snap(page);
+  expect(victory.hp).toBeGreaterThan(0);
+  expect(victory.hp).toBeLessThanOrEqual(victory.maxHp??125);
+  checkpoints.victory=victory;
   await page.screenshot({path:'test-results/m5-04-balanced-victory.png',fullPage:true});
 
   await action(page,'return');
