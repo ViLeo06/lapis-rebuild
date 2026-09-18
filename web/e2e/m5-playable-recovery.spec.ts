@@ -36,6 +36,7 @@ async function selectTarget(page:Page,id:string){
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
 }
 
+// Final gate intentionally uses real pointer delivery after the Phaser logical-scroll adapter fix.
 test('M5 private-original playable recovery: camera NPC door monsters balance quest',async({page})=>{
   test.setTimeout(210000);
   const pageErrors:string[]=[];page.on('pageerror',e=>pageErrors.push(e.message));
