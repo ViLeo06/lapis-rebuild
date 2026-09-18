@@ -270,9 +270,13 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   // source/precedence metadata is carried on each instance, while historical
   // per-encounter AI payloads remain unavailable.
   const damagePolicy=context?.damagePolicy??TRAINING_DAMAGE_POLICY;
-  for(const e of s.enemies){
+  for(const [enemyIndex,e] of s.enemies.entries()){
     if(e.hp<=0)continue;
-    e.action=Math.min(s.actionMax,e.action+s.actionMax*dt/P.enemyIntervalMs);
+    const enemyIntervalMs=s.combatPlayerStats
+      ?DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.tuning.cadence.enemyActionSeconds*1000*
+        (1+enemyIndex*DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.tuning.cadence.staggerPerEnemy)
+      :P.enemyIntervalMs;
+    e.action=Math.min(s.actionMax,e.action+s.actionMax*dt/enemyIntervalMs);
     if(e.action+1e-8>=s.actionMax){
       e.action=0;
       const range=e.role==='melee'?P.meleeRadiusPx:P.rangedRadiusPx;
