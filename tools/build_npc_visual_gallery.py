@@ -63,6 +63,13 @@ def build(client_root: Path, inventory_path: Path, out: Path, limit: int) -> dic
         omitted_actions = []
         for action in source["actions"]:
             action_id = int(action["action"])
+            if int(action.get("ani_index_error_count", 0)):
+                omitted_actions.append({
+                    "action": action_id,
+                    "reason": "original ANI references frames outside the paired SPR; preserved in inventory and skipped for safe preview",
+                    "ani_index_errors": action.get("ani_index_errors", []),
+                })
+                continue
             if int(action["dimensions"].get("non_renderable_frame_count", 0)):
                 omitted_actions.append({"action": action_id, "reason": "paired SPR contains non-renderable original frame bounds"})
                 continue
