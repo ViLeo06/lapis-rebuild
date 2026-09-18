@@ -1,0 +1,566 @@
+{
+  "schema": 1,
+  "scope": "S17 Monster Visual Recovery sanitized metadata; no original pixel bytes",
+  "baseline": "047c52af340076a00a6e0d347806708ad92844d1",
+  "fixed_client": {
+    "installer_sha256": "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88",
+    "unpacked_neodark_sha256": "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7",
+    "original_program_executed": false
+  },
+  "ci_evidence": {
+    "s17_workflow_run": 35287680748,
+    "web_validation_run": 35287680822,
+    "artifact_id": 10524981851,
+    "artifact_name": "s17-monster-visual-recovery"
+  },
+  "inventory_summary": {
+    "visual_family_count": 1638,
+    "ani_resource_count": 6809,
+    "tip_library_count": 27,
+    "story_numeric_model_token_count": 38,
+    "same_numeric_story_visual_count": 26,
+    "story_tokens_without_same_numeric_visual": 12,
+    "action_slot_sets": {
+      "00,01,02,03": 1355,
+      "00,01,02,03,05": 247,
+      "00,01,02,03,06": 22,
+      "00": 7,
+      "00,01,02,03,07": 2,
+      "00,01,02,05": 2,
+      "00,01,02,03,05,06": 1,
+      "00,01,02,03,05,07": 1,
+      "00,01,02,03,05,07,08": 1
+    }
+  },
+  "retail_visual_binding": {
+    "status": "VERIFIED_STATIC_ORIGINAL",
+    "roster_unit_program_key_offset": "0x00",
+    "roster_visual_model_id_offset": "0x08",
+    "live_visual_object_pointer_offset": "0x0C",
+    "visual_cache_model_id_offset": "0x234",
+    "ani_format": "B%03d_%02d.ani",
+    "chain": "battle roster +0x08 -> visual cache/model object +0x234 -> live unit +0x0C visual object -> action loader -> B%03d_%02d.ani",
+    "boundary": "Roster +0x00 and +0x08 are distinct; this does not recover canonical monster names or historical live roster rows."
+  },
+  "evidence_boundaries": {
+    "slot_03_hit": "VERIFIED_STATIC_ORIGINAL",
+    "slot_00_01_02_labels": "RECOVERED_SECONDARY",
+    "story_model_to_visual_numeric_match": "UNVERIFIED_NUMERIC_CORRELATION",
+    "universal_death_slot": "UNVERIFIED",
+    "fallback_death_presentation": "RECONSTRUCTION_POLICY"
+  },
+  "reviewed_archetypes": [
+    {
+      "visual_id": "monster-visual-001",
+      "source_family": "B4524",
+      "source_numeric_id": 4524,
+      "manual_visual_descriptor": "green-skinned sword humanoid-like visual",
+      "identity_status": "DESCRIPTIVE_ONLY_NOT_CANONICAL_NAME",
+      "manual_review_status": "VERIFIED_MANUAL_VISUAL",
+      "available_slots": [
+        "00",
+        "01",
+        "02",
+        "03"
+      ],
+      "raw_timing": 5,
+      "row_equivalence_groups_by_slot": {
+        "00": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "01": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "02": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "03": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ]
+      },
+      "story_model_correlation": {
+        "zone": 81,
+        "script": "DEO",
+        "token": "4524",
+        "status": "UNVERIFIED_NUMERIC_CORRELATION"
+      },
+      "death": {
+        "slot": null,
+        "status": "UNVERIFIED",
+        "runtime_fallback": "RECONSTRUCTION_POLICY"
+      },
+      "source_hashes": {
+        "00": {
+          "ani": "b086a9d0b8ae12e90fffa8ec04a58b0a52baf8059df212b2de802c65feb880a8",
+          "spr": "7f7f1ccb7544cb97312be883ab5514f0ece436514c7e4de53d9e5195d7cc6dd4"
+        },
+        "01": {
+          "ani": "b666e878b1fc799895195c0d74077c10776f5c6bacaf63e367acdd93ed27bc73",
+          "spr": "8c5318359541b4babd791abcb6fa5bd3d94c13ae9ac6bfa0e88cd233af8876b2"
+        },
+        "02": {
+          "ani": "9e6179b1cb8cd9684a96052bf9a70579a68df522603609c21347fb0c824399c9",
+          "spr": "344c9beb196cb2bf7155163eccb3093149187a3cad70360675a1714e02766a1c"
+        },
+        "03": {
+          "ani": "5d38d898917254fda104cdb9de6e2d78aa46b3c6dd38a799ff765b812cd65fbd",
+          "spr": "27baa1c56111ab60eb8287d7b9a8a41a76c6be0458780f6c807732c76f2f55a8"
+        }
+      }
+    },
+    {
+      "visual_id": "monster-visual-002",
+      "source_family": "B4525",
+      "source_numeric_id": 4525,
+      "manual_visual_descriptor": "blue-skinned polearm humanoid-like visual",
+      "identity_status": "DESCRIPTIVE_ONLY_NOT_CANONICAL_NAME",
+      "manual_review_status": "VERIFIED_MANUAL_VISUAL",
+      "available_slots": [
+        "00",
+        "01",
+        "02",
+        "03"
+      ],
+      "raw_timing": 5,
+      "row_equivalence_groups_by_slot": {
+        "00": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "01": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "02": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ],
+          [
+            5
+          ],
+          [
+            6
+          ],
+          [
+            7
+          ]
+        ],
+        "03": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ]
+      },
+      "story_model_correlation": {
+        "zone": 81,
+        "script": "DEO",
+        "token": "4525",
+        "status": "UNVERIFIED_NUMERIC_CORRELATION"
+      },
+      "death": {
+        "slot": null,
+        "status": "UNVERIFIED",
+        "runtime_fallback": "RECONSTRUCTION_POLICY"
+      },
+      "source_hashes": {
+        "00": {
+          "ani": "30e52015988ee99b45f58fbaaf9acd85e0abaed58726678d2e410bdaefd82413",
+          "spr": "7e7eacf4c4325effe813cf5241ee695b42103f0038475f6fdd55bfc869d0a04a"
+        },
+        "01": {
+          "ani": "a283f040823cc07f2359f8532ca07cb4802cb54191c2edab9e6b235a03da97d0",
+          "spr": "cde30b47dfbe178a021e38fc5c7d7d72b96d20352eadefcb654f0d22fa741698"
+        },
+        "02": {
+          "ani": "e3bed74cfe7572eb94267e430e25ce35cd823382d76d9a03c651774c2cb9dddd",
+          "spr": "5fa91d62eab891cfc0faf54aa0c92a5639448f349c92faf35abdeadd50685d44"
+        },
+        "03": {
+          "ani": "598003d60142b2998d93b3d3b9a72df22c02e55e0b9b45ae79e7b37e6adb2eca",
+          "spr": "cb6ab24f5d0e958b7d95adcad7b007bb0761705a43358df761a3138ffa6ad699"
+        }
+      }
+    },
+    {
+      "visual_id": "monster-visual-003",
+      "source_family": "B4526",
+      "source_numeric_id": 4526,
+      "manual_visual_descriptor": "green armored humanoid-like visual",
+      "identity_status": "DESCRIPTIVE_ONLY_NOT_CANONICAL_NAME",
+      "manual_review_status": "VERIFIED_MANUAL_VISUAL",
+      "available_slots": [
+        "00",
+        "01",
+        "02",
+        "03"
+      ],
+      "raw_timing": 5,
+      "row_equivalence_groups_by_slot": {
+        "00": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "01": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "02": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ],
+          [
+            5
+          ],
+          [
+            6
+          ],
+          [
+            7
+          ]
+        ],
+        "03": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ]
+      },
+      "story_model_correlation": {
+        "zone": 81,
+        "script": "DEO",
+        "token": "4526",
+        "status": "UNVERIFIED_NUMERIC_CORRELATION"
+      },
+      "death": {
+        "slot": null,
+        "status": "UNVERIFIED",
+        "runtime_fallback": "RECONSTRUCTION_POLICY"
+      },
+      "source_hashes": {
+        "00": {
+          "ani": "f460cf987a570fb27dd3a5a68382ab3f2fe80bb9848342b564075c5e4aee4371",
+          "spr": "06974a85112af46ca997f3765f740d458cc57c82accd0c9807a12cd2293ea91e"
+        },
+        "01": {
+          "ani": "fc85935119f452a74c51d1199563a56a8443cc42a3c79c59bf09ce7a79b95bc2",
+          "spr": "3c37b9351ca860dfcbd6c97ef3ac3444baffbe3525f57755988df00fc5a9c2e5"
+        },
+        "02": {
+          "ani": "83cfbcf37f706a5d09ec6eee4cb3abea3ffbc4cd397400bb38c0cdbac8cd9165",
+          "spr": "5b38b627cd5efab1ee1a92e89aa5085b6c3a89d6d209b380e50e6cd241c5ec34"
+        },
+        "03": {
+          "ani": "4d1aea56326c43dfcb27fcadae2e4a9f8c043f91d0692346d7f9d06430da5042",
+          "spr": "93de8d4d8fb84af882e92531ad408f725bf1d1c84cd66be5115b2f43bb206d3c"
+        }
+      }
+    },
+    {
+      "visual_id": "monster-visual-004",
+      "source_family": "B4544",
+      "source_numeric_id": 4544,
+      "manual_visual_descriptor": "cyan spectral humanoid-like visual",
+      "identity_status": "DESCRIPTIVE_ONLY_NOT_CANONICAL_NAME",
+      "manual_review_status": "VERIFIED_MANUAL_VISUAL",
+      "available_slots": [
+        "00",
+        "01",
+        "02",
+        "03"
+      ],
+      "raw_timing": 5,
+      "row_equivalence_groups_by_slot": {
+        "00": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "01": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ],
+        "02": [
+          [
+            0
+          ],
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ],
+          [
+            4
+          ],
+          [
+            5
+          ],
+          [
+            6
+          ],
+          [
+            7
+          ]
+        ],
+        "03": [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            4,
+            5
+          ],
+          [
+            6,
+            7
+          ]
+        ]
+      },
+      "story_model_correlation": {
+        "zone": 91,
+        "script": "DEO",
+        "token": "4544",
+        "status": "UNVERIFIED_NUMERIC_CORRELATION"
+      },
+      "death": {
+        "slot": null,
+        "status": "UNVERIFIED",
+        "runtime_fallback": "RECONSTRUCTION_POLICY"
+      },
+      "source_hashes": {
+        "00": {
+          "ani": "f7adf813e3ec3aea316df79c751c1506a1aff46c419a327bf03ac85d55b12aac",
+          "spr": "ff065ecd74398e396da9ce3ea0c21bdb2231cd1a218dcff148c10f9ba37c3371"
+        },
+        "01": {
+          "ani": "67d9818eec9c9a3c8bd2e2bff598f04f2b083bbe871aa01ad2cc94b579aec756",
+          "spr": "1ae972e87a8e832d21545435c990d7a8d0741e7e329eee9fc74062fadef44015"
+        },
+        "02": {
+          "ani": "a37df899095de0852601799cd4d0d3e138df694fa097f07d01f64c5d4c5a3ce3",
+          "spr": "87620d23f35ba07891cec551426398d357355e898c1eaa44e38a34c76da2016f"
+        },
+        "03": {
+          "ani": "d10a5629018dcaea24a981efd348e83f2f6fcec31395a073bc2b546604059e85",
+          "spr": "2bfe6082d0cb3da6e187a91654de3d56c439f27be12d21c27a61182ff7ab1144"
+        }
+      }
+    }
+  ],
+  "reconstruction_training_bindings": [
+    {
+      "battle_unit_key": "dummy-melee",
+      "visual_id": "monster-visual-001",
+      "source_family": "B4524",
+      "provenance": "RECONSTRUCTION_POLICY",
+      "basis": "Visible training melee enemy using human-reviewed original-client monster-like art; retired live roster payload is unavailable."
+    },
+    {
+      "battle_unit_key": "dummy-ranged",
+      "visual_id": "monster-visual-004",
+      "source_family": "B4544",
+      "provenance": "RECONSTRUCTION_POLICY",
+      "basis": "Visible training ranged enemy using human-reviewed original-client spectral art with a projectile-like attack sequence; retired live roster payload is unavailable."
+    }
+  ]
+}
