@@ -79,7 +79,15 @@ These rules optimize for stable playable combat and are replaceable through the 
 
 Policy id:
 
-`m5-reconstruction-combat-balance-v1`
+`m5-reconstruction-combat-balance-v2`
+
+Calibration update after real M5 private-original playtest:
+
+- the first integrated runtime exposed a simulator/runtime mismatch: enemies used the old 1600ms provisional interval while S19 simulated 1900ms + stagger;
+- live M5 now consumes S19's enemy cadence directly;
+- external research PR #27 preserved a 2007 Japanese player candidate where physical damage is subtractive in attack and defence and critical is ×1.5;
+- this evidence is later-region/player-observation only, so M5 **does not** claim the candidate is the 2003 mainland retail formula;
+- v2 uses a calibrated subtractive reconstruction rule: `round(offense × skillMultiplier - defense × 0.65)`, still bounded by the existing minimum and per-strike HP cap.
 
 Guardrails:
 
