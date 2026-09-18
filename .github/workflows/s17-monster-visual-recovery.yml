@@ -1,0 +1,123 @@
+name: S17 monster visual recovery
+on:
+  push:
+    branches: ['codex/m5-monster-visual-recovery']
+    paths:
+      - '.github/workflows/s17-monster-visual-recovery.yml'
+      - 'tools/probe_monster_visuals.py'
+      - 'tools/probe_monster_visual_binding.py'
+      - 'tools/build_s17_monster_preview.py'
+      - 'tools/export_s17_monster_assets.py'
+      - 'tests/parsers/test_monster_visual_probe.py'
+      - 'tests/parsers/test_monster_visual_binding.py'
+      - 'tests/parsers/test_s17_monster_asset_export.py'
+      - 'manifests/s17-monster-visual-catalog.json'
+      - 'web/src/content/monsters/**'
+      - 'web/tests/monster-visual-catalog.test.ts'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: s17-monster-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fixed-client-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+
+      - name: S17 unit tests
+        run: |
+          python3 -m unittest -v \
+            tests/parsers/test_monster_visual_probe.py \
+            tests/parsers/test_monster_visual_binding.py \
+            tests/parsers/test_s17_monster_asset_export.py
+
+      - name: Fetch and verify official UPX decompressor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 60 \
+            https://github.com/upx/upx/releases/download/v5.2.1/upx-5.2.1-amd64_linux.tar.xz \
+            -o "$RUNNER_TEMP/upx.tar.xz"
+          echo "402162aad30af47e60dbd767fb2e64ca394ace9727ba1f40283641f1d1b91657  $RUNNER_TEMP/upx.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/upx.tar.xz" -C "$RUNNER_TEMP"
+
+      - name: Fetch and statically extract fixed-hash 2.2 client
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 \
+            https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe \
+            -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py \
+            "$RUNNER_TEMP/client.exe" \
+            --payload "$RUNNER_TEMP/payload.7z" \
+            --extract-dir "$RUNNER_TEMP/extracted" \
+            --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          mkdir -p "$RUNNER_TEMP/s17"
+          echo "c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd  $RUNNER_TEMP/extracted/client/NeoDark.exe" | sha256sum -c -
+          "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d \
+            -o "$RUNNER_TEMP/s17/neodark-unpacked.bin" \
+            "$RUNNER_TEMP/extracted/client/NeoDark.exe" \
+            > "$RUNNER_TEMP/s17/unpack.log" 2>&1
+          chmod 0644 "$RUNNER_TEMP/s17/neodark-unpacked.bin"
+          echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/s17/neodark-unpacked.bin" | sha256sum -c -
+          python3 tools/probe_monster_visual_binding.py \
+            "$RUNNER_TEMP/s17/neodark-unpacked.bin" \
+            --out "$RUNNER_TEMP/s17/monster-visual-binding.json"
+
+      - name: Capture static visual-binding disassembly windows
+        shell: bash
+        run: |
+          set -euo pipefail
+          objdump -Mintel -d --start-address=0x40fc80 --stop-address=0x40fe40 \
+            "$RUNNER_TEMP/s17/neodark-unpacked.bin" > "$RUNNER_TEMP/s17/character-visual-loader.txt"
+          objdump -Mintel -d --start-address=0x4b3df0 --stop-address=0x4b3f20 \
+            "$RUNNER_TEMP/s17/neodark-unpacked.bin" > "$RUNNER_TEMP/s17/battle-unit-construction.txt"
+          objdump -Mintel -d --start-address=0x4b1f80 --stop-address=0x4b2160 \
+            "$RUNNER_TEMP/s17/neodark-unpacked.bin" > "$RUNNER_TEMP/s17/action-state-setter.txt"
+
+      - name: Inventory visual families and build private review gallery
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/probe_monster_visuals.py \
+            --client-root "$RUNNER_TEMP/extracted/client" \
+            --story-manifest manifests/story-battle-scenes.json \
+            --out "$RUNNER_TEMP/s17/monster-visual-inventory.json"
+          python3 tools/build_s17_monster_preview.py \
+            --client-root "$RUNNER_TEMP/extracted/client" \
+            --report "$RUNNER_TEMP/s17/monster-visual-inventory.json" \
+            --out "$RUNNER_TEMP/s17/gallery"
+          python3 tools/export_s17_monster_assets.py \
+            --client-root "$RUNNER_TEMP/extracted/client" \
+            --manifest manifests/s17-monster-visual-catalog.json \
+            --out "$RUNNER_TEMP/s17/runtime-pack"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'s17'
+          report=json.loads((root/'monster-visual-inventory.json').read_text(encoding='utf-8'))
+          gallery=json.loads((root/'gallery'/'gallery-data.json').read_text(encoding='utf-8'))
+          runtime=json.loads((root/'runtime-pack'/'monster-visuals.json').read_text(encoding='utf-8'))
+          print(json.dumps(report['summary'],ensure_ascii=False,indent=2))
+          print('preview families', [row['visual_id'] for row in gallery['families']])
+          print('reviewed runtime archetypes', [row['visual_id'] for row in runtime['archetypes']])
+          print('training bindings', runtime['battle_unit_bindings'])
+          print('warnings', report['warnings'])
+          PY
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: s17-monster-visual-recovery
+          path: ${{ runner.temp }}/s17/
+          retention-days: 7
+          if-no-files-found: error
