@@ -199,7 +199,11 @@ export class LabScene extends Phaser.Scene {
   fit(){
     if(!this.cameras?.main)return;
     if(this.viewport){
-      if(this.inBattleView&&this.battleFocus){this.viewport.frameRect(this.battleFocus);return;}
+      if(this.inBattleView&&this.battleFocus){
+        const f=this.battleFocus;
+        this.viewport.frameRect({x:f.x-f.width/2,y:f.y-f.height/2,width:f.width,height:f.height});
+        return;
+      }
       this.viewport.fitWorld();return;
     }
     if(this.inBattleView&&this.battleFocus){const f=this.battleFocus;this.cameras.main.setZoom(Math.min(this.scale.width/f.width,this.scale.height/f.height)*.96).centerOn(f.x,f.y);return;}
