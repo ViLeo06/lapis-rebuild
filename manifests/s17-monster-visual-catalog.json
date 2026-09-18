@@ -166,7 +166,9 @@
           "ani": "5d38d898917254fda104cdb9de6e2d78aa46b3c6dd38a799ff765b812cd65fbd",
           "spr": "27baa1c56111ab60eb8287d7b9a8a41a76c6be0458780f6c807732c76f2f55a8"
         }
-      }
+      },
+      "direction_rows": 8,
+      "direction_semantics": "RECOVERED_SECONDARY_BODY_ROW_ORDER_FOR_RUNTIME"
     },
     {
       "visual_id": "monster-visual-002",
@@ -292,7 +294,9 @@
           "ani": "598003d60142b2998d93b3d3b9a72df22c02e55e0b9b45ae79e7b37e6adb2eca",
           "spr": "cb6ab24f5d0e958b7d95adcad7b007bb0761705a43358df761a3138ffa6ad699"
         }
-      }
+      },
+      "direction_rows": 8,
+      "direction_semantics": "RECOVERED_SECONDARY_BODY_ROW_ORDER_FOR_RUNTIME"
     },
     {
       "visual_id": "monster-visual-003",
@@ -418,7 +422,9 @@
           "ani": "4d1aea56326c43dfcb27fcadae2e4a9f8c043f91d0692346d7f9d06430da5042",
           "spr": "93de8d4d8fb84af882e92531ad408f725bf1d1c84cd66be5115b2f43bb206d3c"
         }
-      }
+      },
+      "direction_rows": 8,
+      "direction_semantics": "RECOVERED_SECONDARY_BODY_ROW_ORDER_FOR_RUNTIME"
     },
     {
       "visual_id": "monster-visual-004",
@@ -544,7 +550,9 @@
           "ani": "d10a5629018dcaea24a981efd348e83f2f6fcec31395a073bc2b546604059e85",
           "spr": "2bfe6082d0cb3da6e187a91654de3d56c439f27be12d21c27a61182ff7ab1144"
         }
-      }
+      },
+      "direction_rows": 8,
+      "direction_semantics": "RECOVERED_SECONDARY_BODY_ROW_ORDER_FOR_RUNTIME"
     }
   ],
   "reconstruction_training_bindings": [
