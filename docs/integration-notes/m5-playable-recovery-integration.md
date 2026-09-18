@@ -84,7 +84,7 @@ No debug map selector is required.
 
 M5 player battles opt into:
 
-`m5-reconstruction-combat-balance-v1`
+`m5-reconstruction-combat-balance-v2`
 
 The old server formula remains unrecovered.
 
@@ -94,6 +94,8 @@ M5 battle creation uses:
 - S19 player ATK/DEF/MATK/MDEF/HIT/EVA/CRIT reconstruction stats
 - level-aware normal melee/ranged enemy profiles
 - bounded hit/critical/damage rules
+- v2 subtractive defence calibration (`offense × multiplier - defence × 0.65`) informed by, but not identified with, the 2007 Japanese player candidate archived in PR #27
+- S19 enemy cadence (`1.9s` base + stagger) is now consumed by the live runtime instead of the older provisional `1.6s` interval
 - equipment bonuses
 - S19 encounter rewards through the existing idempotent reward pipeline
 
