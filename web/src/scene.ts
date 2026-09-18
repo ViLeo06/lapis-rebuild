@@ -183,10 +183,16 @@ export class LabScene extends Phaser.Scene {
     const port={
       viewportSize:()=>({width:this.scale.width,height:this.scale.height}),
       worldBounds:()=>({x:0,y:0,width:this.currentMap().manifest.render.width,height:this.currentMap().manifest.render.height}),
-      cameraState:()=>({scrollX:this.cameras.main.scrollX,scrollY:this.cameras.main.scrollY,zoom:this.cameras.main.zoom}),
+      cameraState:()=>{
+        const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
+        return{scrollX:origin.x,scrollY:origin.y,zoom:camera.zoom};
+      },
       resize:(width:number,height:number)=>{if(this.scale.width!==width||this.scale.height!==height)this.scale.resize(width,height);},
       setZoom:(zoom:number)=>void this.cameras.main.setZoom(zoom),
-      setScroll:(scrollX:number,scrollY:number)=>void this.cameras.main.setScroll(scrollX,scrollY),
+      setScroll:(scrollX:number,scrollY:number)=>{
+        const zoom=this.cameras.main.zoom;
+        this.cameras.main.centerOn(scrollX+this.scale.width/(2*zoom),scrollY+this.scale.height/(2*zoom));
+      },
     };
     this.viewport=new ViewportController(port,target?new BrowserFullscreenPort(document,target):undefined);
   }
