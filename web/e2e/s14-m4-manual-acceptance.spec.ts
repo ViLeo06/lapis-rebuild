@@ -48,6 +48,7 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   page.on('pageerror',error=>errors.push(error.message));
 
   await ready(page);
+  test.skip((await m4(page)).playableRecovery===true,'Superseded by M5 spatial playable-recovery acceptance on private-original packs.');
   const start=await m4(page);
   expect(start.world.mapId).toBe(1);
   expect(start.quest.stage).toBe('not_started');
@@ -169,6 +170,7 @@ test('S14 M4 wizard uses authored vitals, visible magic and opt-in diagnostics',
   const errors:string[]=[];
   page.on('pageerror',error=>errors.push(error.message));
   await ready(page);
+  test.skip((await m4(page)).playableRecovery===true,'Superseded by M5 private-original wizard/runtime validation.');
 
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-action="class-wizard"]')).toBeVisible();
