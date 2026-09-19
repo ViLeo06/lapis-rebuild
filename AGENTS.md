@@ -91,7 +91,7 @@ Python 3.12 负责：安装包静态拆解、旧格式解析、资源转换、�
 - 不直接向 `main` 提交。
 - 功能分支开发，通过 PR 集成。
 - 未经负责人明确批准不合并 `main`。
-- 当前集成分支：`codex/m3-content`，对应 Draft PR #4。
+- 当前阶段：**M6 Dual-class Completion（S25–S29）**。并行期共享核心由 S29 集成线统一接入；S25–S28 按 `Plan.md v3.4` 的文件所有权和 integration-note 契约推进。
 - 临时诊断/修复分支可使用 `codex/*`；验证后只做非 force 快进/正常 PR 集成。
 - 同一路径修改前读取最新 blob SHA，避免覆盖并发更新。
 - commit 保持小而清楚：`feat/fix/test/docs/refactor/chore`。
