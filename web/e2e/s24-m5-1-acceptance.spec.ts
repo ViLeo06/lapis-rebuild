@@ -242,6 +242,7 @@ test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer tur
 
   const dialogue=page.locator('[data-ui="npc-dialogue"]');
   await expect(dialogue).toBeVisible();
+  await expect(dialogue).toHaveAttribute('data-input-source','pointer');
   await expect(dialogue).toContainText(/训练引导员|训练/);
   const acceptChoice=dialogue.locator('[data-dialogue-choice="accept-quest"]');
   await expect(acceptChoice).toBeVisible();
