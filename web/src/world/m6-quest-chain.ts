@@ -1,5 +1,5 @@
 import {validateRewardBundle} from '../progression/rewards.ts';
-import type {RewardBundle} from '../progression/rewards.ts';
+import type {RewardBundle,RewardItem} from '../progression/rewards.ts';
 
 export type M6QuestStatus='locked'|'available'|'active'|'ready_to_turn_in'|'complete';
 export type M6QuestObjective=
@@ -86,7 +86,7 @@ export function validateM6QuestChainDefinition(definition:M6QuestChainDefinition
     if(new Set(questIds).size!==questIds.length||new Set(questFlags).size!==questFlags.length||questIds.some(id=>!token(id))||questFlags.some(flag=>!token(flag)))throw new Error('Invalid M6 quest prerequisite token');
     if(!Array.isArray(quest.steps)||quest.steps.length<1||quest.steps.length>64)throw new Error('Invalid M6 quest steps');
     const stepIds=new Set<string>();
-    const steps=quest.steps.map(step=>{
+    const steps=quest.steps.map((step:M6QuestStepDefinition)=>{
       if(!step||!token(step.id)||stepIds.has(step.id))throw new Error('Invalid M6 quest step');
       stepIds.add(step.id);
       return{id:step.id,objective:validateObjective(step.objective)};
@@ -97,7 +97,7 @@ export function validateM6QuestChainDefinition(definition:M6QuestChainDefinition
       ...quest,
       prerequisites:{questIds,questFlags},
       steps,
-      reward:{...quest.reward,items:quest.reward.items?.map(item=>({...item})),questFlags:quest.reward.questFlags?[...quest.reward.questFlags]:undefined},
+      reward:{...quest.reward,items:quest.reward.items?.map((item:RewardItem)=>({...item})),questFlags:quest.reward.questFlags?[...quest.reward.questFlags]:undefined},
     };
   });
   for(const quest of quests)for(const prerequisite of quest.prerequisites.questIds)if(!ids.has(prerequisite)||prerequisite===quest.id)throw new Error('Unknown or self M6 quest prerequisite');
