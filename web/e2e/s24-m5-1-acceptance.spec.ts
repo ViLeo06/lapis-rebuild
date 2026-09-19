@@ -37,15 +37,23 @@ async function clickWorldCell(page:Page,cell:readonly[number,number]){
 
 async function guidePointerPoint(page:Page){
   const state=await scene(page);
-  const guide=state.worldVisuals.find(row=>row.id==='training-guide'&&row.visible);
-  if(!guide)throw new Error('Visible training guide visual is missing');
   const canvas=page.locator('canvas');
   const box=await canvas.boundingBox();
   if(!box)throw new Error('Missing canvas');
-  const worldX=(guide.cell[0]+1)*32;
-  // Aim at the torso rather than the anchor/feet so the click exercises the
-  // visual/hitbox contract that S22 owns.
-  const worldY=(guide.cell[1]+1)*16-24;
+
+  // Prefer S22's live rendered hitbox when available. The fallback exists only
+  // so the preflight can run on the plan baseline before S22 is integrated.
+  const pointerTarget=state.worldPointerTargets?.find(row=>row.id==='training-guide'&&row.visible);
+  let worldX:number,worldY:number;
+  if(pointerTarget){
+    worldX=(pointerTarget.bounds.left+pointerTarget.bounds.right)/2;
+    worldY=(pointerTarget.bounds.top+pointerTarget.bounds.bottom)/2;
+  }else{
+    const guide=state.worldVisuals.find(row=>row.id==='training-guide'&&row.visible);
+    if(!guide)throw new Error('Visible training guide visual is missing');
+    worldX=(guide.cell[0]+1)*32;
+    worldY=(guide.cell[1]+1)*16-24;
+  }
   return {
     x:box.x+(worldX-state.camera.x)*state.camera.zoom,
     y:box.y+(worldY-state.camera.y)*state.camera.zoom,
@@ -202,14 +210,22 @@ test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer tur
   await equipSwordsman(page);
 
   // P0 gate: a real browser pointer click on the visible NPC must be consumed
-  // as interaction and must not fall through to field movement.
-  const acceptedClick=await clickGuide(page);
-  await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('accepted');
-  expect(acceptedClick.after.routeLength).toBe(0);
-  expect(acceptedClick.after.anchor.x).toBeCloseTo(acceptedClick.before.anchor.x,2);
-  expect(acceptedClick.after.anchor.y).toBeCloseTo(acceptedClick.before.anchor.y,2);
-  const dialogue=page.locator('[data-ui="npc-dialogue"],#m4-runtime-notice').filter({hasText:/训练引导员|训练/}).first();
+  // as interaction and must not fall through to field movement. S23 requires
+  // activation and quest mutation to be separate: opening the dialogue must
+  // leave the quest at not_started until the user explicitly accepts.
+  const offeredClick=await clickGuide(page);
+  expect(offeredClick.after.routeLength).toBe(0);
+  expect(offeredClick.after.anchor.x).toBeCloseTo(offeredClick.before.anchor.x,2);
+  expect(offeredClick.after.anchor.y).toBeCloseTo(offeredClick.before.anchor.y,2);
+  await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('not_started');
+
+  const dialogue=page.locator('[data-ui="npc-dialogue"]');
   await expect(dialogue).toBeVisible();
+  await expect(dialogue).toContainText(/训练引导员|训练/);
+  const acceptChoice=dialogue.locator('[data-dialogue-choice="accept-quest"]');
+  await expect(acceptChoice).toBeVisible();
+  await acceptChoice.click();
+  await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('accepted');
 
   const plan=(await runtime(page)).worldPlan!;
   await clickWorldCell(page,plan.doorCell as [number,number]);
@@ -263,8 +279,13 @@ test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer tur
   await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('ready_to_turn_in');
 
   const turnInClick=await clickGuide(page);
-  await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('complete');
   expect(turnInClick.after.routeLength).toBe(0);
+  await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('ready_to_turn_in');
+  await expect(dialogue).toBeVisible();
+  const turnInChoice=dialogue.locator('[data-dialogue-choice="turn-in-quest"]');
+  await expect(turnInChoice).toBeVisible();
+  await turnInChoice.click();
+  await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('complete');
   await assertDiagnosticsOff(page);
   expect(pageErrors).toEqual([]);
 
