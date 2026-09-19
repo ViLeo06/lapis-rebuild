@@ -37,9 +37,25 @@ class MatrixProbeTest(unittest.TestCase):
         row[45] = "Description"
         fields = probe.typed_fields(row, probe.ABILITY_FIELDS)
         self.assertEqual(fields["hp"], 2)
+        self.assertEqual(fields["str"], 8)
+        self.assertEqual(fields["int"], 12)
+        self.assertEqual(fields["move_tick_decrement"], 26)
+        self.assertEqual(fields["attack_tick_decrement"], 27)
+        self.assertEqual(fields["rest_tick_decrement"], 28)
+        self.assertEqual(fields["magic_tick_rate"], 29)
+        self.assertEqual(fields["authored_exp_field"], 34)
         self.assertEqual(fields["defence"], 37)
         self.assertNotIn("strength", fields)
         self.assertNotIn("intelligence", fields)
+
+    def test_progression_and_item_requirement_schema_preserves_source_boundaries(self):
+        self.assertEqual(probe.LEVELABL_COLUMNS[10], "class_link_raw")
+        self.assertEqual(probe.LEVELABL_COLUMNS[13], "experience")
+        self.assertEqual(probe.LEVELABL_COLUMNS[14], "sub_magic_id")
+        self.assertEqual(probe.ITEM_FIELDS[5], "equip_level_requirement")
+        self.assertEqual(probe.ITEM_FIELDS[48], "str_requirement")
+        self.assertEqual(probe.ITEM_FIELDS[50], "int_requirement")
+        self.assertEqual(len(probe.ITEM_CLASS_FLAG_COLUMNS), 10)
 
     def test_known_hash_verifier_rejects_wrong_sources(self):
         with tempfile.TemporaryDirectory() as td:
