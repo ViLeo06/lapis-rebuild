@@ -3,6 +3,8 @@ import {validateInventory} from './inventory.ts';
 import type {InventoryState} from './inventory.ts';
 import {validateProgression} from './progression.ts';
 import type {ProgressionState} from './progression.ts';
+import {validateM6SaveExtension} from './m6-save-extension.ts';
+import type {M6SaveExtension} from './m6-save-extension.ts';
 
 export const SAVE_KIND = 'lapis-rebuild-save' as const;
 export const CURRENT_SAVE_VERSION = 2 as const;
@@ -22,6 +24,7 @@ export type SaveV2 = {
   questFlags: Record<string, true>;
   progression: ProgressionState;
   rewardReceipts: string[];
+  m6?: M6SaveExtension;
   savedAt: string;
 };
 export type SaveValidationContext = {
@@ -84,6 +87,7 @@ export function validateSaveV2(raw: unknown, context: SaveValidationContext): Sa
   if (typeof save.savedAt !== 'string' || !Number.isFinite(Date.parse(save.savedAt))) throw new Error('Invalid save timestamp');
   const inventory = validateEquipment(validateInventory(save.inventory), save.character);
   const progression = validateProgression(save.progression);
+  const m6=save.m6===undefined?undefined:validateM6SaveExtension(save.m6,save.character);
   return {
     kind: SAVE_KIND,
     version: CURRENT_SAVE_VERSION,
@@ -98,6 +102,7 @@ export function validateSaveV2(raw: unknown, context: SaveValidationContext): Sa
     questFlags: validateFlags(save.questFlags),
     progression,
     rewardReceipts: validateReceipts(save.rewardReceipts),
+    ...(m6?{m6}:{}),
     savedAt: save.savedAt,
   };
 }
