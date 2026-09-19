@@ -342,3 +342,187 @@
   .skill-command{min-width:100px}
   .developer-diagnostics{right:5px;top:5px;width:calc(100vw - 10px);max-height:calc(100vh - 10px)}
 }
+
+/* S20 original-structure alignment / M5.1 integration */
+.top-command-strip{
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:32px;
+  display:flex;
+  align-items:stretch;
+  gap:1px;
+  padding:2px 6px;
+  border-bottom:1px solid var(--lapis-edge);
+  background:linear-gradient(180deg,rgba(33,39,34,.88),rgba(14,20,17,.82));
+  box-shadow:0 2px 5px #0007,inset 0 -1px 0 rgba(5,7,6,.65);
+  pointer-events:auto;
+}
+.top-command-button{
+  min-width:58px;
+  height:27px;
+  padding:2px 9px;
+  border:1px solid #665b43;
+  border-radius:0;
+  background:linear-gradient(rgba(55,56,46,.86),rgba(29,33,27,.86));
+  color:#dcd4bd;
+  font-size:9px;
+  cursor:pointer;
+}
+.top-command-button:disabled{opacity:.52;cursor:not-allowed;color:#918d7b}
+.player-plate{
+  left:8px;
+  top:auto;
+  bottom:6px;
+  width:min(280px,22vw);
+  min-width:250px;
+  min-height:56px;
+  grid-template-columns:42px minmax(126px,1fr) 50px;
+  padding:5px 6px;
+}
+.small-map-plate{
+  position:absolute;
+  left:8px;
+  top:38px;
+  width:152px;
+  height:76px;
+  min-height:0;
+  padding:6px;
+}
+.small-map-plate b{margin-top:4px;font-size:9px}
+.map-placeholder{display:block;margin-top:8px;color:#777969;font:7px/1.15 ui-monospace,monospace}
+.quest-tracker{
+  top:38px;
+  right:8px;
+  width:clamp(218px,20vw,286px);
+  min-height:56px;
+  max-height:82px;
+}
+.field-bottom-center{
+  position:absolute;
+  left:296px;
+  right:286px;
+  bottom:6px;
+  height:62px;
+  padding:5px 8px;
+  border:1px solid var(--lapis-edge);
+  background:linear-gradient(180deg,rgba(28,35,30,.72),rgba(12,18,15,.72));
+  box-shadow:0 2px 5px #0008,inset 0 0 0 1px rgba(8,10,9,.72);
+}
+.bottom-deck-heading{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #4d493a;padding-bottom:4px;color:#bbaa82;font:8px/1.1 ui-monospace,monospace}
+.bottom-deck-heading small{color:#77796b;font-size:7px}
+.bottom-deck-log{padding:7px 3px 0;color:#a8a48f;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.field-bottom-right{
+  right:8px;
+  bottom:6px;
+  width:270px;
+  min-height:62px;
+  height:62px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+  padding:5px;
+}
+.quick-slot-group{min-width:0}
+.quick-slot-label{display:block;margin-bottom:3px;color:#a9a18b;font:7px/1 ui-monospace,monospace}
+.quick-slot-row{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.legacy-quick-slot{
+  min-width:0;
+  height:38px;
+  padding:2px 1px;
+  border:1px solid #554e3c;
+  border-radius:0;
+  background:rgba(15,20,17,.44);
+  color:#807d6d;
+  box-shadow:inset 0 0 0 1px #080b0999;
+  cursor:not-allowed;
+}
+.legacy-quick-slot b{display:block;color:#a59b7e;font:8px/1 ui-monospace,monospace}
+.legacy-quick-slot span{display:block;margin-top:5px;font:6px/1 ui-monospace,monospace}
+.interaction-prompt{bottom:76px}
+.game-notice{top:38px}
+
+.battle-hud{position:absolute;inset:0;left:0;right:0;bottom:auto;pointer-events:none}
+.battle-hud>*{pointer-events:auto}
+.battle-topline{display:contents}
+.battle-player{
+  position:absolute;
+  right:8px;
+  bottom:6px;
+  width:270px;
+  min-height:58px;
+  grid-template-columns:36px 1fr;
+}
+.target-plate{
+  position:absolute;
+  right:8px;
+  top:38px;
+  width:252px;
+  min-height:56px;
+}
+.battle-state{
+  position:absolute;
+  right:8px;
+  top:100px;
+  width:252px;
+  min-height:54px;
+}
+.command-deck{
+  position:absolute;
+  left:8px;
+  bottom:6px;
+  width:min(650px,calc(100vw - 302px));
+  min-height:58px;
+  max-height:112px;
+  display:flex;
+  flex-wrap:wrap;
+  align-content:flex-end;
+  overflow:hidden;
+}
+.command-deck .skill-deck{display:flex;flex:1 1 auto;gap:4px;min-width:0;overflow-x:auto}
+.command-deck .quiet-command{margin-left:0}
+.battle-command{min-height:44px}
+
+@media(max-width:900px){
+  .top-command-strip{height:30px;padding:2px 5px;overflow-x:auto}
+  .top-command-button{flex:0 0 54px;min-width:54px;height:25px;padding:2px 5px;font-size:8px}
+  .player-plate{left:6px;top:auto;bottom:5px;width:250px;min-width:0;grid-template-columns:40px minmax(112px,1fr) 44px}
+  .small-map-plate{left:6px;top:36px;width:132px;height:70px}
+  .quest-tracker{top:36px;right:6px;width:244px}
+  .field-bottom-center{left:266px;right:244px;bottom:5px;height:58px;padding:4px 6px}
+  .field-bottom-right{right:6px;bottom:5px;width:228px;height:58px;min-height:58px;padding:4px}
+  .legacy-quick-slot{height:35px}
+  .interaction-prompt{bottom:69px}
+  .game-notice{top:36px}
+  .battle-player{right:6px;bottom:5px;width:238px}
+  .target-plate,.battle-state{right:6px;width:230px}
+  .target-plate{top:36px}
+  .battle-state{top:98px}
+  .command-deck{left:6px;bottom:5px;width:calc(100vw - 256px);max-height:108px}
+}
+@media(max-width:700px){
+  .player-plate{width:226px;grid-template-columns:38px minmax(96px,1fr) 40px}
+  .small-map-plate{width:108px;height:66px}
+  .quest-tracker{width:198px;max-height:70px}
+  .field-bottom-center{left:238px;right:216px;height:56px}
+  .field-bottom-right{width:204px;height:56px;min-height:56px}
+  .legacy-quick-slot{height:33px}
+  .legacy-quick-slot span{display:none}
+  .interaction-prompt{bottom:66px}
+  .battle-player{width:210px}
+  .target-plate,.battle-state{width:204px}
+  .command-deck{width:calc(100vw - 222px)}
+}
+@media(max-width:560px){
+  .field-bottom-center{display:none}
+  .player-plate{left:5px;width:220px}
+  .field-bottom-right{right:5px;width:calc(100vw - 240px);min-width:170px}
+  .quest-tracker{right:5px;width:min(190px,45vw)}
+  .small-map-plate{left:5px}
+  .interaction-prompt{bottom:66px}
+  .battle-player{display:none}
+  .target-plate{top:34px;right:5px;width:190px}
+  .battle-state{top:94px;right:5px;width:190px}
+  .command-deck{left:5px;width:calc(100vw - 10px)}
+}
