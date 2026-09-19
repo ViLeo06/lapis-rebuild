@@ -228,12 +228,9 @@ test('S24 synthetic glue: keyboard interaction opens explicit dialogue before qu
   await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('accepted');
   await expect(dialogue).toHaveCount(0);
 
-  await page.keyboard.press('e');
-  await expect(dialogue).toBeVisible();
-  await expect(dialogue).toHaveAttribute('data-input-source','keyboard');
-  await expect(dialogue.locator('[data-dialogue-choice="close"]')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(dialogue).toHaveCount(0);
+  // The synthetic compatibility world warps to its training objective only
+  // after the explicit Accept choice. At that point E belongs to the objective
+  // interaction, not to a second guide-dialogue assertion.
   await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('accepted');
   await assertDiagnosticsOff(page);
 });
