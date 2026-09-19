@@ -701,10 +701,13 @@ export class M4RuntimeIntegration{
     const lines=view.lines.map(line=>`<p>${escapeHtml(line)}</p>`).join('');
     const choices=view.choices.map(choice=>`<button type="button" data-dialogue-choice="${choice.id}">${escapeHtml(choice.label)}</button>`).join('');
     return `<section class="npc-dialogue" data-ui="npc-dialogue" data-input-source="${session.inputSource}" aria-label="NPC 对话">
-      <div class="npc-dialogue-speaker">${escapeHtml(view.speaker)}</div>
-      <div class="npc-dialogue-copy">${lines}</div>
-      <div class="npc-dialogue-actions">${choices}</div>
-      <small>RECONSTRUCTION_POLICY</small>
+      <div class="npc-dialogue-portrait" aria-label="NPC 头像占位"><b>NPC</b><span>PORTRAIT</span><small>头像绑定未恢复</small></div>
+      <div class="npc-dialogue-body">
+        <div class="npc-dialogue-speaker">${escapeHtml(view.speaker)}</div>
+        <div class="npc-dialogue-copy">${lines}</div>
+        <div class="npc-dialogue-actions">${choices}</div>
+        <small class="npc-dialogue-provenance">RECONSTRUCTION_POLICY</small>
+      </div>
     </section>`;
   }
 
