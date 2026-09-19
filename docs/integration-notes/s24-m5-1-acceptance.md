@@ -1,22 +1,26 @@
 # S24 — M5.1 Player-input Acceptance / Integration
 
-Date: 2026-09-19  
+Date: 2026-09-20  
 Branch: `codex/s24-m5-1-acceptance`  
 Plan baseline: `57ff22363156bec7aad3acb7555208533485d193`  
-Validated executable head: `dcc0c412635245b4d26118ce5ec3f675bc959001`
+Final validated runtime head: `97bd5063749a15e114ce85119015f9dcb8b7afc0`
 
-## Final engineering status
+## Final engineering and user status
 
-**PASSED.** GitHub Actions run `35433856641` completed successfully on the exact executable head above, including the mobile-touch extension.
+**PASSED / USER ACCEPTED.** The final runtime follow-up on head `97bd5063...` passed GitHub Actions run `35442734082` after the delayed-center camera and active-battle retreat fixes.
 
 - `synthetic`: **success**
 - `private-original`: **success**
-- private-original `Real thirty-minute diagnostic soak`: **success**
-- `private-original-validation` artifact: `10582154008`
-- artifact archive size: `53,011,314` bytes
-- artifact digest: `sha256:99627bfc7bc0934b8e0a48ef3d711b1ab244c808f77f3aeae2a4d0bff1c68da0`
+- TypeScript / unit / production build: **success**
+- Chromium integration + standalone offline: **success**
+- E2E: **58 passed / 4 skipped / 0 failed**
+- final `private-original-validation` artifact: `10583854810`
+- artifact archive size: `51,231,285` bytes
+- artifact digest: `sha256:30790b67e589870f26dd53831c2fa31bdf208b37a2661f3cdad8758be33528fc`
 
-The earlier hosted-runner allocation issue is resolved for this acceptance run. The prior local/static screenshots remain useful historical preflight evidence, but they are no longer the final acceptance basis.
+The latest incremental run intentionally did not repeat the 30-minute soak. The required S24 wall-clock soak had already passed on run `35433856641` for the integrated M5.1 player runtime; the subsequent runtime delta was limited to the camera-follow contract and confirmed retreat flow, both covered by focused unit/browser acceptance.
+
+On **2026-09-20**, the user personally played the final standalone HTML and explicitly accepted the result for M5.1 closeout and progression to M6. This closes the player-experience gate; it does not upgrade reconstruction-only NPC identity, quest, combat or reward rules to historical retail facts.
 
 ## Accepted player path
 
@@ -48,11 +52,11 @@ The private E2E report for the run records `58 passed`, `4 skipped`, `0 unexpect
 
 ## Standalone private HTML / offline evidence
 
-Final standalone private HTML from artifact `10582154008`:
+Final standalone private HTML from artifact `10583854810`:
 
 - file: `_temp/lapis-private.html`
-- bytes: `11,211,980`
-- SHA-256: `768bf6e26eb3f933733f19fb290940e62c5fea33d6d3a284c0a1f2fb8806c696`
+- bytes: `11,214,215`
+- SHA-256: `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`
 
 The S24 standalone test opens this file through `file://`, waits for the M4/M5 player runtime and formal HUD, asserts Developer diagnostics are absent, records every HTTP(S) request, and requires that request list to remain empty. That test passed in run `35433856641`.
 
@@ -124,11 +128,20 @@ Final mobile screenshots in artifact `10582154008`:
 - `test-results/s24-mobile-touch-field-390x844.png` — exactly `390x844`
 - `test-results/s24-mobile-touch-battle-390x844.png` — exactly `390x844`
 
+## Post-playtest runtime follow-up
+
+After the first accepted S24 integration, the final hands-on feedback produced two focused runtime changes now included in head `97bd5063...`:
+
+1. **Delayed chase to true center.** The player position is the desired camera center; scroll eases toward it, continues settling after movement stops, and remains clamped at world bounds.
+2. **Confirmed battle retreat.** Exit pauses the battle and requires confirmation; cancel resumes the same battle; confirm returns to the pre-battle field without reward or win credit and suppresses immediate re-entry until the trigger radius is exited.
+
+The mobile acceptance path explicitly verifies retreat request → cancel → request → confirm, plus the no-immediate-retrigger contract.
+
 ## Evidence boundary
 
 ### VERIFIED / VERIFIED-ENGINEERING
 
-- run `35433856641` executed successfully on executable head `dcc0c412...`;
+- run `35433856641` provides the required long-soak evidence for the integrated M5.1 runtime; final follow-up run `35442734082` executed successfully on runtime head `97bd5063...`;
 - synthetic and fixed-hash private-original jobs are green;
 - final S24 pointer/dialogue/spatial/battle/turn-in gate passed;
 - standalone private HTML loads offline with zero HTTP(S) requests;
@@ -148,6 +161,4 @@ Passing S24 does not promote these reconstruction choices to historical retail f
 
 ## Closeout
 
-S24 engineering acceptance is complete. PR #36 may be **Ready for review**, but it must **not** be merged to `main` yet.
-
-The remaining M5.1 gate is the user's final hands-on playtest of the standalone private HTML. That manual playtest, not CI, decides whether the player experience is acceptable for merge/release.
+S24 engineering acceptance and the final user playtest gate are complete. The user explicitly approved the final standalone HTML on 2026-09-20 and authorized M5.1 closeout. PR #36 is therefore approved for merge to `main`; after merge, superseded component PRs #31–#35 can be closed and the project advances to M6.
