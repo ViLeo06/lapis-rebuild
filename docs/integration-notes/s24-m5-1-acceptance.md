@@ -18,12 +18,38 @@ S24 has integrated the following work into its own branch only. Main has not bee
 
 | Line | Integrated head / evidence | S24 use |
 | --- | --- | --- |
-| S21 HUD | `a30f0e388cc1ed778e32336a4c7568951b69643b` final note; player code from preceding S21 head | compact top-left player plate, top-right quest frame, bottom regions, disabled placeholders, diagnostics separation |
+| S20 UI archaeology | `4e0b0861fcf33ff731616a837320dedbeaecf9f8`, integrated by S24 merge `90f043963709a96a4968693d8c7f5a635fe7045a` | implementation-ready Original UI Reference Pack, HUD region map, asset manifest and S21 handoff |
+| S21 HUD | `a30f0e388cc1ed778e32336a4c7568951b69643b` final note plus earlier player code | supplied the compact reconstruction shell and responsive harness; S24 then corrected its pre-S20 geometry to the S20 evidence |
 | S22 pointer | `e3dc2483dae22be466a56cc275b8fb419ee4dd60` | live NPC hit bounds, hover cursor, pointer-before-move arbitration, exact entity handoff |
 | S23 dialogue | `994ea9146e73ff258bd8b4dbf19a54727f494caa` | explicit dialogue session, accept/decline/turn-in/close choices, stale-session rejection |
-| S20 UI archaeology | not yet integrated | PR #35 remains draft and has not yet delivered the final Original UI Reference Pack / HUD region mapping / asset manifest |
 
 The S21 final note records an earlier complete synthetic green checkpoint. S22 has a complete synthetic + fixed-hash private-original green run (`35416789970`). These are upstream evidence, not substitutes for a final integrated S24 run.
+
+## S20 synchronization and HUD correction
+
+S20's implementation-ready pack materially changed the target from the earlier S21 provisional shell. S24 therefore corrected the integrated HUD on its own integration branch rather than treating the pre-S20 S21 layout as final.
+
+Current field relationships:
+
+- shallow full-width top command strip;
+- optional/placeholder small-map region upper-left under that strip;
+- compact player portrait/status lower-left;
+- low bottom-center chat/system deck;
+- fixed lower-right ITEM and MAGIC quick-slot banks;
+- A/S/D/F item slots and Z/X/C/V magic slots retained as disabled placeholders;
+- M5.1 guide tracker remains upper-right and explicitly reconstruction-only;
+- Developer diagnostics remain opt-in with zero player-HUD footprint while closed.
+
+Current battle relationships:
+
+- shallow top strip;
+- battle command block lower-left;
+- target/status compact at upper-right;
+- player battle status compact at lower-right.
+
+NPC dialogue now follows the S20 historical relationship: near-full-width bottom dock, portrait column on the left, text/choices on the right. The portrait is deliberately a placeholder until a concrete portrait binding is recovered.
+
+These are relationship/anchor corrections. Exact mainland 2.2 pixels, alpha, fonts and control artwork remain unverified unless separately classified in S20.
 
 ## S24 shared glue
 
@@ -51,7 +77,7 @@ Keyboard `E` resolves a nearby NPC and calls the same S23 begin-dialogue API wit
 
 ### Explicit choices
 
-The player surface renders S23 choices as real buttons:
+The S20-aligned bottom-docked player surface renders S23 choices as real buttons:
 
 - `accept-quest`
 - `decline-quest`
@@ -96,6 +122,45 @@ The DOM exposes only acceptance semantics:
 - `data-dialogue-choice="<choice-id>"`
 
 These are engineering test hooks, not retail UI claims.
+
+## Local validation while hosted runners are unavailable
+
+GitHub hosted runner allocation became unavailable during the integration pass: affected S20/S21/S23/S24 jobs terminate before checkout with `runner_id=0` and `steps=[]`. S24 therefore performed local checks that do not require the private-original runtime.
+
+Completed locally on the current S20-aligned UI:
+
+- TypeScript syntax/transpile checks for the changed HUD renderers;
+- rebuilt `game-ui-shell` unit suite: **7/7 passed, 0 failed**;
+- system Chromium geometry review at **1366x768** and **1920x1080**:
+  - top strip = 32 px;
+  - 1366 player plate approximately 280 x 60, left/bottom gap 8/6 px;
+  - 1920 player plate remains approximately 280 x 60;
+  - small map 152 x 76 under the top strip;
+  - quest frame stays hard-right;
+  - bottom-center deck and lower-right quick-slot bank stay on the bottom edge with no overlap;
+  - 8 quick slots remain disabled;
+  - no horizontal overflow;
+- dialogue geometry at 1366x768:
+  - 8 px left/right, 6 px bottom;
+  - 1350 px wide;
+  - approximately 23% viewport height;
+  - 250 px portrait column;
+- battle geometry at 1366x768:
+  - command block lower-left;
+  - target/state upper-right;
+  - player plate lower-right;
+  - no horizontal overflow.
+
+Manual screenshot review found no return to the previous large-card/dashboard layout.
+
+Preliminary structure screenshots were uploaded to private Drive folder `lapis-rebuild-assets/40_previews/S24-m5-1-acceptance-20260919/` as:
+
+- `s24-local-static-field-1366x768.png`
+- `s24-local-static-field-1920x1080.png`
+- `s24-local-static-dialogue-1366x768.png`
+- `s24-local-static-battle-1366x768.png`
+
+They are explicitly local/static structure evidence, **not** final fixed-hash private-original acceptance screenshots.
 
 ## Acceptance harness
 
@@ -173,17 +238,18 @@ The private-original gate requires:
 
 ### Not yet final / blocked
 
-- S20 Original UI Reference Pack is still draft/incomplete; S24 cannot promote the current S21/S24 geometry to retail VERIFIED.
+- S20's implementation-ready reference docs/manifest are integrated, but its PR #35 remains Draft because its private reference-pack workflow/contact-sheet artifact has not received a working hosted runner. This does not invalidate the documented historical relationship evidence; it does mean the final private S20 artifact is still pending.
 - The latest S20/S21/S23/S24 GitHub Actions attempts are currently failing before checkout with no hosted runner assignment (`runner_id=0`, `steps=[]`). Re-running the latest S24 failed job produced the same infrastructure-level result.
-- Therefore the integrated S24 head has not yet received a fresh code-executing synthetic/private-original/soak run.
+- Therefore the integrated S24 head has not yet received a fresh code-executing full synthetic/private-original/soak run.
+- The local Chromium checks above validate structure only. They do not replace the final fixed-hash runtime acceptance.
 
 ## Final closeout checklist
 
 S24 is not complete until all of the following are done:
 
-1. S20 publishes its final reference pack and S24/S21 are rechecked against it.
-2. Any final S20/S21/S22/S23 heads are synchronized into the S24 integration head.
-3. TypeScript typecheck, unit tests and production build execute successfully on the integrated head.
+1. Recheck S20/S21/S22/S23 heads for any changes after the currently integrated versions and synchronize only durable final deltas.
+2. S20 private reference-pack/contact-sheet workflow executes when hosted runners recover; review its final private artifact against the already integrated relationship map.
+3. Full TypeScript typecheck, unit tests and production build execute successfully on the integrated head.
 4. Chromium E2E executes successfully, including the synthetic explicit-dialogue test.
 5. A fixed-hash 2.2 `[private-smoke]` run executes the final real pointer/dialogue/battle flow.
 6. The standalone private HTML passes offline/no-external-request acceptance.
