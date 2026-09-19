@@ -40,21 +40,31 @@ async function geometry(page:Page){
   });
 }
 
+function expectDesktopGeometry(g:Awaited<ReturnType<typeof geometry>>){
+  expect(g.player.width).toBeLessThanOrEqual(330);
+  expect(g.player.height).toBeLessThanOrEqual(64);
+  const questRightGap=g.viewport.width-g.quest.right;
+  const leftBottomGap=g.viewport.height-g.left.bottom;
+  const rightBottomGap=g.viewport.height-g.right.bottom;
+  expect(questRightGap).toBeGreaterThanOrEqual(0);
+  expect(questRightGap).toBeLessThanOrEqual(10);
+  expect(leftBottomGap).toBeGreaterThanOrEqual(0);
+  expect(leftBottomGap).toBeLessThanOrEqual(10);
+  expect(rightBottomGap).toBeGreaterThanOrEqual(0);
+  expect(rightBottomGap).toBeLessThanOrEqual(10);
+  expect(g.map.width).toBeLessThanOrEqual(140);
+  expect(g.left.right).toBeLessThan(g.right.x);
+  expect(g.scroll.width).toBeLessThanOrEqual(g.scroll.client);
+}
+
 for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
   test(`S21 static HUD anchors at ${viewport.width}x${viewport.height}`,async({page})=>{
     await page.setViewportSize(viewport);
     await show(page,base);
     const g=await geometry(page);
-    expect(g.player.width).toBeLessThanOrEqual(330);
-    expect(g.player.height).toBeLessThanOrEqual(64);
-    expect(g.viewport.width-g.quest.right).toBeLessThanOrEqual(10);
-    expect(g.viewport.height-g.left.bottom).toBeLessThanOrEqual(10);
-    expect(g.viewport.height-g.right.bottom).toBeLessThanOrEqual(10);
-    expect(g.map.width).toBeLessThanOrEqual(140);
-    expect(g.left.right).toBeLessThan(g.right.x);
-    expect(g.scroll.width).toBeLessThanOrEqual(g.scroll.client);
+    expectDesktopGeometry(g);
     expect(g.background).toContain('rgba');
-    await page.screenshot({path:`test-results/s21-static-${viewport.width}x${viewport.height}.png`,fullPage:true});
+    await page.screenshot({path:`test-results/s21-static-${viewport.width}x${viewport.height}.png`});
   });
 }
 
@@ -77,14 +87,7 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
     await expect(page.locator('#app > header')).toBeHidden();
     await expect(page.locator('#app > footer')).toBeHidden();
     const g=await geometry(page);
-    expect(g.player.width).toBeLessThanOrEqual(330);
-    expect(g.player.height).toBeLessThanOrEqual(64);
-    expect(g.viewport.width-g.quest.right).toBeLessThanOrEqual(10);
-    expect(g.viewport.height-g.left.bottom).toBeLessThanOrEqual(10);
-    expect(g.viewport.height-g.right.bottom).toBeLessThanOrEqual(10);
-    expect(g.map.width).toBeLessThanOrEqual(140);
-    expect(g.left.right).toBeLessThan(g.right.x);
-    expect(g.scroll.width).toBeLessThanOrEqual(g.scroll.client);
-    await page.screenshot({path:`test-results/s21-runtime-${viewport.width}x${viewport.height}.png`,fullPage:true});
+    expectDesktopGeometry(g);
+    await page.screenshot({path:`test-results/s21-runtime-${viewport.width}x${viewport.height}.png`});
   });
 }
