@@ -124,52 +124,60 @@ test('S24 preflight: required desktop viewports stay inside the player shell wit
     const geometry=await page.evaluate(()=>{
       const rect=(selector:string)=>{
         const node=document.querySelector<HTMLElement>(selector);
-        if(!node)return null;
+        if(!node)throw new Error(`Missing ${selector}`);
         const r=node.getBoundingClientRect();
         return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};
       };
       return {
         viewport:{width:innerWidth,height:innerHeight},
         scrollWidth:document.documentElement.scrollWidth,
+        top:rect('.top-command-strip'),
         player:rect('.player-plate'),
-        map:rect('.map-plate'),
+        map:rect('.small-map-plate'),
         quest:rect('.quest-tracker'),
-        menu:rect('.menu-button'),
-        bottomLeft:rect('.field-bottom-left'),
-        bottomRight:rect('.field-bottom-right'),
-        legacySlots:[...document.querySelectorAll<HTMLButtonElement>('.legacy-slot')].map(node=>({disabled:node.disabled})),
+        deck:rect('.field-bottom-center'),
+        quick:rect('.field-bottom-right'),
+        quickSlots:[...document.querySelectorAll<HTMLButtonElement>('.legacy-quick-slot')].map(node=>({disabled:node.disabled,text:node.textContent??''})),
       };
     });
     expect(geometry.scrollWidth).toBeLessThanOrEqual(size.width);
 
-    const regions=[geometry.player,geometry.map,geometry.quest,geometry.menu,geometry.bottomLeft,geometry.bottomRight].filter(Boolean) as RectLike[];
+    const regions=[geometry.top,geometry.player,geometry.map,geometry.quest,geometry.deck,geometry.quick] as RectLike[];
     for(const region of regions){
       expect(region.left).toBeGreaterThanOrEqual(-1);
       expect(region.top).toBeGreaterThanOrEqual(-1);
       expect(region.right).toBeLessThanOrEqual(size.width+1);
       expect(region.bottom).toBeLessThanOrEqual(size.height+1);
     }
-    // S21 capability gate: once the original-structure-first bottom regions
-    // exist, enforce S21's published geometry contract rather than merely
-    // recording screenshots.
-    if(geometry.bottomLeft&&geometry.bottomRight){
-      expect(geometry.player).not.toBeNull();
-      expect(geometry.quest).not.toBeNull();
-      expect(geometry.map).not.toBeNull();
-      expect(geometry.player!.width).toBeLessThanOrEqual(330);
-      expect(geometry.player!.height).toBeLessThanOrEqual(64);
-      expect(size.width-geometry.quest!.right).toBeLessThanOrEqual(10);
-      expect(size.height-geometry.bottomLeft.bottom).toBeLessThanOrEqual(10);
-      expect(size.height-geometry.bottomRight.bottom).toBeLessThanOrEqual(10);
-      expect(geometry.map!.width).toBeLessThanOrEqual(140);
-      expect(overlap(geometry.bottomLeft,geometry.bottomRight)).toBe(0);
-      expect(geometry.legacySlots.length).toBeGreaterThanOrEqual(7);
-      expect(geometry.legacySlots.every(slot=>slot.disabled)).toBe(true);
-    }else{
-      for(let i=0;i<regions.length;i++)for(let j=i+1;j<regions.length;j++){
-        expect(overlap(regions[i],regions[j])).toBe(0);
-      }
-    }
+
+    // S20 evidence gate: edge chrome relationships, not free-form RPG cards.
+    expect(geometry.top.top).toBeLessThanOrEqual(1);
+    expect(geometry.top.height).toBeGreaterThanOrEqual(28);
+    expect(geometry.top.height).toBeLessThanOrEqual(36);
+    expect(geometry.top.width).toBeGreaterThanOrEqual(size.width-1);
+
+    expect(geometry.player.left).toBeLessThanOrEqual(10);
+    expect(size.height-geometry.player.bottom).toBeLessThanOrEqual(10);
+    expect(geometry.player.width).toBeLessThanOrEqual(300);
+    expect(geometry.player.height).toBeLessThanOrEqual(70);
+
+    expect(geometry.map.left).toBeLessThanOrEqual(10);
+    expect(geometry.map.top).toBeGreaterThanOrEqual(geometry.top.bottom);
+    expect(geometry.map.width).toBeLessThanOrEqual(160);
+
+    expect(size.width-geometry.quest.right).toBeLessThanOrEqual(10);
+    expect(geometry.quest.top).toBeGreaterThanOrEqual(geometry.top.bottom);
+
+    expect(size.height-geometry.deck.bottom).toBeLessThanOrEqual(10);
+    expect(geometry.deck.height).toBeLessThanOrEqual(138);
+    expect(size.height-geometry.quick.bottom).toBeLessThanOrEqual(10);
+    expect(size.width-geometry.quick.right).toBeLessThanOrEqual(10);
+    expect(overlap(geometry.player,geometry.deck)).toBe(0);
+    expect(overlap(geometry.deck,geometry.quick)).toBe(0);
+
+    expect(geometry.quickSlots).toHaveLength(8);
+    expect(geometry.quickSlots.every(slot=>slot.disabled)).toBe(true);
+    for(const key of ['A','S','D','F','Z','X','C','V'])expect(geometry.quickSlots.some(slot=>slot.text.includes(key))).toBe(true);
 
     geometries[`${size.width}x${size.height}`]=geometry;
     await page.screenshot({path:`test-results/s24-preflight-${size.width}x${size.height}.png`,fullPage:true});
@@ -203,6 +211,17 @@ test('S24 synthetic glue: keyboard interaction opens explicit dialogue before qu
   const dialogue=page.locator('[data-ui="npc-dialogue"]');
   await expect(dialogue).toBeVisible();
   await expect(dialogue).toHaveAttribute('data-input-source','keyboard');
+  const dialogueGeometry=await dialogue.evaluate(node=>{
+    const rect=node.getBoundingClientRect();
+    const portrait=node.querySelector<HTMLElement>('.npc-dialogue-portrait')?.getBoundingClientRect();
+    return {left:rect.left,right:rect.right,bottom:rect.bottom,height:rect.height,viewportWidth:innerWidth,viewportHeight:innerHeight,portraitWidth:portrait?.width??0};
+  });
+  expect(dialogueGeometry.left).toBeLessThanOrEqual(10);
+  expect(dialogueGeometry.viewportWidth-dialogueGeometry.right).toBeLessThanOrEqual(10);
+  expect(dialogueGeometry.viewportHeight-dialogueGeometry.bottom).toBeLessThanOrEqual(10);
+  expect(dialogueGeometry.right-dialogueGeometry.left).toBeGreaterThanOrEqual(dialogueGeometry.viewportWidth*.8);
+  expect(dialogueGeometry.height).toBeGreaterThanOrEqual(dialogueGeometry.viewportHeight*.18);
+  expect(dialogueGeometry.portraitWidth).toBeGreaterThan(90);
   await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('not_started');
 
   const accept=dialogue.locator('[data-dialogue-choice="accept-quest"]');
