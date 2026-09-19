@@ -159,7 +159,7 @@ export type CombatBalanceTuning = Readonly<{
     maxStat: number;
   }>;
   damage: Readonly<{
-    defenseConstant: number;
+    defenseEffectiveness: number;
     baseHitChance: number;
     accuracyPointValue: number;
     criticalMultiplier: number;
@@ -194,7 +194,7 @@ export type CombatBalanceTuning = Readonly<{
 }>;
 
 export const RECONSTRUCTION_COMBAT_BALANCE_TUNING: CombatBalanceTuning = Object.freeze({
-  id: 'm5-reconstruction-combat-balance-v1',
+  id: 'm5-reconstruction-combat-balance-v2',
   provenance: COMBAT_BALANCE_PROVENANCE,
   level: Object.freeze({
     min: 1,
@@ -216,7 +216,10 @@ export const RECONSTRUCTION_COMBAT_BALANCE_TUNING: CombatBalanceTuning = Object.
     maxStat: 99999,
   }),
   damage: Object.freeze({
-    defenseConstant: 4,
+    // Calibrated reconstruction inspired by the 2007 Japanese player
+    // candidate "(attack - defence) * skill multiplier". 0.65 deliberately
+    // stays below a 1:1 retail claim and is tuned against the real M5 runtime.
+    defenseEffectiveness: 0.65,
     baseHitChance: 0.84,
     accuracyPointValue: 0.002,
     criticalMultiplier: 1.5,
@@ -337,10 +340,6 @@ function randomUnit(random: () => number): number {
   return value;
 }
 
-function mitigation(defense: number, tuning: CombatBalanceTuning): number {
-  return 100 / (100 + Math.max(0, defense) * tuning.damage.defenseConstant);
-}
-
 export class ReconstructionCombatBalance {
   readonly tuning: CombatBalanceTuning;
   readonly id: string;
@@ -455,7 +454,7 @@ export class ReconstructionCombatBalance {
     if (multiplier < 0 || multiplier > 20) throw new Error('Invalid damage multiplier');
     const offense = kind === 'physical' ? attacker.attack : attacker.magicAttack;
     const defense = kind === 'physical' ? defender.defense : defender.magicDefense;
-    let damage = Math.round(offense * multiplier * mitigation(defense, this.tuning));
+    let damage = Math.round(offense * multiplier - defense * this.tuning.damage.defenseEffectiveness);
     damage = Math.max(this.tuning.bounds.minDamage, damage);
     if (critical) damage = Math.round(damage * attacker.criticalMultiplier);
     const cap = Math.max(this.tuning.bounds.minDamage, Math.floor(defender.maxHp * this.tuning.bounds.maxSingleStrikeHpRatio));

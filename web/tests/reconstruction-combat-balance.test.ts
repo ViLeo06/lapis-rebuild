@@ -13,7 +13,7 @@ const balance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE;
 test('S19 keeps authored class anchors separate from reconstruction combat stats',()=>{
   const swordsman=balance.playerStats(100);
   const wizard=balance.playerStats(109);
-  assert.equal(balance.id,'m5-reconstruction-combat-balance-v1');
+  assert.equal(balance.id,'m5-reconstruction-combat-balance-v2');
   assert.equal(balance.provenance,'RECONSTRUCTION_POLICY');
   assert.equal(swordsman.provenance,COMBAT_BALANCE_PROVENANCE);
   assert.deepEqual(swordsman.authoredAnchors,{hp:125,mp:100,hit:160,magicHit:160,provenance:'VERIFIED'});
@@ -55,6 +55,24 @@ test('hit, critical and damage bounds prevent one-shot extremes while preserving
   assert.ok(reduced<incoming);
   assert.ok(balance.hitChance(player,enemy,'physical')>=RECONSTRUCTION_COMBAT_BALANCE_TUNING.bounds.minHitChance);
   assert.ok(balance.hitChance(player,enemy,'physical')<=RECONSTRUCTION_COMBAT_BALANCE_TUNING.bounds.maxHitChance);
+});
+
+test('M5 runtime calibration makes armour meaningful without promoting the Japanese candidate to retail truth',()=>{
+  const sword=balance.playerStats(100,1,{attack:7,defense:2});
+  const wizard=balance.playerStats(109,1,{magicAttack:7,defense:2});
+  const melee=balance.enemyStats({level:1,rank:'normal',role:'melee'});
+  const ranged=balance.enemyStats({level:1,rank:'normal',role:'ranged'});
+  const swordHit=balance.deterministicDamage(sword,melee,'physical',1,false);
+  const meleeIntoSword=balance.deterministicDamage(melee,sword,'physical',1,false);
+  const rangedIntoSword=balance.deterministicDamage(ranged,sword,'physical',1,false);
+  const meleeIntoWizard=balance.deterministicDamage(melee,wizard,'physical',1,false);
+  assert.equal(RECONSTRUCTION_COMBAT_BALANCE_TUNING.damage.defenseEffectiveness,0.65);
+  assert.equal(swordHit,27);
+  assert.equal(meleeIntoSword,8);
+  assert.equal(rangedIntoSword,7);
+  assert.equal(meleeIntoWizard,12);
+  assert.ok(swordHit>meleeIntoSword*3);
+  assert.ok(meleeIntoWizard>meleeIntoSword);
 });
 
 test('showcase skills preserve authored MP costs but use explicit reconstruction multipliers',()=>{

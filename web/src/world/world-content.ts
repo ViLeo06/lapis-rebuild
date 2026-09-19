@@ -33,3 +33,30 @@ export const OUTER_CITY_ENTRY:WorldState={mapId:OUTER_CITY_MAP_ID,x:26,y:24};
 export const TRAINING_RETURN:WorldState={mapId:TRAINING_MAP_ID,x:22,y:24};
 
 export const WORLD_ENTITIES:readonly WorldEntity[]=[TRAINING_GUIDE.entity,OUTER_CITY_OBJECTIVE];
+
+
+export type TrainingWorldContent={
+  trainingMapId:number;
+  objectiveMapId:number;
+  battleZoneId:number;
+  questId:string;
+  guide:NpcDefinition;
+  objective:WorldEntity;
+  start:WorldState;
+  objectiveEntry:WorldState;
+  returnState:WorldState;
+  warpOnAccept:boolean;
+};
+
+export const DEFAULT_TRAINING_WORLD_CONTENT:TrainingWorldContent=Object.freeze({
+  trainingMapId:TRAINING_MAP_ID,
+  objectiveMapId:OUTER_CITY_MAP_ID,
+  battleZoneId:TRAINING_BATTLE_ZONE_ID,
+  questId:TRAINING_QUEST_ID,
+  guide:TRAINING_GUIDE,
+  objective:OUTER_CITY_OBJECTIVE,
+  start:START_STATE,
+  objectiveEntry:OUTER_CITY_ENTRY,
+  returnState:TRAINING_RETURN,
+  warpOnAccept:true,
+});

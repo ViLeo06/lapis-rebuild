@@ -32,6 +32,11 @@ import {renderGameMenu} from './ui/game-menu.ts';
 import {renderDebugPanel} from './ui/debug-panel.ts';
 import type {BattleHudState,DiagnosticsState,FieldHudState,PlayerHudState} from './ui/types.ts';
 import {readM4Save,writeM4Save} from './m4-save-store.ts';
+import {equipmentBonus as legacyEquipmentBonus} from './inventory.ts';
+import {createM5PlayableWorld} from './world/m5-playable-world.ts';
+import type {M5PlayableWorld} from './world/m5-playable-world.ts';
+import {SceneTransitionController} from './world/scene-transition.ts';
+import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
 const QUEST_STAGES:readonly QuestStage[]=['not_started','accepted','objective','ready_to_turn_in','complete'];
@@ -47,15 +52,15 @@ export function createM4RewardState(gold=0):RewardState{
   return {gold,inventory:starterInventory(),progression:initialProgression(),questFlags:{},rewardReceipts:[]};
 }
 
-export function parseM4Quest(raw:JsonValue):QuestRuntimeState{
+export function parseM4Quest(raw:JsonValue,questId=TRAINING_QUEST_ID):QuestRuntimeState{
   if(raw&&typeof raw==='object'&&!Array.isArray(raw)){
     const record=raw as Record<string,JsonValue>;
-    if(record.questId===TRAINING_QUEST_ID&&typeof record.stage==='string'&&QUEST_STAGES.includes(record.stage as QuestStage))return{questId:TRAINING_QUEST_ID,stage:record.stage as QuestStage};
+    if(record.questId===questId&&typeof record.stage==='string'&&QUEST_STAGES.includes(record.stage as QuestStage))return{questId,stage:record.stage as QuestStage};
     // S7/M3 migration: only the completed legacy guide is promoted to a
     // completed reconstruction quest. Partial legacy stages restart safely.
-    if(record.guide==='complete')return{questId:TRAINING_QUEST_ID,stage:'complete'};
+    if(record.guide==='complete')return{questId,stage:'complete'};
   }
-  return initialQuestRuntime(TRAINING_QUEST_ID);
+  return initialQuestRuntime(questId);
 }
 
 export function questHud(stage:QuestStage):Pick<FieldHudState,'questTitle'|'questDetail'>{
@@ -87,7 +92,9 @@ function cloneRewardState(state:RewardState):RewardState{
 
 export class M4RuntimeIntegration{
   readonly scene:LabScene;
-  readonly worldAuthority=new ReconstructionWorldAuthority();
+  readonly m5World:M5PlayableWorld|null;
+  readonly worldAuthority:ReconstructionWorldAuthority;
+  readonly spatial:SceneTransitionController|null;
   readonly presentation=new BattlePresentation();
   world:WorldRuntimeState;
   rewards:RewardState;
@@ -106,7 +113,14 @@ export class M4RuntimeIntegration{
 
   constructor(scene:LabScene){
     this.scene=scene;
-    this.world=this.worldAuthority.initial(START_STATE);
+    let m5:M5PlayableWorld|null=null;
+    try{
+      if(scene.pack.maps['7']&&scene.pack.animations['1001']&&scene.pack.animations['4524']&&scene.pack.animations['4544'])m5=createM5PlayableWorld(scene.pack);
+    }catch(error){console.warn('M5 playable world unavailable; using M4 compatibility world',error);}
+    this.m5World=m5;
+    this.worldAuthority=new ReconstructionWorldAuthority(m5?.content);
+    this.spatial=m5?new SceneTransitionController(m5.house.graph,m5.house.triggers):null;
+    this.world=this.worldAuthority.initial(m5?.content.start??START_STATE);
     this.rewards=createM4RewardState(scene.gold);
   }
 
@@ -117,9 +131,21 @@ export class M4RuntimeIntegration{
     this.mountRoots();
     this.installSceneAdapters();
     this.installInput();
-    this.applyWorldState(START_STATE);
-    this.applyClassProfile(false);
     this.syncSceneInventory();
+    const initial=this.m5World?.content.start??START_STATE;
+    this.applyWorldState(initial);
+    if(this.m5World){
+      this.scene.configureWorldVisuals(this.m5World.visuals);
+      this.scene.configureWorldMarkers([
+        {id:'training-house-door',mapId:this.m5World.content.trainingMapId,cell:this.m5World.doorCell,label:'训练屋入口'},
+        {id:'training-house-exit',mapId:this.m5World.content.objectiveMapId,cell:this.m5World.interiorExit,label:'出口'},
+      ]);
+      this.scene.setPlayerCameraFollow(true);
+      this.scene.focusPlayer();
+      this.spatial?.start({mapId:initial.mapId,cell:[initial.x,initial.y]});
+      this.setNotice('M5 可玩性恢复运行时：NPC / 怪物 / 空间切场景 / camera follow / reconstruction balance 已接入');
+    }
+    this.applyClassProfile(false);
     window.addEventListener('lapis-state',event=>this.onSnapshot((event as CustomEvent<Snapshot>).detail));
     this.render(this.scene.snapshot());
   }
@@ -135,6 +161,8 @@ export class M4RuntimeIntegration{
       pendingEncounter:this.pendingEncounter?{...this.pendingEncounter}:null,
       developerMode:this.developerMode,
       lastAudio:this.lastAudio,
+      playableRecovery:!!this.m5World,
+      worldPlan:this.m5World?{doorCell:this.m5World.doorCell,interiorEntry:this.m5World.interiorEntry,interiorExit:this.m5World.interiorExit,encounterCell:this.m5World.encounterCell}:null,
     };
   }
 
@@ -166,17 +194,19 @@ export class M4RuntimeIntegration{
         const inventory=equipProgression(this.rewards.inventory,this.scene.character,slot,id,CLASS_RESOLVER);
         this.rewards={...this.rewards,inventory};
         this.syncSceneInventory();
+        this.applyClassProfile(false);
         this.setNotice('装备已更新 / RECONSTRUCTION_POLICY');
       }catch(error){this.setNotice(String(error));}
     };
 
     const originalEnter=this.scene.enterBattle.bind(this.scene);
     this.scene.enterBattle=()=>{
+      this.prepareReconstructionBattle();
       originalEnter();
       if(!this.scene.inBattleView)return;
       this.applyClassProfile(true);
       this.lastSnapshot=null;
-      const batch=this.presentation.battleStart({zoneId:this.scene.state.battleZoneId??TRAINING_BATTLE_ZONE_ID});
+      const batch=this.presentation.battleStart({zoneId:this.scene.state.battleZoneId??this.worldAuthority.content.battleZoneId});
       this.present(batch);
     };
 
@@ -212,7 +242,10 @@ export class M4RuntimeIntegration{
       else if(action==='save')void this.save();
       else if(action==='load')void this.load();
       else if(action==='inventory'){this.inventoryOpen=!this.inventoryOpen;document.body.classList.toggle('m4-inventory-open',this.inventoryOpen);}
-      else if(action==='options')this.setNotice('设置面板尚未实现；当前只保留必要的开发诊断开关。');
+      else if(action==='fullscreen')void this.scene.toggleFullscreen().then(ok=>this.setNotice(ok?'全屏状态已切换':'当前浏览器未允许全屏切换'));
+      else if(action==='zoom-in'){this.scene.zoomIn();this.setNotice('视角已放大');}
+      else if(action==='zoom-out'){this.scene.zoomOut();this.setNotice('视角已缩小');}
+      else if(action==='zoom-reset'){this.scene.resetZoom();this.scene.focusPlayer();this.setNotice('视角已恢复 1:1 并居中角色');}
       else if(action==='attack')this.scene.attack(null);
       else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
       else if(action==='rest')this.rest();
@@ -230,6 +263,10 @@ export class M4RuntimeIntegration{
     window.addEventListener('keydown',event=>{
       if((event.target as HTMLElement).closest('input,select,button,textarea'))return;
       if(event.key==='Escape'){this.menuOpen=!this.menuOpen;this.render(this.scene.snapshot());return;}
+      if(event.key==='f'||event.key==='F'){event.preventDefault();void this.scene.toggleFullscreen();return;}
+      if(event.key==='+'||event.key==='='){event.preventDefault();this.scene.zoomIn();return;}
+      if(event.key==='-'){event.preventDefault();this.scene.zoomOut();return;}
+      if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
       if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.interactWorld();return;}
       if(this.scene.inBattleView&&['1','2','3'].includes(event.key)){
         const skills=playableClassById(this.scene.character).availableSkillIds;
@@ -273,7 +310,8 @@ export class M4RuntimeIntegration{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
-    const entity=WORLD_ENTITIES.find(candidate=>canInteract(candidate,actor));
+    const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
+    const entity=entities.find(candidate=>canInteract(candidate,actor));
     if(!entity){this.setNotice('附近没有可交互对象');return;}
     const previousStage=this.world.quest.stage;
     const resolved=this.worldAuthority.interact(this.world,{entityId:entity.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
@@ -316,6 +354,14 @@ export class M4RuntimeIntegration{
   }
 
   private applyBattleSettlement():void{
+    if(this.m5World){
+      const level=Math.max(1,this.rewards.progression.level);
+      const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter([{level,rank:'normal'},{level,rank:'normal'}]);
+      const applied=applyBattleReward(this.rewards,'m5-training-house','battle:m5-training-house:win',{gold:reward.gold,exp:reward.exp});
+      this.rewards=applied.state;this.scene.gold=this.rewards.gold;
+      this.setNotice(`战斗胜利：金币 +${reward.gold}，EXP +${reward.exp}，当前 Lv.${this.rewards.progression.level} / RECONSTRUCTION_POLICY`);
+      return;
+    }
     const applied=applyBattleReward(this.rewards,'s9-training-battle','battle:s9-training-run:win',{gold:10,exp:100});
     this.rewards=applied.state;
     this.scene.gold=this.rewards.gold;
@@ -323,24 +369,50 @@ export class M4RuntimeIntegration{
   }
 
   private applyQuestSettlement():void{
-    const applied=applyQuestReward(this.rewards,TRAINING_QUEST_ID,'quest:s9-training-run:turn-in',{gold:5,exp:200,questFlags:['m4.training.complete']});
+    const questId=this.worldAuthority.content.questId;
+    const reward=this.m5World?{gold:7,exp:230,questFlags:['m5.training.complete']}:{gold:5,exp:200,questFlags:['m4.training.complete']};
+    const applied=applyQuestReward(this.rewards,questId,`quest:${questId}:turn-in`,reward);
     this.rewards=applied.state;
     this.scene.gold=this.rewards.gold;
-    this.setNotice(`任务完成：金币 +5，EXP +200，当前 Lv.${this.rewards.progression.level}`);
+    this.setNotice(`任务完成：金币 +${reward.gold}，EXP +${reward.exp}，当前 Lv.${this.rewards.progression.level} / RECONSTRUCTION_POLICY`);
+  }
+
+  private combatEquipment(){
+    const bonus=legacyEquipmentBonus(this.scene.inventory,this.scene.character);
+    return this.scene.character==='109'?{defense:bonus.defense,magicAttack:bonus.attack}:{attack:bonus.attack,defense:bonus.defense};
+  }
+
+  private playerCombatStats(){
+    return DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.playerStats(this.scene.character,Math.max(1,this.rewards.progression.level),this.combatEquipment());
+  }
+
+  private prepareReconstructionBattle():void{
+    if(!this.m5World){this.scene.setReconstructionBattleSetup(undefined);return;}
+    this.scene.setReconstructionBattleSetup({
+      playerClassId:this.scene.character,level:Math.max(1,this.rewards.progression.level),equipment:this.combatEquipment(),
+      enemyLevel:Math.max(1,this.rewards.progression.level),enemyRank:'normal'
+    });
   }
 
   private applyClassProfile(resetVitals:boolean):void{
     if(!['100','109'].includes(this.scene.character))return;
     const definition=playableClassById(this.scene.character);
     const profile=battleProfileForClass(this.scene.character);
-    this.scene.state.maxHp=definition.baseAuthoredStats.hp;
-    this.scene.state.maxMp=definition.baseAuthoredStats.mp;
-    if(resetVitals||!this.scene.inBattleView){
-      this.scene.state.hp=this.scene.state.maxHp;
-      this.scene.state.mp=this.scene.state.maxMp;
+    if(this.m5World){
+      if(!this.scene.inBattleView){
+        const stats=this.playerCombatStats();
+        this.scene.state.maxHp=stats.maxHp;this.scene.state.maxMp=stats.maxMp;this.scene.state.hp=stats.maxHp;this.scene.state.mp=stats.maxMp;
+      }
     }else{
-      this.scene.state.hp=Math.min(this.scene.state.hp,this.scene.state.maxHp);
-      this.scene.state.mp=Math.min(this.scene.state.mp,this.scene.state.maxMp);
+      this.scene.state.maxHp=definition.baseAuthoredStats.hp;
+      this.scene.state.maxMp=definition.baseAuthoredStats.mp;
+      if(resetVitals||!this.scene.inBattleView){
+        this.scene.state.hp=this.scene.state.maxHp;
+        this.scene.state.mp=this.scene.state.maxMp;
+      }else{
+        this.scene.state.hp=Math.min(this.scene.state.hp,this.scene.state.maxHp);
+        this.scene.state.mp=Math.min(this.scene.state.mp,this.scene.state.maxMp);
+      }
     }
     this.scene.state.moveReadinessCost=profile.movementReadinessCost;
     this.scene.state.attackReadinessCost=profile.attackReadinessCost;
@@ -368,8 +440,9 @@ export class M4RuntimeIntegration{
     const [x,y]=referenceCellToScreen([state.x,state.y]);
     this.scene.anchor={x,y};
     this.scene.route=[];
-    this.scene.fit();
+    if(this.m5World)this.scene.focusPlayer();else this.scene.fit();
     this.world={...this.world,world:{...state}};
+    this.spatial?.start({mapId:state.mapId,cell:[state.x,state.y]});
   }
 
   private saveContext():SaveValidationContext{
@@ -404,7 +477,7 @@ export class M4RuntimeIntegration{
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
     const save=migrateSave(raw,this.saveContext());
-    const quest=parseM4Quest(save.quest);
+    const quest=parseM4Quest(save.quest,this.worldAuthority.content.questId);
     this.rewards={gold:save.gold,inventory:save.inventory,progression:save.progression,questFlags:save.questFlags,rewardReceipts:save.rewardReceipts};
     this.world={world:{mapId:save.mapId,...(()=>{const cell=nearestAnchor(save.x,save.y);return{x:cell[0],y:cell[1]};})()},quest};
     this.scene.setCharacter(save.character);
@@ -413,7 +486,8 @@ export class M4RuntimeIntegration{
     this.scene.route=[];
     this.applyClassProfile(false);
     this.syncSceneInventory();
-    this.scene.fit();
+    if(this.m5World){this.scene.setPlayerCameraFollow(true);this.scene.focusPlayer();const cell=nearestAnchor(save.x,save.y);this.spatial?.start({mapId:save.mapId,cell});}
+    else this.scene.fit();
     this.setNotice(`存档恢复成功 / schema v${CURRENT_SAVE_VERSION}`);
     this.render(this.scene.snapshot());
   }
@@ -435,9 +509,42 @@ export class M4RuntimeIntegration{
         if(snapshot.phase==='lost')this.present(this.presentation.deathOf('player','player'));
       }
     }
-    if(!snapshot.inBattleView)this.world={...this.world,world:this.currentWorldState()};
+    if(!snapshot.inBattleView){
+      this.world={...this.world,world:this.currentWorldState()};
+      if(this.handleM5Spatial())return;
+    }
     this.lastSnapshot=snapshot;
     this.render(snapshot);
+  }
+
+  private handleM5Spatial():boolean{
+    if(!this.m5World||!this.spatial||this.scene.inBattleView)return false;
+    const actor=this.currentWorldState();
+    let update;
+    try{update=this.spatial.update({mapId:actor.mapId,cell:[actor.x,actor.y]});}
+    catch{return false;}
+    if(update.transition){
+      if(this.world.quest.stage==='not_started'){
+        this.spatial.rejectPending();this.setNotice('先与训练引导员交谈并接取任务，再进入训练屋。');return false;
+      }
+      const committed=this.spatial.commit(update.transition);
+      const next={mapId:committed.mapId,x:committed.cell[0],y:committed.cell[1]};
+      this.world={...this.world,world:next};
+      if(committed.mapId===this.m5World.content.objectiveMapId)this.world=this.worldAuthority.arriveObjectiveMap(this.world,committed.mapId);
+      this.applyWorldState(next);
+      this.setNotice(committed.mapId===this.m5World.content.objectiveMapId?'已自动进入训练屋 / RECONSTRUCTION_POLICY':'已离开训练屋，返回外城 / RECONSTRUCTION_POLICY');
+      this.lastSnapshot=null;this.render(this.scene.snapshot());return true;
+    }
+    if(this.world.quest.stage==='objective'&&actor.mapId===this.m5World.content.objectiveMapId&&!this.pendingEncounter&&!this.scene.route.length&&canInteract(this.m5World.content.objective,actor)){
+      const resolved=this.worldAuthority.interact(this.world,{entityId:this.m5World.content.objective.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
+      this.world=resolved.state;
+      if(resolved.result.encounter){
+        this.pendingEncounter=resolved.result.encounter;this.scene.enterBattle();
+        this.setNotice('接近训练怪物：进入战斗 / RECONSTRUCTION_POLICY');
+        return true;
+      }
+    }
+    return false;
   }
 
   private present(batch:BattlePresentationBatch):void{
@@ -459,7 +566,8 @@ export class M4RuntimeIntegration{
   private nearestInteraction(snapshot:Snapshot):string|undefined{
     if(snapshot.inBattleView)return undefined;
     const actor=this.currentWorldState();
-    const entity=WORLD_ENTITIES.find(candidate=>canInteract(candidate,actor));
+    const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
+    const entity=entities.find(candidate=>canInteract(candidate,actor));
     if(!entity)return undefined;
     if(entity.kind==='npc')return `与${entity.displayName}交谈`;
     return `调查${entity.displayName}`;
@@ -468,10 +576,11 @@ export class M4RuntimeIntegration{
   private render(snapshot:Snapshot):void{
     if(!['100','109'].includes(snapshot.character))return;
     const definition=playableClassById(snapshot.character);
+    const fieldStats=this.m5World?this.playerCombatStats():null;
     const player:PlayerHudState={
       name:'佣兵',className:definition.displayName,portraitLabel:definition.family==='swordsman'?'剑':'巫',level:this.rewards.progression.level,
-      hp:snapshot.inBattleView?snapshot.hp:definition.baseAuthoredStats.hp,hpMax:definition.baseAuthoredStats.hp,
-      mp:snapshot.inBattleView?snapshot.mp:definition.baseAuthoredStats.mp,mpMax:definition.baseAuthoredStats.mp,gold:this.rewards.gold,
+      hp:snapshot.inBattleView?snapshot.hp:fieldStats?.maxHp??definition.baseAuthoredStats.hp,hpMax:snapshot.inBattleView?this.scene.state.maxHp:fieldStats?.maxHp??definition.baseAuthoredStats.hp,
+      mp:snapshot.inBattleView?snapshot.mp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,mpMax:snapshot.inBattleView?this.scene.state.maxMp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,gold:this.rewards.gold,
     };
     const quest=questHud(this.world.quest.stage);
     const field:FieldHudState={mapId:snapshot.mapId,mapName:snapshot.mapName,...quest,interactionPrompt:this.nearestInteraction(snapshot)};

@@ -12,12 +12,14 @@ import argparse,hashlib,json,subprocess,sys,tempfile
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools/convert'))
-from ani import parse_ani
+from ani import parse_ani,validate_frame_indices
 from map_bundle import parse_mmf,parse_imf
 from render_map import render
 from spr import parse_spr,export_spr
 INSTALLER_SHA='c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88'
-WEB_MAPS={0:'对练场',1:'布日古斯_外城'}
+WEB_MAPS={0:'对练场',1:'布日古斯_外城',7:'布日古斯_本城_大厅'}
+WEB_VISUALS={1001:'training-guide-reconstruction',4524:'training-melee-reconstruction',4544:'training-ranged-reconstruction'}
+VISUAL_ACTIONS=('00','01','02','03')
 WEB_EFFECTS=(1,2,3,35,36,37,38)
 def digest(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def find_ci(root:Path,name:str)->Path:
@@ -34,6 +36,26 @@ def map_payload(sgres:Path,stage:Path,map_id:int,name:str)->dict:
     inspector={'width':mmf['width'],'height':mmf['height'],'cells':[{'resource_id':c['resource_id'],'directory_path':c['directory_path']} for c in mmf['cells']]}
     inspector_rel=f'maps/map-{map_id:04d}-inspector.json';(stage/inspector_rel).write_text(json.dumps(inspector,separators=(',',':'))+'\n')
     return {'id':map_id,'name':name,'png':f'maps/map-{map_id:04d}.png','collision':collision_rel,'inspector':inspector_rel,'render':result,'evidence':'VERIFIED_STATIC_RESOURCE'}
+def visual_payload(char_dir:Path,stage:Path,resource_id:int,label:str)->dict:
+    actor={'class_id':resource_id,'label':label,'actions':{}}
+    for action in VISUAL_ACTIONS:
+        base=f'B{resource_id}_{action}'
+        ani_path=find_ci(char_dir,base+'.ani');spr_path=find_ci(char_dir,base+'.spr')
+        ani=parse_ani(ani_path);spr=parse_spr(spr_path)
+        errors=validate_frame_indices(ani,spr.frame_count)
+        if errors:raise ValueError(f'{base}: {errors[0]}')
+        rel=Path('visuals')/f'B{resource_id}'/action
+        export_spr(spr,stage/rel/'frames')
+        payload={
+            'action_slot':action,'frames_per_direction':ani.frames_per_direction,
+            'raw_timing':ani.raw_timing,'directions':ani.directions,
+            'spr_frame_count':spr.frame_count,
+            'frame_bounds':[{'index':f.index,'left':f.left,'top':f.top,'right':f.right,'bottom':f.bottom} for f in spr.frames],
+        }
+        (stage/rel/'animation.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
+        actor['actions'][action]={'animation':(rel/'animation.json').as_posix(),'frames_dir':(rel/'frames').as_posix()}
+    return actor
+
 def effect_payload(magic:Path,stage:Path,rid:int)->dict:
     stem=f'magic-{rid:03d}';ani=parse_ani(find_ci(magic,stem+'.ani'));spr=parse_spr(find_ci(magic,stem+'.spr'))
     if ani.layer_name!='FOCUS':raise ValueError(f'{stem}: expected FOCUS layer, got {ani.layer_name!r}')
@@ -76,19 +98,20 @@ def generate(client:Path,out:Path):
         tmp=Path(tmp_name);stage=tmp/'pack'
         subprocess.run([sys.executable,str(ROOT/'tools/prepare_prototype.py'),'--char-dir',str(client/'Char'),'--sgres-dir',str(client/'SGRes'),'--out',str(stage)],check=True,capture_output=True,text=True)
         manifest=json.loads((stage/'prototype.json').read_text())
-        manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets/content only. Timing, FOCUS placement, quest triggers and training rules may remain UNVERIFIED.'}
+        manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets/content only. Map 7 and B1001/B4524/B4544 are original client resources; their M5 training-house/NPC/enemy gameplay bindings remain RECONSTRUCTION_POLICY.'}
         manifest['map']['render'].pop('output',None)
         maps={str(mid):map_payload(client/'SGRes',stage,mid,name) for mid,name in WEB_MAPS.items()}
         manifest['map']=maps['0'];manifest['maps']=maps
+        manifest['visuals']={str(rid):visual_payload(client/'Char',stage,rid,label) for rid,label in WEB_VISUALS.items()}
         manifest['effects']={str(rid):effect_payload(client/'MagicRes',stage,rid) for rid in WEB_EFFECTS}
         manifest['content']=build_content(client,stage,tmp)
-        manifest['provenance']['pack_sha256']=hashlib.sha256(json.dumps({'schema':4,'inputs':sources,'maps':sorted(WEB_MAPS),'effects':list(WEB_EFFECTS),'content':'quest-lib-v2'},sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        manifest['provenance']['pack_sha256']=hashlib.sha256(json.dumps({'schema':5,'inputs':sources,'maps':sorted(WEB_MAPS),'visuals':sorted(WEB_VISUALS),'effects':list(WEB_EFFECTS),'content':'quest-lib-v2'},sort_keys=True,separators=(',',':')).encode()).hexdigest()
         for p in stage.rglob('index.json'):
             obj=json.loads(p.read_text());obj['source']=Path(obj['source']).name;p.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
         (stage/'prototype.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
         files={p.relative_to(stage).as_posix():{'sha256':digest(p),'size':p.stat().st_size} for p in sorted(stage.rglob('*')) if p.is_file()}
         (stage/'asset-index.json').write_text(json.dumps({'schema':1,'inputs':sources,'files':files},indent=2)+'\n')
         stage.rename(out)
-    print(json.dumps({'output':str(out),'files':len(files)+1,'bytes':sum(p.stat().st_size for p in out.rglob('*') if p.is_file()),'mode':'private-original','maps':list(WEB_MAPS),'effects':list(WEB_EFFECTS),'content':'Quest.lib+Tutorial+HelpScript'}))
+    print(json.dumps({'output':str(out),'files':len(files)+1,'bytes':sum(p.stat().st_size for p in out.rglob('*') if p.is_file()),'mode':'private-original','maps':list(WEB_MAPS),'visuals':list(WEB_VISUALS),'effects':list(WEB_EFFECTS),'content':'Quest.lib+Tutorial+HelpScript'}))
 if __name__=='__main__':
     ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--client-root',type=Path,required=True);ap.add_argument('--out',type=Path,default=ROOT/'web/public/game-data');a=ap.parse_args();generate(a.client_root,a.out)
