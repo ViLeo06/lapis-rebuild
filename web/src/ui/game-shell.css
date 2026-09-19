@@ -541,7 +541,7 @@
 
 @media(max-width:560px){
   .top-command-strip{
-    height:44px;
+    height:52px;
     padding:4px 5px;
     justify-content:flex-end;
     overflow:hidden;
@@ -550,11 +550,11 @@
   .top-command-button:not(:disabled){
     flex:0 0 auto;
     min-width:72px;
-    height:36px;
+    height:44px;
     padding:4px 10px;
     font-size:10px;
   }
-  .small-map-plate,.quest-tracker{top:50px}
+  .small-map-plate,.quest-tracker{top:58px}
   .field-bottom-right{display:none}
   .interaction-prompt{
     bottom:70px;
@@ -564,8 +564,8 @@
     font-size:11px;
   }
   .interaction-prompt .touch-hint{display:inline}
-  .target-plate{top:50px}
-  .battle-state{top:112px}
+  .target-plate{top:58px}
+  .battle-state{top:120px}
   .command-deck{
     display:flex;
     flex-wrap:nowrap;
