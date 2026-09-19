@@ -204,10 +204,7 @@ test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer tur
 
   await assertDiagnosticsOff(page);
   const cursor=await hoverGuide(page);
-  // This turns into a hard gate automatically once S22 has supplied the
-  // required NPC hover/pointer contract. Until then the S24 branch records the
-  // dependency explicitly instead of pretending keyboard E proves pointer UX.
-  test.fixme(cursor!=='pointer','Waiting for S22 NPC pointer/hitbox contract on the integration head.');
+  expect(cursor).toBe('pointer');
 
   const start=await scene(page);
   expect(start.mapId).toBe(1);
@@ -258,7 +255,11 @@ test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer tur
 
   await clickWorldCell(page,plan.encounterCell as [number,number]);
   await expect.poll(async()=>(await scene(page)).inBattleView,{timeout:30000,intervals:[100]}).toBe(true);
-  expect((await scene(page)).battleZoneId).toBe(0);
+  const entered=await scene(page);
+  expect(entered.battleZoneId).toBe(0);
+  expect(entered.damagePolicy.id).toBe('m5-reconstruction-combat-balance-v2');
+  expect(entered.damagePolicy.provenance).toBe('RECONSTRUCTION_POLICY');
+  expect(entered.enemies.map(row=>row.visualResourceId)).toEqual([4524,4544]);
 
   let moved=false,attacked=false;
   for(let turn=0;turn<40;turn++){
@@ -304,10 +305,18 @@ test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer tur
   expect(turnInClick.after.routeLength).toBe(0);
   await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('ready_to_turn_in');
   await expect(dialogue).toBeVisible();
+  await expect(dialogue).toHaveAttribute('data-input-source','pointer');
   const turnInChoice=dialogue.locator('[data-dialogue-choice="turn-in-quest"]');
   await expect(turnInChoice).toBeVisible();
   await turnInChoice.click();
   await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('complete');
+  const done=await runtime(page);
+  expect(done.gold).toBe(15);
+  expect(done.progression.exp).toBe(300);
+  expect(done.progression.level).toBe(3);
+  const save=JSON.parse(await page.evaluate(()=>window.lapisM4!.exportJson()));
+  expect(save.version).toBe(2);
+  expect(save.quest.stage).toBe('complete');
   await assertDiagnosticsOff(page);
   expect(pageErrors).toEqual([]);
 
