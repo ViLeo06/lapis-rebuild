@@ -38,7 +38,7 @@ async function start(){
   const host=el('canvas-host');
   const game=new Phaser.Game({
     type:Phaser.AUTO,parent:host,backgroundColor:'#111b1b',pixelArt:true,antialias:false,
-    scale:{mode:Phaser.Scale.RESIZE,width:host.clientWidth,height:host.clientHeight},scene:[scene],audio:{noAudio:true}
+    scale:{mode:Phaser.Scale.NONE,width:host.clientWidth,height:host.clientHeight},scene:[scene],audio:{noAudio:true}
   });
   const resize=new ResizeObserver(()=>{
     const width=host.clientWidth,height=host.clientHeight;
