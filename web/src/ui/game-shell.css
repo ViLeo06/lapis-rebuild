@@ -443,7 +443,7 @@
 .interaction-prompt{bottom:76px}
 .game-notice{top:38px}
 
-.battle-hud{position:absolute;inset:0;left:0;right:0;bottom:auto;pointer-events:none}
+.battle-hud{position:absolute;inset:0;left:0;right:0;bottom:0;height:100%;pointer-events:none}
 .battle-hud>*{pointer-events:auto}
 .battle-topline{display:contents}
 .battle-player{

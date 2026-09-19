@@ -7,6 +7,11 @@ async function ready(page:import('@playwright/test').Page){
   await page.goto('/?m4=1');
   await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready&&!!window.lapisM4);
 }
+async function chooseDialogue(page:import('@playwright/test').Page,id:string){
+  const choice=page.locator(`[data-dialogue-choice="${id}"]`);
+  await expect(choice).toBeVisible();
+  await choice.click();
+}
 
 test('S13 M4 player shell replaces developer-first layout',async({page})=>{
   await ready(page);
@@ -23,6 +28,7 @@ test('S13 world quest enters explicit battle and exposes S11 skills through S8 H
   await ready(page);
   test.skip((await m4(page)).playableRecovery===true,'M5 private pack uses the spatial training-house flow covered by m5-playable-recovery.spec.ts.');
   await page.keyboard.press('e');
+  await chooseDialogue(page,'accept-quest');
   await expect.poll(async()=>(await m4(page)).quest.stage).toBe('accepted');
   await expect.poll(async()=>(await snap(page)).mapId).toBe(1);
   await expect(page.locator('[data-ui="field-hud"]')).toContainText('前往外城');
@@ -55,6 +61,7 @@ test('S13 class switch swaps authored vitals and skill roster while keeping reco
   });
   await expect.poll(async()=>(await snap(page)).character).toBe('109');
   await page.keyboard.press('e');
+  await chooseDialogue(page,'accept-quest');
   await page.keyboard.press('e');
   await expect(page.locator('[data-skill-id="19101"]')).toBeVisible();
   await expect(page.locator('[data-skill-id="19201"]')).toBeVisible();

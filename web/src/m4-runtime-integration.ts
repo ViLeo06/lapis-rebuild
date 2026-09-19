@@ -105,6 +105,7 @@ export class M4RuntimeIntegration{
   developerMode=false;
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
+  private dialogueHtml='';
   private noticeText='M4 游戏化运行时已接入';
   private lastSnapshot:Snapshot|null=null;
   private lastAudio='';
@@ -336,6 +337,10 @@ export class M4RuntimeIntegration{
     const entities=this.m5World?[this.m5World.content.guide.entity]:WORLD_ENTITIES.filter(entity=>entity.kind==='npc');
     const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
     if(!entity){
+      if(!this.m5World&&!entityId){
+        const objective=WORLD_ENTITIES.find(candidate=>candidate.kind!=='npc'&&canInteract(candidate,actor));
+        if(objective){this.interactWorld(objective.id);return;}
+      }
       this.activeDialogue=null;
       this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互 NPC');
       this.render(this.scene.snapshot());
@@ -377,7 +382,10 @@ export class M4RuntimeIntegration{
     if(action==='quest-completed'&&previousStage!=='complete'&&this.world.quest.stage==='complete'){
       this.applyQuestSettlement();
     }else if(action==='quest-accepted'){
-      this.setNotice('已接受训练委托 / RECONSTRUCTION_POLICY');
+      if(!this.m5World&&this.worldAuthority.content.warpOnAccept){
+        this.applyWorldState({...this.worldAuthority.content.objectiveEntry});
+        this.setNotice('已接受训练委托：已前往外城训练点 / RECONSTRUCTION_POLICY');
+      }else this.setNotice('已接受训练委托 / RECONSTRUCTION_POLICY');
     }else if(action==='declined'){
       this.setNotice('暂未接受训练委托');
     }else{
@@ -687,7 +695,11 @@ export class M4RuntimeIntegration{
       provenance:`battle=${snapshot.battleEntryProvenance}; damage=${snapshot.damagePolicy.provenance}; quest=${this.worldAuthority.provenance}; progression=RECONSTRUCTION_POLICY${this.lastAudio?`; audio=${this.lastAudio}`:''}`,
     };
     this.debugRoot.innerHTML=this.developerMode?renderDebugPanel(diagnostics):'';
-    this.dialogueRoot.innerHTML=this.renderDialogue();
+    const dialogueHtml=this.renderDialogue();
+    if(dialogueHtml!==this.dialogueHtml){
+      this.dialogueRoot.innerHTML=dialogueHtml;
+      this.dialogueHtml=dialogueHtml;
+    }
     document.body.classList.toggle('m4-dev-enabled',this.developerMode);
     document.body.classList.toggle('m4-inventory-open',this.inventoryOpen);
     const status=document.getElementById('m4-runtime-notice');
