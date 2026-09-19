@@ -57,6 +57,22 @@ class MatrixProbeTest(unittest.TestCase):
         self.assertEqual(probe.ITEM_FIELDS[50], "int_requirement")
         self.assertEqual(len(probe.ITEM_CLASS_FLAG_COLUMNS), 10)
 
+    def test_committed_canonical_manifest_is_complete_and_bounded(self):
+        manifest = ROOT / "manifests" / "m6-dual-class-ten-stage-matrix.json"
+        import json
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        stages = [stage for family in data["families"] for stage in family["stages"]]
+        self.assertEqual(len(stages), 20)
+        self.assertEqual(sum(len(s["progression"]["levels"]) for s in stages), 200)
+        self.assertEqual(data["families"][0]["stage_ids"], probe.SWORDSMAN_IDS)
+        self.assertEqual(data["families"][1]["stage_ids"], probe.WIZARD_IDS)
+        self.assertEqual(len(data["magic_catalog"]), 10)
+        self.assertTrue(all(len(s["visual"]["resources"]) == 5 for s in stages))
+        self.assertTrue(all(s["ability"]["evidence"] == "VERIFIED-STATIC-ORIGINAL" for s in stages))
+        self.assertEqual(data["boundaries"]["promotion_semantics_and_conditions"], "SERVER-BOUNDARY")
+        self.assertEqual(data["boundaries"]["server_exp_authority_and_transition"], "SERVER-BOUNDARY")
+        self.assertEqual(data["item_requirement_schema"]["final_server_eligibility"], "SERVER-BOUNDARY")
+
     def test_known_hash_verifier_rejects_wrong_sources(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
