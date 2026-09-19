@@ -153,8 +153,8 @@ S4 已到达明确的 client evidence boundary：
 - field/building/interior 等场景的空间触发和自动切换，不再由玩家手点调试框；
 - 第二个及更多可靠 field/interior map 的实际可走区域、入口/出口、NPC 放置；
 - death、MagicRes placement/blend/stage、foreground occlusion、完整音效触发等仍影响体验的视觉表现。
-- **原版 UI 外壳尚未恢复。** 当前 `web/src/ui/*` 主要是 reconstruction shell；下一轮要以原版客户端资源、同期截图/攻略图和已归档外部资料为结构依据，优先恢复原版 HUD 的区域、尺寸、锚点和层级。功能未实现时允许原位占位，不再自由设计一套替代 HUD。
-- **NPC 交互链未达到玩家可用标准。** 当前 `scene.ts` 的场景 `pointerdown` 在非战斗状态最终进入 `moveTo(...)`，而 `worldVisualActors` 只创建视觉 actor/label，没有 NPC pointer hit target。`talkGuide()` 虽存在，但仍是独立命令路径。下一轮必须打通 pointer/hitbox → NPC interaction intent → 对话/任务/战斗引导，并保留键盘交互作为辅助。
+- **原版 UI 精确像素仍未完全恢复。** M5.1 已建立 S20 reference pack，并按原版结构关系完成玩家 HUD 重构；未被 fixed-hash 2.2 直接证明的精确像素、alpha、字体和缺失功能仍保持 `RECONSTRUCTION_POLICY` / disabled placeholder。
+- **NPC 交互的历史 server 语义仍不完整。** M5.1 已完成 pointer/hitbox → interaction intent → 显式对话/任务选择，并保留键盘 E 与手机触控；但具体 NPC 身份、任务条件、奖励、招募/传送/战斗决定仍属于旧服务器缺口，继续由可替换 reconstruction policy 承担。
 
 其中已有明确线索：`NPC350.Tip` 已验证为 sprite library，但还没有完成“图像/动作 → NPC archetype → 地图实体”的运行时恢复。
 
