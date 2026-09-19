@@ -20,7 +20,9 @@ async function assertDiagnosticsOff(page:Page){
 async function clickAction(page:Page,action:string){
   const button=page.locator(`[data-action="${action}"]`).first();
   await expect(button).toBeVisible();
-  await button.click();
+  const box=await button.boundingBox();
+  if(!box)throw new Error(`Missing visible action ${action}`);
+  await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
 }
 
 async function clickWorldCell(page:Page,cell:readonly[number,number]){
