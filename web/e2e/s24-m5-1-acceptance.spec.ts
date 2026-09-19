@@ -280,7 +280,7 @@ test('S24 synthetic glue: keyboard interaction opens explicit dialogue before qu
 });
 
 test.describe('S24 mobile touch contract',()=>{
-  test.use({hasTouch:true,viewport:{width:390,height:844}});
+  test.use({hasTouch:true,isMobile:true,viewport:{width:390,height:844}});
 
   test('S24 mobile touch: NPC interaction and skill activation need no keyboard',async({page})=>{
     test.setTimeout(180000);
@@ -295,6 +295,7 @@ test.describe('S24 mobile touch contract',()=>{
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     const menuBox=await page.locator('[data-action="menu"]').boundingBox();
     expect(menuBox?.height??0).toBeGreaterThanOrEqual(44);
+    await page.screenshot({path:'test-results/s24-mobile-touch-field-390x844.png',fullPage:true});
 
     const before=await scene(page);
     const offeredTap=await tapGuide(page);
@@ -349,6 +350,8 @@ test.describe('S24 mobile touch contract',()=>{
     await skill.tap();
     await expect.poll(async()=>(await scene(page)).mp,{timeout:5000}).toBeLessThan(beforeSkill.mp);
     expect((await scene(page)).action).toBeLessThan(beforeSkill.action);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await page.screenshot({path:'test-results/s24-mobile-touch-battle-390x844.png',fullPage:true});
 
     await assertDiagnosticsOff(page);
     expect(pageErrors).toEqual([]);
