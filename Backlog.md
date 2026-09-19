@@ -172,7 +172,6 @@
 - [ ] 关键视觉/玩法人工 spot-check 后再关闭 M6 gate。
 
 ## 边界
-## 边界
 
 - 第一波 S1–S5 已关闭，不再向旧分支追加共享运行时改动。
 - 当前旧 server/source/capture 缺失不是“多扫几遍客户端”就一定能解决；缺口必须显式落在 reconstruction policy 层。
