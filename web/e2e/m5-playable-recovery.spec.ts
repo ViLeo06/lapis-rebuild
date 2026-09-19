@@ -73,6 +73,11 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   // NPC interaction at non-default zoom; it must not fall through to moveTo().
   const beforeNpcClick=await snap(page);
   await clickWorldPointerTarget(page,'training-guide');
+  await expect.poll(async()=>(await m5(page)).quest.stage).toBe('not_started');
+  const offer=page.locator('[data-ui="npc-dialogue"]');
+  await expect(offer).toBeVisible();
+  await expect(offer).toHaveAttribute('data-input-source','pointer');
+  await offer.locator('[data-dialogue-choice="accept-quest"]').click();
   await expect.poll(async()=>(await m5(page)).quest.stage).toBe('accepted');
   const afterNpcClick=await snap(page);
   expect(afterNpcClick.anchor).toEqual(beforeNpcClick.anchor);
@@ -167,6 +172,10 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   expect(postBattle.progression.exp).toBe(70);
 
   await page.keyboard.press('e');
+  const turnIn=page.locator('[data-ui="npc-dialogue"]');
+  await expect(turnIn).toBeVisible();
+  await expect(turnIn).toHaveAttribute('data-input-source','keyboard');
+  await turnIn.locator('[data-dialogue-choice="turn-in-quest"]').click();
   await expect.poll(async()=>(await m5(page)).quest.stage).toBe('complete');
   const done=await m5(page);
   expect(done.gold).toBe(15);
