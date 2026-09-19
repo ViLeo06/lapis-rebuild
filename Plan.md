@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.1｜更新：2026-09-18｜Web-first  
+> 版本：v3.2｜更新：2026-09-19｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -20,6 +20,9 @@
 - M4 第二波 S8–S12（Game UI、World/Quest、Battle Presentation、Swordsman/Wizard、Progression/Save）已全部合并；S13 已统一接入 M4 玩家运行时。
 - S14 Release Validation 已完成：final run `35281047574` 的 synthetic、private-original Chromium/offline 与新版 M4 30 分钟真实墙钟 soak 全部 success。最终 HTML SHA-256 为 `28ef2dcadeb0e3e7216f9b21cff44e725b54b2854944230df0db7c5433fd462c`。
 - 2026-09-18 人工试玩反馈确认：**M4 虽已工程跑通，但距离“可玩”仍明显不足**。当前最高优先级不是继续扩大技术验证，而是恢复完整视角操作、可见 NPC、可见怪物、相机跟随、自动场景切换，并为旧服务器缺失的战斗数值建立稳定可玩的 reconstruction balance。
+- M5 S15–S19 已完成并统一接线，集成 PR #29 合并为 `efbadaf0b0781ee205bd7a2541b265a41c7929e9`。fixed-hash 2.2 final run `35405864082` 的 synthetic、private-original Chromium/offline 与 30 分钟 M5 soak 全部 success。
+- M5 private pack 已实际使用原客户端 map 1 / map 7、B1001 world visual、B4524/B4544 monster visual；具体“训练引导员/训练怪物/训练屋”绑定继续明确标记 `RECONSTRUCTION_POLICY`。
+- 最终 M5 单 HTML：11,190,078 bytes；SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。自动/人工式浏览器链路已经证明自然闭环；**最终玩家体感验收仍以用户亲自试玩为准。**
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -165,28 +168,27 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-下一阶段改为 **M5 Playable Recovery / 可玩性恢复**。完成标准不再是“模块存在”，而是玩家打开单 HTML 后可以自然操作和理解游戏。
+下一阶段先进入 **M5.1 User Playtest / 可玩性打磨**，不立即跳到 M6 扩职业内容。
 
-本轮明确解决人工试玩暴露出的六个核心问题：
+当前 M5 工程验收已经证明：
 
-1. **视角操作**：恢复全屏、窗口自适应、放大/缩小；角色移动时相机平滑跟随，地图大于 viewport 时不再把玩家走出屏幕。
-2. **NPC 可见且可交互**：系统普查客户端 NPC sprite/ANI/Tip 资源，优先从已验证的 `NPC350.Tip` 和相关资源族恢复 NPC 形象/动作；建立 NPC archetype catalog，再绑定到 reconstruction world entity/quest。
-3. **怪物可见且有动作**：系统普查 battle/ANI/SPR/Tip/roster 相关资源，恢复怪物外观、待机/移动/攻击/受击/死亡，并建立 battle unit → visual archetype 绑定。
-4. **空间驱动场景切换**：例如走到训练屋入口就自动进入训练屋 interior；走到出口自动回 field。对原版 server/session 缺失的 trigger 使用明确 `RECONSTRUCTION_POLICY`，但交互方式必须像游戏，不再依赖手动选择调试框。
-5. **可玩战斗数值**：既然 exact server formula 无法恢复，就建立正式 `ReconstructionCombatBalance`：角色/怪物 HP、攻击、防御、魔攻、魔防、命中、暴击、技能倍率、EXP/reward 都有合理默认值、等级缩放、上下界和自动平衡测试。
-6. **自然任务闭环**：玩家看到 NPC → 走近/交互 → 接任务 → 自动场景/遇敌 → 看到怪物并战斗 → 回 NPC 交任务。任何一步都不能依赖 Developer diagnostics 才能完成。
+1. 全屏、zoom、responsive viewport 和角色 camera-follow 可工作；
+2. B1001 原客户端 world visual 已作为重构训练引导员真实渲染；
+3. B4524/B4544 原客户端怪物 visual 已进入战斗；
+4. 玩家接任务后走到门口会自动进入 map 7 重构训练屋，靠近怪物自动进入 battle；
+5. S19 simulator 与 live `battle.ts` 已对齐到 `m5-reconstruction-combat-balance-v2`；真实 2v1 验收可胜利；
+6. 返回 NPC、奖励、Lv3 / 300 EXP / 15 gold、SaveV2 完整闭环；
+7. final run `35405864082` synthetic/private-original 全绿，30 分钟 M5 soak 为 `1,800,406 ms` / 59 samples / 0 page error / 0 external request。
 
-并行拆分为五个 Session：
+M5.1 只接受用户真实试玩暴露的问题，按以下优先级处理：
 
-- **S15 Viewport / Camera / Fullscreen**
-- **S16 NPC Visual Recovery**
-- **S17 Monster Visual Recovery**
-- **S18 World Scene Transition / Spatial Interaction**
-- **S19 Reconstruction Combat Balance**
+- **P0 阻断**：无法移动、NPC/怪物不可见、无法交互、场景无法切换、战斗无法完成、存档损坏；
+- **P1 明显违和**：视角/缩放手感、NPC/怪物尺寸/anchor、动作节奏、战斗难度、入口/出口可读性；
+- **P2 可后置**：更多 NPC/怪物身份考据、更多地图、death/MagicRes/occlusion、完整音频、UI polish。
 
-五条线继续冻结共享核心文件，优先交付独立模块、资产索引、tests 与 integration note。五个 PR 全部完成后，由协调 Session 统一接入 `scene.ts / main.ts / battle.ts` 并重新生成 private-original single HTML 做人工试玩。
+用户确认 M5 基础体验可接受后，再进入 **M6 双职业完整化**：剑士/巫师十阶段职业矩阵、技能树、成长/转职、正式任务链和更多地图流程。
 
-详细要求见 **5.5 M5 Playable Recovery — S15–S19**。
+外部研究 PR #27 中的 2.1 客户端、日服/韩服资料和候选公式继续作为后续静态差分/校准线索；不能自动升级为 mainland retail truth。
 
 ---
 
@@ -271,7 +273,7 @@ S4 已到达明确的 client evidence boundary：
 | M2 Web 诊断 | 地图、角色、逐帧/方向/碰撞/Debug/离线 HTML | **G2-Web 通过** |
 | M3 Web 可玩切片 | field→battle→return→NPC/地图→存档 | **工程闭环通过** |
 | M4 行为校准/玩家壳 | readiness、AI、damage boundary、Quest/NPC、UI、双职业、SaveV2 | **S14 工程验收通过，但人工试玩确认仍不足以称“可玩”** |
-| M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **S15–S19 开始** |
+| M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **工程/私有验收通过；等待用户亲自试玩确认体感** |
 | M6 双职业完整化 | 十阶段职业矩阵 | 未开始 |
 | M7 Web 发布 | 性能、兼容、访问控制、版权、回滚 | 未开始 |
 | M8 可选联网 | 单机稳定后的独立权威服务端 | 暂缓 |
@@ -279,9 +281,9 @@ S4 已到达明确的 client evidence boundary：
 门禁：
 
 - **G0 / G1 / G2-Web：已通过。**
-- **G3：工程通过，玩法未通过。** field/battle/readiness/M4 runtime 已整合，但人工试玩仍缺 viewport/NPC/monster/scene transition。
+- **G3：通过。** field/battle/readiness/M4 runtime 与 M5 viewport/NPC/monster/scene transition 已整合并通过 fixed-hash 浏览器验收。
 - **G4：部分通过。** 大量 client behavior 已固定；旧服务器规则继续由 reconstruction policy 补齐。
-- **M5 Playability Gate：未通过。** 必须完成 S15–S19，并由用户实际试玩确认基础探索、任务、场景切换和战斗自然可用。
+- **M5 Playability Gate：工程门通过 / 用户体感门待确认。** S15–S19、private-original 玩家闭环与 30 分钟 soak 已通过；仍需用户对最终 HTML 做亲自试玩，确认操作手感、画面可读性和难度。
 - **G5：**双职业矩阵完成或批准例外；否则不称 V1。
 - **G6：**公开发布前完成访问控制、版权、构建检查并取得发布授权。
 
@@ -320,9 +322,19 @@ M4 已完成玩家 HUD、World/Quest reconstruction、Battle Presentation、剑�
 
 因此 M4 被视为 **工程验证完成**，不是玩法完成。
 
-### 5.4 M5 Playable Recovery — 当前阶段
+### 5.4 M5 Playable Recovery — 工程验收已完成
 
-本阶段只做能显著缩短“距离真正可玩还有多远”的工作，不继续用调试功能替代游戏功能。
+S15–S19 已全部合并并由协调 Session 完成共享运行时接线。PR #29 合并到 main 后，M5 已不再依赖调试 selector 完成基础任务/场景/战斗闭环。
+
+最终工程证据：
+
+- fixed-hash 2.2 run `35405864082`：synthetic + private-original success；
+- M5 private E2E：可见 NPC → 接任务 → 自动进屋 → 可见怪物 → 2v1 战斗 → 返回交任务；
+- S19 balance v2 对齐 simulator 与 live cadence；
+- 30 分钟 M5 soak success；
+- 最终 HTML SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。
+
+**注意：工程门通过不替代用户亲自试玩的体感门。**
 
 ### 5.5 M5 Playable Recovery — S15–S19
 
@@ -437,3 +449,5 @@ CI 不运行原安装器、`NeoDark.exe`、未知 DLL、兼容注入或 Frida �
 - **2026-09-16 v2.7：S1–S5 / PR #7–#11 全部审阅并合并。恢复 encounter 客户端边界、AI instance binding precedence、damage authored fields/server authority、Quest/NPC server-selected runtime boundary、ANI timing/hit/BGM 语义；第一波静态考古收口，项目正式进入 S6 Runtime Integration。**
 
 - **2026-09-18 v3.1：依据 S14 后真实人工试玩反馈，将 M5 重新定义为 Playable Recovery。新增 S15–S19 五条并行主线：viewport/camera/fullscreen、NPC visual、monster visual、world scene transition、reconstruction combat balance。明确 NPC350.Tip 是可继续恢复的 sprite library；旧服务端数值不再等待 exact formula，而以独立可替换的平衡层保证可玩性。**
+
+- **2026-09-19 v3.2：S15–S19 与统一 M5 runtime integration 收口。final run `35405864082` synthetic/private-original/Chromium/offline/30min soak 全通过；S19 升级为 balance v2 并对齐 live cadence；最终 M5 single HTML 固定为 11,190,078 bytes / SHA-256 `12cd5154...3d9140`。下一步转为 M5.1 用户真实试玩打磨，不再以自动测试代替体感验收。**
