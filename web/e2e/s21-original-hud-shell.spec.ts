@@ -74,6 +74,8 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
     await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready&&!!window.lapisM4);
     await expect(page.locator('#m4-hud-root [data-ui="field-hud"]')).toBeVisible();
     await expect(page.locator('#m4-debug-root #developer-diagnostics')).toHaveCount(0);
+    await expect(page.locator('#app > header')).toBeHidden();
+    await expect(page.locator('#app > footer')).toBeHidden();
     const g=await geometry(page);
     expect(g.player.width).toBeLessThanOrEqual(330);
     expect(g.player.height).toBeLessThanOrEqual(64);
