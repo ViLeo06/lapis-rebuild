@@ -22,7 +22,7 @@ export type BeginNpcInteractionResolution={state:WorldRuntimeState;dialogue:Begi
 export type ChooseNpcInteractionResolution={state:WorldRuntimeState;outcome:ApplyNpcDialogueChoiceResult};
 
 export class ReconstructionWorldAuthority{
-  readonly id='s23-reconstruction-world-v2';
+  readonly id='s9-reconstruction-world-v1';
   readonly provenance='RECONSTRUCTION_POLICY' as const;
   readonly content:TrainingWorldContent;
   constructor(content:TrainingWorldContent=DEFAULT_TRAINING_WORLD_CONTENT){this.content=content;}
