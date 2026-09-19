@@ -18,7 +18,7 @@ S24 has integrated the following work into its own branch only. Main has not bee
 
 | Line | Integrated head / evidence | S24 use |
 | --- | --- | --- |
-| S20 UI archaeology | `4e0b0861fcf33ff731616a837320dedbeaecf9f8`, integrated by S24 merge `90f043963709a96a4968693d8c7f5a635fe7045a` | implementation-ready Original UI Reference Pack, HUD region map, asset manifest and S21 handoff |
+| S20 UI archaeology | `a457cf5cbc06b6a6b4a0b1580e8527b331aec047` (final delivered head; initial integration merge `90f043963709a96a4968693d8c7f5a635fe7045a`) | implementation-ready Original UI Reference Pack, HUD region map, asset manifest, S21 handoff, Drive preview delivery and local parser validation |
 | S21 HUD | `a30f0e388cc1ed778e32336a4c7568951b69643b` final note plus earlier player code | supplied the compact reconstruction shell and responsive harness; S24 then corrected its pre-S20 geometry to the S20 evidence |
 | S22 pointer | `e3dc2483dae22be466a56cc275b8fb419ee4dd60` | live NPC hit bounds, hover cursor, pointer-before-move arbitration, exact entity handoff |
 | S23 dialogue | `994ea9146e73ff258bd8b4dbf19a54727f494caa` | explicit dialogue session, accept/decline/turn-in/close choices, stale-session rejection |
@@ -108,7 +108,8 @@ S24 adds a compact player-facing dialogue layer under `#m4-dialogue-root`.
 It is intentionally:
 
 - separate from Developer diagnostics;
-- bottom-centered above the field HUD;
+- bottom-docked and near-full-width, replacing/overlaying the lower deck relationship;
+- portrait-left / text-and-actions-right;
 - hard-bordered and compact;
 - moderately translucent;
 - free of glass/modern dashboard treatment.
@@ -172,16 +173,16 @@ At 1366x768 and 1920x1080:
 
 - no horizontal overflow;
 - formal HUD regions remain in viewport;
-- S21 player plate <= 330 x 64 when its structure is present;
-- quest frame stays within 10 px of right edge;
-- bottom regions stay within 10 px of bottom edge;
-- left map subframe <= 140 px;
-- bottom frames do not overlap;
-- missing legacy function slots remain disabled;
+- top command strip stays 28–36 px and spans the desktop width;
+- player plate stays compact at lower-left (<= 300 px wide / <= 70 px high in the current reconstruction geometry);
+- small-map placeholder stays upper-left below the top strip (<= 160 px wide);
+- quest frame stays within 10 px of the right edge below the top strip;
+- bottom-center deck and lower-right quick-slot bank stay within 10 px of the bottom edge and do not overlap the player plate or each other;
+- all 8 historical A/S/D/F and Z/X/C/V quick-slot placeholders remain disabled;
 - Developer diagnostics are absent by default;
 - screenshots and geometry JSON are captured.
 
-The exact retail geometry is not considered final until the S20 Reference Pack is available.
+S20's implementation-ready relationship map is now integrated. Exact mainland 2.2 pixel geometry, font metrics, alpha and decoded control artwork remain unverified; the current responsive pixel values are still `RECONSTRUCTION_POLICY`.
 
 ### Synthetic dialogue glue gate
 
@@ -238,7 +239,7 @@ The private-original gate requires:
 
 ### Not yet final / blocked
 
-- S20's implementation-ready reference docs/manifest are integrated, but its PR #35 remains Draft because its private reference-pack workflow/contact-sheet artifact has not received a working hosted runner. This does not invalidate the documented historical relationship evidence; it does mean the final private S20 artifact is still pending.
+- S20 PR #35 is now open and non-draft at `a457cf5...`. Its Drive reference pack has been delivered and local TDG parser/static syntax checks passed. The GitHub-hosted private contact-sheet workflow still cannot execute because runner assignment fails before steps begin.
 - The latest S20/S21/S23/S24 GitHub Actions attempts are currently failing before checkout with no hosted runner assignment (`runner_id=0`, `steps=[]`). Re-running the latest S24 failed job produced the same infrastructure-level result.
 - Therefore the integrated S24 head has not yet received a fresh code-executing full synthetic/private-original/soak run.
 - The local Chromium checks above validate structure only. They do not replace the final fixed-hash runtime acceptance.
@@ -248,7 +249,7 @@ The private-original gate requires:
 S24 is not complete until all of the following are done:
 
 1. Recheck S20/S21/S22/S23 heads for any changes after the currently integrated versions and synchronize only durable final deltas.
-2. S20 private reference-pack/contact-sheet workflow executes when hosted runners recover; review its final private artifact against the already integrated relationship map.
+2. When hosted runners recover, execute S20's private contact-sheet workflow and compare it against the already delivered Drive reference pack and integrated relationship map.
 3. Full TypeScript typecheck, unit tests and production build execute successfully on the integrated head.
 4. Chromium E2E executes successfully, including the synthetic explicit-dialogue test.
 5. A fixed-hash 2.2 `[private-smoke]` run executes the final real pointer/dialogue/battle flow.
