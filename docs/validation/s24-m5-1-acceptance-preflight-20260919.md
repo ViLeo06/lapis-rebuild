@@ -3,7 +3,7 @@
 Date: 2026-09-19  
 Branch: `codex/s24-m5-1-acceptance`  
 Plan baseline: `57ff22363156bec7aad3acb7555208533485d193`  
-Validated executable head: `3eb57f19d0bfcb9ea60d1ca05f2af39c76ca8cf7`
+Validated executable head: `dcc0c412635245b4d26118ce5ec3f675bc959001`
 
 ## Purpose
 
@@ -28,7 +28,7 @@ S24 applies the S20 edge-chrome relationships to the integrated player shell and
 
 ## Final workflow evidence
 
-GitHub Actions run `35429647238` on head `3eb57f19...` completed successfully.
+GitHub Actions run `35433856641` on head `dcc0c412...` completed successfully.
 
 | Gate | Result |
 | --- | --- |
@@ -42,31 +42,32 @@ GitHub Actions run `35429647238` on head `3eb57f19...` completed successfully.
 
 Private E2E report:
 
-- expected/pass: `57`
+- passed: `58`
 - skipped: `4`
 - unexpected: `0`
 - flaky: `0`
 
-All four S24 specs executed and passed:
+All five S24 specs executed and passed:
 
 - required desktop viewport geometry / diagnostics-off gate;
 - standalone offline/no-network gate;
 - synthetic explicit-dialogue glue gate;
+- mobile touch NPC / world movement / battle skill gate;
 - final real-pointer private gate.
 
 ## Final private artifact
 
 `private-original-validation`
 
-- artifact id: `10581071412`
-- archive size: `51,953,619` bytes
-- artifact digest: `sha256:9b0c133fd631750d235bb509eb1de27f1fd86740b662c47c02dd8ecaf6442474`
+- artifact id: `10582154008`
+- archive size: `53,011,314` bytes
+- artifact digest: `sha256:99627bfc7bc0934b8e0a48ef3d711b1ab244c808f77f3aeae2a4d0bff1c68da0`
 
 Standalone HTML inside the artifact:
 
 - `_temp/lapis-private.html`
-- size: `11,210,188` bytes
-- SHA-256: `b08b9b851f6dd89a4fb265d91c2fd6000a4c5726ca588efaabaa2f0fac8be8d5`
+- size: `11,211,980` bytes
+- SHA-256: `768bf6e26eb3f933733f19fb290940e62c5fea33d6d3a284c0a1f2fb8806c696`
 
 The offline S24 spec loads that HTML through `file://`, asserts the field HUD is active with diagnostics off, records HTTP(S) requests and requires the list to be empty. It passed.
 
@@ -93,6 +94,30 @@ It proves:
 15. SaveV2 persists `quest.stage=complete`;
 16. diagnostics stay off and page errors remain empty.
 
+## Mobile-touch acceptance proof
+
+The new phone gate runs at `390x844` with Playwright touch enabled and no keyboard dependency for the tested flow.
+
+It proves:
+
+1. direct NPC tap opens a pointer-sourced dialogue and does not create a movement route;
+2. a visible touch interaction button can open the same dialogue authority;
+3. Decline and Accept choices are tappable and remain explicit quest-state boundaries;
+4. touch movement reaches the training-house door;
+5. off-screen destinations are approached through visible touch points while camera-follow recenters the phone viewport;
+6. touch movement reaches the encounter and enters battle;
+7. enemy target selection works through touch;
+8. tapping skill `1301` executes the skill and consumes MP/readiness;
+9. mobile menu, interaction and battle controls checked by the gate meet the 44 px touch-target floor;
+10. no horizontal overflow occurs at 390 px width.
+
+The first private mobile run failed only because the test attempted a direct tap on an off-screen encounter cell. The final test uses visible phone-sized touch steps and passed on the fixed-hash private pack.
+
+Artifact screenshots:
+
+- `s24-mobile-touch-field-390x844.png` — exactly 390x844
+- `s24-mobile-touch-battle-390x844.png` — exactly 390x844
+
 ## Screenshot / geometry proof
 
 Final screenshots from the same artifact were inspected directly:
@@ -107,10 +132,11 @@ Both show the completed field state with no Developer diagnostics. `s24-hud-geom
 `test-results/soak/report.json`:
 
 - status: `passed`
-- elapsed: `1,800,632 ms`
-- sample count: `59`
+- elapsed: `1,800,712 ms`
+- sample count: `58`
 - errors: `[]`
-- final sample at `1,800,026 ms`, `35 FPS`
+- external HTTP(S) requests: `[]`
+- final sample at `1,800,054 ms`, `32 FPS`
 - playable recovery, camera follow, guide visibility and SaveV2 remained valid in the sampled state.
 
 ## Evidence boundary
