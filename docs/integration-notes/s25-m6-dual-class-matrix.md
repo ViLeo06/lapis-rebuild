@@ -51,3 +51,17 @@ No copyrighted pixel/resource payload is committed. No new private preview was n
 - S29: preserve provenance into runtime diagnostics/acceptance; do not report M6 playability as restoration of old server formulas.
 
 S25 does not modify `scene.ts`, `main.ts`, `battle.ts`, `Plan.md`, `Backlog.md`, or `docs/evidence-ledger.md`.
+
+
+## Final fixed-hash generation checkpoint
+
+- final static generation run: `35477353328` — success;
+- generated canonical manifest commit: `26a40ac778b0d0210f15ee8b8682e9c1b87fc98a`;
+- canonical manifest schema: `3`;
+- authority marker: `S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX`;
+- exact stage sets: swordsman 100..190 / wizard 109..199;
+- exact linked Magictbl records: 10;
+- visual contract cross-check: 200/200 target ANI/SPR files;
+- server-boundary fields remain explicit in the committed manifest.
+
+The generic repository CI is re-triggered from this final generated state; its run is reported in the S25 PR rather than being recursively written back into this note.
