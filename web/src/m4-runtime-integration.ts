@@ -105,6 +105,8 @@ export class M4RuntimeIntegration{
   developerMode=false;
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
+  private battleExitConfirm=false;
+  private suppressEncounterUntilLeave=false;
   private hudHtml='';
   private menuHtml='';
   private debugHtml='';
@@ -218,6 +220,7 @@ export class M4RuntimeIntegration{
     const originalEnter=this.scene.enterBattle.bind(this.scene);
     this.scene.enterBattle=()=>{
       this.activeDialogue=null;
+      this.battleExitConfirm=false;
       this.prepareReconstructionBattle();
       originalEnter();
       if(!this.scene.inBattleView)return;
@@ -273,6 +276,9 @@ export class M4RuntimeIntegration{
       else if(action==='attack')this.scene.attack(null);
       else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
       else if(action==='rest')this.rest();
+      else if(action==='battle-exit-request')this.requestBattleExit();
+      else if(action==='battle-exit-cancel')this.cancelBattleExit();
+      else if(action==='battle-exit-confirm')this.confirmBattleExit();
       else if(action==='return')this.returnFromBattle();
       else if(action==='class-swordsman')this.changeClass('100');
       else if(action==='class-wizard')this.changeClass('109');
@@ -287,6 +293,7 @@ export class M4RuntimeIntegration{
     window.addEventListener('keydown',event=>{
       if((event.target as HTMLElement).closest('input,select,button,textarea'))return;
       if(event.key==='Escape'){
+        if(this.battleExitConfirm){this.cancelBattleExit();return;}
         if(this.activeDialogue){this.activeDialogue=null;this.render(this.scene.snapshot());return;}
         this.menuOpen=!this.menuOpen;this.render(this.scene.snapshot());return;
       }
@@ -332,6 +339,47 @@ export class M4RuntimeIntegration{
     if(!this.scene.inBattleView||!actionReady(this.scene.state)){this.setNotice('当前不能休息：请等待行动槽就绪');return;}
     if(!consumeAction(this.scene.state,this.scene.state.restReadinessCost)){this.setNotice('休息指令未执行');return;}
     this.setNotice('休息：已按恢复出的 REST readiness cost 消耗行动槽；额外效果尚无原版证据。');
+  }
+
+  private requestBattleExit():void{
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active'){this.setNotice('当前没有可退出的进行中战斗');return;}
+    this.menuOpen=false;
+    this.battleExitConfirm=true;
+    this.scene.battlePaused=true;
+    this.render(this.scene.snapshot());
+  }
+
+  private cancelBattleExit():void{
+    if(!this.battleExitConfirm)return;
+    this.battleExitConfirm=false;
+    if(this.scene.inBattleView&&this.scene.state.phase==='active')this.scene.battlePaused=false;
+    this.render(this.scene.snapshot());
+  }
+
+  private confirmBattleExit():void{
+    if(!this.battleExitConfirm)return;
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active'){
+      this.battleExitConfirm=false;
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.battleExitConfirm=false;
+    this.retreatFromBattle();
+  }
+
+  private retreatFromBattle():void{
+    this.scene.leaveBattle();
+    this.scene.gold=this.rewards.gold;
+    this.world={...this.world,world:this.currentWorldState()};
+    this.pendingEncounter=null;
+    this.lastSnapshot=null;
+    this.suppressEncounterUntilLeave=true;
+    if(this.spatial){
+      const actor=this.currentWorldState();
+      this.spatial.start({mapId:actor.mapId,cell:[actor.x,actor.y]});
+    }
+    this.setNotice('已退出战斗：未结算奖励，任务目标保持未完成。离开怪物触发范围后可再次进入战斗。');
+    this.render(this.scene.snapshot());
   }
 
   private beginNpcInteraction(entityId:string|undefined,inputSource:NpcInteractionInputSource):void{
@@ -429,6 +477,8 @@ export class M4RuntimeIntegration{
     if(!this.scene.inBattleView)return;
     const phase=this.scene.state.phase;
     if(phase==='active'){this.setNotice('战斗尚未结束');return;}
+    this.battleExitConfirm=false;
+    if(phase==='lost')this.suppressEncounterUntilLeave=true;
     let returnState:WorldState|null=null;
     if(this.pendingEncounter){
       const outcome=phase==='won'?'won':'lost';
@@ -629,7 +679,12 @@ export class M4RuntimeIntegration{
       this.setNotice(committed.mapId===this.m5World.content.objectiveMapId?'已自动进入训练屋 / RECONSTRUCTION_POLICY':'已离开训练屋，返回外城 / RECONSTRUCTION_POLICY');
       this.lastSnapshot=null;this.render(this.scene.snapshot());return true;
     }
-    if(this.world.quest.stage==='objective'&&actor.mapId===this.m5World.content.objectiveMapId&&!this.pendingEncounter&&!this.scene.route.length&&canInteract(this.m5World.content.objective,actor)){
+    const nearObjective=actor.mapId===this.m5World.content.objectiveMapId&&canInteract(this.m5World.content.objective,actor);
+    if(this.suppressEncounterUntilLeave){
+      if(!nearObjective)this.suppressEncounterUntilLeave=false;
+      else return false;
+    }
+    if(this.world.quest.stage==='objective'&&nearObjective&&!this.pendingEncounter&&!this.scene.route.length){
       const resolved=this.worldAuthority.interact(this.world,{entityId:this.m5World.content.objective.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
       this.world=resolved.state;
       if(resolved.result.encounter){
@@ -724,6 +779,17 @@ export class M4RuntimeIntegration{
   }
 
   private renderDialogue():string{
+    if(this.battleExitConfirm&&this.scene.inBattleView&&this.scene.state.phase==='active'){
+      return `<section class="npc-dialogue battle-exit-dialogue" data-ui="battle-exit-confirm" aria-label="退出战斗确认">
+        <div class="npc-dialogue-portrait" aria-hidden="true"><b>撤</b><span>RETREAT</span><small>战斗不会结算奖励</small></div>
+        <div class="npc-dialogue-body">
+          <div class="npc-dialogue-speaker">确认退出战斗？</div>
+          <div class="npc-dialogue-copy"><p>退出后返回进入战斗前的场景，本次战斗不计胜利，也不会获得奖励。</p></div>
+          <div class="npc-dialogue-actions"><button type="button" data-action="battle-exit-cancel">取消</button><button type="button" data-action="battle-exit-confirm">确认退出</button></div>
+          <small class="npc-dialogue-provenance">RECONSTRUCTION_POLICY</small>
+        </div>
+      </section>`;
+    }
     const session=this.activeDialogue;
     if(!session)return '';
     const view=session.view;

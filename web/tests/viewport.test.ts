@@ -33,15 +33,26 @@ test('camera clamp never leaves map and centers undersized worlds',()=>{
   assert.deepEqual(clampScroll({x:0,y:0},{width:1000,height:800},{x:0,y:0,width:600,height:400},1),{x:-200,y:-200});
 });
 
-test('camera follow uses dead zone, smooths movement, and clamps at edges',()=>{
-  const follow=new CameraFollowPolicy({lerp:0.25,deadZoneRatioX:0.2,deadZoneRatioY:0.2});
+test('camera follow eases toward player center and clamps at map edges',()=>{
+  const follow=new CameraFollowPolicy({lerp:0.25});
   const viewport={width:800,height:600},world={x:0,y:0,width:1600,height:900};
   const camera={scrollX:0,scrollY:0,zoom:1};
   assert.deepEqual(follow.desiredScroll(camera,{x:400,y:300},viewport,world),{x:0,y:0});
+
+  const desired=follow.desiredScroll(camera,{x:900,y:300},viewport,world);
+  assert.deepEqual(desired,{x:500,y:0});
   const moved=follow.step(camera,{x:900,y:300},viewport,world,16.6667);
-  assert.ok(moved.x>0&&moved.x<340);
-  const edge=follow.desiredScroll({scrollX:700,scrollY:250,zoom:1},{x:1599,y:899},viewport,world);
-  assert.deepEqual(edge,{x:800,y:300});
+  assert.ok(moved.x>0&&moved.x<desired.x);
+
+  let settling={scrollX:moved.x,scrollY:moved.y,zoom:1};
+  for(let i=0;i<80;i++){
+    const next=follow.step(settling,{x:900,y:300},viewport,world,16.6667);
+    settling={scrollX:next.x,scrollY:next.y,zoom:1};
+  }
+  assert.ok(Math.abs((settling.scrollX+viewport.width/2)-900)<0.01);
+
+  assert.deepEqual(follow.desiredScroll({scrollX:700,scrollY:250,zoom:1},{x:1599,y:899},viewport,world),{x:800,y:300});
+  assert.deepEqual(follow.desiredScroll({scrollX:20,scrollY:0,zoom:1},{x:0,y:300},viewport,world),{x:0,y:0});
 });
 
 test('controller zoom is bounded and preserves camera center',()=>{

@@ -3,20 +3,13 @@ import {clamp,finitePositive,normalizeRect,normalizeSize} from './viewport-state
 
 export type CameraFollowOptions = Readonly<{
   lerp:number;
-  deadZoneRatioX:number;
-  deadZoneRatioY:number;
 }>;
 
 export const DEFAULT_CAMERA_FOLLOW_OPTIONS:CameraFollowOptions={
-  lerp:0.18,
-  deadZoneRatioX:0.22,
-  deadZoneRatioY:0.18,
+  // Keep a visible amount of camera inertia while still converging on the
+  // player's true center after movement stops.
+  lerp:0.10,
 };
-
-function ratio(value:number,label:string):number{
-  if(!Number.isFinite(value)||value<0||value>=1)throw new RangeError(`${label} must be in [0, 1)`);
-  return value;
-}
 
 export function clampScroll(scroll:Point,viewport:Size,world:Rect,zoom:number):Point{
   const v=normalizeSize(viewport),w=normalizeRect(world),z=finitePositive(zoom,'camera zoom');
@@ -43,25 +36,15 @@ export class CameraFollowPolicy{
   constructor(options:Partial<CameraFollowOptions>={}){
     const lerp=options.lerp??DEFAULT_CAMERA_FOLLOW_OPTIONS.lerp;
     if(!Number.isFinite(lerp)||lerp<=0||lerp>1)throw new RangeError('lerp must be in (0, 1]');
-    this.options={
-      lerp,
-      deadZoneRatioX:ratio(options.deadZoneRatioX??DEFAULT_CAMERA_FOLLOW_OPTIONS.deadZoneRatioX,'deadZoneRatioX'),
-      deadZoneRatioY:ratio(options.deadZoneRatioY??DEFAULT_CAMERA_FOLLOW_OPTIONS.deadZoneRatioY,'deadZoneRatioY'),
-    };
+    this.options={lerp};
   }
 
   desiredScroll(camera:CameraState,target:Point,viewport:Size,world:Rect):Point{
     const v=normalizeSize(viewport),z=finitePositive(camera.zoom,'camera zoom');
-    const visibleW=v.width/z,visibleH=v.height/z;
-    const deadW=visibleW*this.options.deadZoneRatioX,deadH=visibleH*this.options.deadZoneRatioY;
-    const center=cameraCenter(camera,v);
-    let nextCenterX=center.x,nextCenterY=center.y;
-    const dx=target.x-center.x,dy=target.y-center.y;
-    if(dx>deadW)nextCenterX=target.x-deadW;
-    else if(dx<-deadW)nextCenterX=target.x+deadW;
-    if(dy>deadH)nextCenterY=target.y-deadH;
-    else if(dy<-deadH)nextCenterY=target.y+deadH;
-    return scrollForCenter({x:nextCenterX,y:nextCenterY},v,world,z);
+    // The player is always the camera's desired center. Smoothing in step()
+    // creates the requested follow delay; clampScroll prevents showing beyond
+    // a map edge, where the player is intentionally allowed to move off-center.
+    return scrollForCenter(target,v,world,z);
   }
 
   step(camera:CameraState,target:Point,viewport:Size,world:Rect,deltaMs=16.6667):Point{

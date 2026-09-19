@@ -386,6 +386,28 @@ test.describe('S24 mobile touch contract',()=>{
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     await page.screenshot({path:'test-results/s24-mobile-touch-battle-390x844.png',fullPage:true});
 
+    const exitButton=page.locator('[data-action="battle-exit-request"]');
+    await expect(exitButton).toBeVisible();
+    expect((await exitButton.boundingBox())?.height??0).toBeGreaterThanOrEqual(44);
+    await exitButton.tap();
+    const exitConfirm=page.locator('[data-ui="battle-exit-confirm"]');
+    await expect(exitConfirm).toBeVisible();
+    await expect.poll(async()=>(await scene(page)).battlePaused).toBe(true);
+
+    await exitConfirm.locator('[data-action="battle-exit-cancel"]').tap();
+    await expect(exitConfirm).toHaveCount(0);
+    await expect.poll(async()=>(await scene(page)).battlePaused).toBe(false);
+    expect((await scene(page)).inBattleView).toBe(true);
+
+    await exitButton.tap();
+    await expect(exitConfirm).toBeVisible();
+    await exitConfirm.locator('[data-action="battle-exit-confirm"]').tap();
+    await expect.poll(async()=>(await scene(page)).inBattleView,{timeout:5000}).toBe(false);
+    expect((await scene(page)).mapId).toBe(7);
+    expect((await runtime(page)).quest.stage).toBe('objective');
+    await page.waitForTimeout(750);
+    expect((await scene(page)).inBattleView).toBe(false);
+
     await assertDiagnosticsOff(page);
     expect(pageErrors).toEqual([]);
   });
