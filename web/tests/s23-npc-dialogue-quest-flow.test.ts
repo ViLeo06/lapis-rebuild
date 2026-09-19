@@ -8,7 +8,8 @@ import {
 import {ReconstructionWorldAuthority} from '../src/world/world-authority.ts';
 import {TRAINING_BATTLE_ZONE_ID,TRAINING_GUIDE,TRAINING_QUEST_ID,START_STATE} from '../src/world/world-content.ts';
 import type {QuestRuntimeState} from '../src/world/quest-runtime.ts';
-import {parseM4Quest} from '../src/m4-runtime-integration.ts';
+import {createM4RewardState,parseM4Quest} from '../src/m4-runtime-integration.ts';
+import {applyQuestReward} from '../src/progression/rewards.ts';
 
 const intent=(
   entityId:string,
@@ -178,4 +179,44 @@ test('S23 SaveV2-restored ready-to-turn-in state resumes through the same dialog
   assert.equal(completed.outcome.accepted,true);
   state=completed.state;
   assert.equal(state.quest.stage,'complete');
+});
+
+
+test('S23 explicit completion composes with the S12 receipt guard so turn-in rewards stay idempotent',()=>{
+  const authority=new ReconstructionWorldAuthority();
+  let state={
+    world:{...START_STATE},
+    quest:{questId:TRAINING_QUEST_ID,stage:'ready_to_turn_in' as const},
+  };
+  const begun=authority.beginNpcInteraction(
+    state,
+    intent(TRAINING_GUIDE.entity.id,state.world.mapId,state.world.x,state.world.y,'pointer'),
+  );
+  assert.equal(begun.dialogue.accepted,true);
+  if(!begun.dialogue.accepted)return;
+
+  const completed=authority.chooseNpcInteraction(state,begun.dialogue.session,'turn-in-quest');
+  assert.equal(completed.outcome.accepted,true);
+  if(!completed.outcome.accepted)return;
+  assert.equal(completed.outcome.action,'quest-completed');
+  state=completed.state;
+  assert.equal(state.quest.stage,'complete');
+
+  const receipt=`quest:${TRAINING_QUEST_ID}:turn-in`;
+  const first=applyQuestReward(
+    createM4RewardState(),
+    TRAINING_QUEST_ID,
+    receipt,
+    {gold:7,exp:230,questFlags:['m5.training.complete']},
+  );
+  assert.equal(first.applied,true);
+  const duplicate=applyQuestReward(
+    first.state,
+    TRAINING_QUEST_ID,
+    receipt,
+    {gold:7,exp:230,questFlags:['m5.training.complete']},
+  );
+  assert.equal(duplicate.applied,false);
+  assert.equal(duplicate.state.gold,first.state.gold);
+  assert.equal(duplicate.state.progression.exp,first.state.progression.exp);
 });
