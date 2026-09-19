@@ -131,6 +131,7 @@ export class M4RuntimeIntegration{
     this.mountRoots();
     this.installSceneAdapters();
     this.installInput();
+    this.scene.setWorldInteractionHandler(entityId=>this.interactWorld(entityId));
     this.syncSceneInventory();
     const initial=this.m5World?.content.start??START_STATE;
     this.applyWorldState(initial);
@@ -306,13 +307,13 @@ export class M4RuntimeIntegration{
     this.setNotice('休息：已按恢复出的 REST readiness cost 消耗行动槽；额外效果尚无原版证据。');
   }
 
-  interactWorld():void{
+  interactWorld(entityId?:string):void{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
     const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
-    const entity=entities.find(candidate=>canInteract(candidate,actor));
-    if(!entity){this.setNotice('附近没有可交互对象');return;}
+    const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
+    if(!entity){this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互对象');return;}
     const previousStage=this.world.quest.stage;
     const resolved=this.worldAuthority.interact(this.world,{entityId:entity.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
     this.world=resolved.state;
