@@ -28,9 +28,10 @@ No placeholder in this branch is presented as recovered retail functionality.
 4. Bottom frames sit 5–8 px from the viewport edge at desktop sizes.
 5. The left-bottom map subframe is constrained to roughly 132 px at desktop sizes.
 6. Reconstruction brand/header chrome is removed from the player shell.
-7. HUD panels use semi-transparent dark fills with hard old-PC-game borders; no blur/glass-card treatment is introduced.
-8. Missing functions remain visibly disabled instead of being removed and collapsing layout.
-9. Developer/Diagnostics remains absent unless explicitly enabled.
+7. Integrated M4/M5 mode also hides the inherited `#app > header` and `#app > footer` developer chrome so the map/HUD uses the full viewport.
+8. HUD panels use semi-transparent dark fills with hard old-PC-game borders; no blur/glass-card treatment is introduced.
+9. Missing functions remain visibly disabled instead of being removed and collapsing layout.
+10. Developer/Diagnostics remains absent unless explicitly enabled.
 
 ## Responsive acceptance
 
@@ -47,6 +48,7 @@ Assertions include:
 - left-bottom map subframe <= 140 px wide;
 - bottom left/right frames do not overlap;
 - no horizontal overflow;
+- inherited app header/footer are hidden in integrated M4/M5 mode;
 - diagnostics absent by default;
 - an opened diagnostics `<details>` can be closed.
 
