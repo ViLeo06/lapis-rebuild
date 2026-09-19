@@ -12,13 +12,15 @@ const fieldState:GameShellState={
   diagnostics:{open:false,rawTiming:'5 -> 200ms',bounds:'hidden',provenance:'VERIFIED + RECONSTRUCTION_POLICY'},
 };
 
-test('field shell keeps player information in compact corner HUD and diagnostics out of normal view',()=>{
+test('field shell follows S20 edge-chrome relationships and keeps diagnostics out of normal view',()=>{
   const html=renderGameShell(fieldState);
   assert.match(html,/data-ui="field-hud"/);
-  assert.match(html,/hud-corner-top-left/);
+  assert.match(html,/data-ui="top-command-strip"/);
+  assert.match(html,/hud-corner-lower-left/);
   assert.match(html,/hud-corner-top-right/);
-  assert.match(html,/field-bottom-left/);
-  assert.match(html,/field-bottom-right/);
+  assert.match(html,/data-ui="small-map"/);
+  assert.match(html,/data-ui="bottom-deck"/);
+  assert.match(html,/data-ui="quick-slots"/);
   assert.match(html,/外城/);
   assert.match(html,/训练委托/);
   assert.match(html,/HP/);
@@ -26,10 +28,12 @@ test('field shell keeps player information in compact corner HUD and diagnostics
   assert.doesNotMatch(html,/id="developer-diagnostics"/);
 });
 
-test('missing retail functions keep visible disabled placeholders instead of collapsing layout',()=>{
+test('missing retail functions keep disabled original-structure categories and eight historical quick-slot keys',()=>{
   const html=renderGameShell(fieldState);
-  const disabled=(html.match(/class="legacy-slot" disabled/g)||[]).length;
-  assert.equal(disabled,7);
+  const quickSlots=(html.match(/class="legacy-quick-slot" disabled/g)||[]).length;
+  assert.equal(quickSlots,8);
+  for(const key of ['A','S','D','F','Z','X','C','V'])assert.match(html,new RegExp(`<b>${key}<\\/b>`));
+  assert.match(html,/top-command-button" disabled/);
   assert.match(html,/未恢复/);
 });
 
