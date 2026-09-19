@@ -5,20 +5,23 @@ on:
     paths:
       - '.github/workflows/s25-m6-dual-class-matrix.yml'
       - 'tools/probe_m6_dual_class_matrix.py'
+      - 'tools/build_m6_dual_class_manifest.py'
       - 'tests/parsers/test_m6_dual_class_matrix_probe.py'
+      - 'tests/parsers/test_m6_dual_class_canonical_matrix.py'
       - 'tools/extract/extract_client.py'
       - 'tools/extract/lib_archive.py'
       - 'tools/extract/pkware_blast.py'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   static-only:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with: {persist-credentials: false}
+        with:
+          persist-credentials: true
       - name: Synthetic probe tests
         run: python3 -m unittest tests/parsers/test_m6_dual_class_matrix_probe.py -v
       - name: Extract fixed-hash retail data without executing original binaries
@@ -54,6 +57,29 @@ jobs:
           assert all(len(s['visual_family']['actions'])==5 for s in d['stages'])
           print('S25 source matrix:', len(d['stages']), 'stages,', len(d['skills_by_id']), 'skill rows')
           PY
+      - name: Build canonical consumer matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p manifests
+          python3 tools/build_m6_dual_class_manifest.py \
+            "$RUNNER_TEMP/s25/source-matrix.json" \
+            --out manifests/m6-dual-class-ten-stage-matrix.json
+          cp manifests/m6-dual-class-ten-stage-matrix.json "$RUNNER_TEMP/s25/canonical-matrix.json"
+          python3 -m unittest tests/parsers/test_m6_dual_class_canonical_matrix.py -v
+      - name: Commit canonical matrix to S25 branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- manifests/m6-dual-class-ten-stage-matrix.json; then
+            echo "Canonical matrix already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifests/m6-dual-class-ten-stage-matrix.json
+          git commit -m "data: generate S25 canonical dual-class matrix"
+          git push origin HEAD:codex/s25-m6-dual-class-matrix
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
