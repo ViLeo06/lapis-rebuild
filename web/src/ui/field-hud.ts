@@ -14,7 +14,7 @@ export function renderFieldHud(player:PlayerHudState,field:FieldHudState):string
   const level=player.level==null?'':`<span class="hud-level">Lv.${Math.max(1,Math.floor(player.level))}</span>`;
   const questTitle=field.questTitle||'任务';
   const questDetail=field.questDetail||'暂无追踪任务';
-  const interaction=field.interactionPrompt?`<div class="interaction-prompt"><span class="keycap">E</span><span>${escapeHtml(field.interactionPrompt)}</span></div>`:'';
+  const interaction=field.interactionPrompt?`<button type="button" class="interaction-prompt" data-action="interact" aria-label="${escapeHtml(field.interactionPrompt)}"><span class="keycap" aria-hidden="true">E</span><span class="interaction-label">${escapeHtml(field.interactionPrompt)}</span><span class="touch-hint" aria-hidden="true">轻点交互</span></button>`:'';
   const itemSlots=['A','S','D','F'].map(key=>disabledQuickSlot(key,`物品快捷槽 ${key}，尚未恢复`)).join('');
   const magicSlots=['Z','X','C','V'].map(key=>disabledQuickSlot(key,`魔法快捷槽 ${key}，尚未恢复`)).join('');
   const topCommands=[
