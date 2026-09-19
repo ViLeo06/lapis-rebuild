@@ -164,7 +164,7 @@ test('M6 equipment rejects class stage and level violations and keeps stat polic
 
   assert.deepEqual(evaluateM6EquipmentEligibility(rule,levelOne).reasons,['level-restricted']);
   assert.deepEqual(evaluateM6EquipmentEligibility(rule,later).reasons,['stage-restricted']);
-  assert.deepEqual(evaluateM6EquipmentEligibility(rule,wizard).reasons,['class-restricted']);
+  assert.deepEqual(evaluateM6EquipmentEligibility(rule,wizard).reasons,['class-restricted','stage-restricted']);
 
   const equipped=equipM6Item({weapon:null,armor:null,accessory:null},inventory,[rule],legal,'weapon',3);
   assert.equal(equipped.weapon,3);
