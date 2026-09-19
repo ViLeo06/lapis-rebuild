@@ -1,0 +1,63 @@
+name: S25 M6 dual-class matrix static probe
+on:
+  push:
+    branches: ['codex/s25-m6-dual-class-matrix']
+    paths:
+      - '.github/workflows/s25-m6-dual-class-matrix.yml'
+      - 'tools/probe_m6_dual_class_matrix.py'
+      - 'tests/parsers/test_m6_dual_class_matrix_probe.py'
+      - 'tools/extract/extract_client.py'
+      - 'tools/extract/lib_archive.py'
+      - 'tools/extract/pkware_blast.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Synthetic probe tests
+        run: python3 -m unittest tests/parsers/test_m6_dual_class_matrix_probe.py -v
+      - name: Extract fixed-hash retail data without executing original binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 \
+            https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe \
+            -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py \
+            "$RUNNER_TEMP/client.exe" \
+            --payload "$RUNNER_TEMP/payload.7z" \
+            --extract-dir "$RUNNER_TEMP/extracted" \
+            --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          setlib="$(find "$RUNNER_TEMP/extracted" -type f -iname 'Set.lib' -print -quit)"
+          test -n "$setlib"
+          echo "ce1bb0425b367289f144e0780147f7c63abb833733035949853ce70dfb3c82fe  $setlib" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/setlib" "$RUNNER_TEMP/s25"
+          python3 tools/extract/lib_archive.py "$setlib" --extract-dir "$RUNNER_TEMP/setlib"
+          python3 tools/probe_m6_dual_class_matrix.py \
+            "$RUNNER_TEMP/setlib" \
+            --client-root "$RUNNER_TEMP/extracted/client" \
+            --out "$RUNNER_TEMP/s25/source-matrix.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          p=Path(os.environ['RUNNER_TEMP'])/'s25'/'source-matrix.json'
+          d=json.loads(p.read_text(encoding='utf-8'))
+          assert len(d['stages'])==20
+          assert set(d['target_stage_ids']['swordsman'])==set(range(100,191,10))
+          assert set(d['target_stage_ids']['wizard'])==set(range(109,200,10))
+          assert all(len(s['visual_family']['actions'])==5 for s in d['stages'])
+          print('S25 source matrix:', len(d['stages']), 'stages,', len(d['skills_by_id']), 'skill rows')
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: s25-m6-source-matrix
+          path: ${{ runner.temp }}/s25/
+          retention-days: 3
+          if-no-files-found: error
