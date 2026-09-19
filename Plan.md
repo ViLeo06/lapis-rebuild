@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.3｜更新：2026-09-19｜Web-first  
+> 版本：v3.4｜更新：2026-09-20｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -23,7 +23,8 @@
 - M5 S15–S19 已完成并统一接线，集成 PR #29 合并为 `efbadaf0b0781ee205bd7a2541b265a41c7929e9`。fixed-hash 2.2 final run `35405864082` 的 synthetic、private-original Chromium/offline 与 30 分钟 M5 soak 全部 success。
 - M5 private pack 已实际使用原客户端 map 1 / map 7、B1001 world visual、B4524/B4544 monster visual；具体“训练引导员/训练怪物/训练屋”绑定继续明确标记 `RECONSTRUCTION_POLICY`。
 - 最终 M5 单 HTML：11,190,078 bytes；SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。自动/人工式浏览器链路已经证明自然闭环；**最终玩家体感验收仍以用户亲自试玩为准。**
-- 2026-09-19 用户亲自试玩已给出 M5 体感门结论：**未通过**。NPC 虽可见，但世界 NPC 当前不是可点击交互目标；点击引导员会落入地图点击移动路径，无法自然触发对话/任务。HUD 也仍明显偏开发壳：状态栏过大、引导框和下方框位置不合理、遮挡偏重，且未优先复用已经搜集到的原版/同期界面证据。项目立即转入 **M5.1 User Playtest Repair**，不进入 M6。
+- 2026-09-19 用户亲自试玩已给出 M5 体感门结论：**未通过**。NPC 虽可见，但世界 NPC 当前不是可点击交互目标；点击引导员会落入地图点击移动路径，无法自然触发对话/任务。HUD 也仍明显偏开发壳：状态栏过大、引导框和下方框位置不合理、遮挡偏重，且未优先复用已经搜集到的原版/同期界面证据。项目立即转入 **M5.1 User Playtest Repair**。
+- 2026-09-20 用户亲自试玩最终 S24 standalone HTML 后明确确认 **通过**。M5.1 已完成原版结构优先 HUD、NPC pointer/hitbox、显式对话/任务选择、手机触控、延迟追中相机与战斗主动撤退确认。最终验收运行时 head `97bd5063749a15e114ce85119015f9dcb8b7afc0`；run `35442734082` synthetic/private-original/Chromium/offline 成功，E2E `58 passed / 4 skipped / 0 failed`；artifact `10583854810`；最终单 HTML 11,214,215 bytes，SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。**M5 Playability Gate 通过，项目正式进入 M6 Dual-class Completion。**
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -171,25 +172,17 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-下一阶段正式进入 **M5.1 User Playtest Repair / 用户试玩修复**。M5 的自动化、fixed-hash private-original 和 soak 结果继续有效，但它们只证明工程链路；2026-09-19 用户真实试玩已经证明 **M5 Playability Gate 仍未通过**。
+下一阶段正式进入 **M6 Dual-class Completion / 双职业完整化**。目标不再是继续证明基础 Web 闭环，而是把已通过人工门禁的训练切片扩展为可持续成长的剑士/巫师双职业游戏主线。
 
-本轮按实际阻断优先级处理：
+M6 采用五条工作线 S25–S29：
 
-- **P0 — NPC 可点击与自然交互。** NPC 必须成为真实 pointer target；点击 NPC 不得穿透成地图移动；在 zoom / fullscreen / camera-follow 下 hit-test 仍正确；点击或键盘交互均进入统一 interaction intent。训练引导员至少要能自然完成“点击 → 对话/提示 → 接任务 → 进入既有训练流程”。
-- **P1 — 原版 UI 外壳恢复。** 当前 HUD 不再继续自由设计。优先从 fixed-hash 2.2 客户端资产、既有 Drive 预览、已归档历史截图/攻略图和可复现外部资料建立原版 UI reference pack，再按原版结构恢复。当前试玩明确要求：顶部状态区整体缩小；右上引导/任务框贴右上；下方两个主要框下沉到底部；左下子框缩小；HUD 背景适度半透明，减少地图遮挡。
-- **P1 — 未实现功能用原位占位。** 如果原版 UI 某区域功能尚未恢复，保留正确位置/轮廓/禁用态或 placeholder，不因功能缺失改变整体构图。
-- **P1 — Debug 与正式 UI 分层。** Debug Panel、场景/战斗测试和诊断信息继续保留，但默认 opt-in，不作为正式 HUD 的一部分，也不能遮挡正常玩家路径。
-- **P1 — 真实点击验收。** 新 E2E 不再允许只调用内部 `talkGuide()` 或调试 selector 冒充 NPC 交互；必须通过浏览器真实 pointer/keyboard 输入完成至少一次 NPC 任务链。
+- **S25 — Dual-class Matrix / Data Archaeology：** 固定剑士 B100–B190、巫师 B109–B199 十阶段的视觉、authored stats、技能、装备与转职/成长证据矩阵；缺失服务器规则继续明确标记 reconstruction policy。
+- **S26 — Swordsman Ten-stage Progression：** 剑士十阶段成长、合法装备、代表技能与阶段切换，优先新增职业域模块和测试，避免抢共享核心。
+- **S27 — Wizard Ten-stage Progression：** 巫师十阶段成长、MP/魔法、合法装备、代表技能与阶段切换，与 S26 保持相同数据契约。
+- **S28 — World / Quest / Equipment Expansion：** 扩充等级成长、装备/背包、转职/任务链、地图/场景和奖励闭环；所有退役服务器缺口集中为可替换 policy。
+- **S29 — M6 Integration / Acceptance：** 在 S25–S28 收口后统一接入共享 runtime，完成双职业十阶段 SaveV2 迁移、桌面/手机真实输入、fixed-hash private-original、standalone offline 与 soak 验收。
 
-2026-09-18 外部深度调研已经并入本仓库与私有 Drive，本轮必须按证据等级吸收：
-
-- `docs/research/external-web-research-20260918.md` 与 Drive `lapis-rebuild-assets/00_inbox/external-web-research-20260918/` 作为统一外部研究入口；
-- 2006 日服村庄/设施资料和 `kaosia.gif` 中“训练场有两个入口、通往不同地图”等信息，只按 **VERIFIED-HISTORICAL / 同源候选约束** 使用，必须与本地 2.2 map/object/transition 交叉验证，不直接当国服坐标/对象 ID；
-- 2011 日服/繁中技能与任务前置表可帮助解释 UI 文案、任务依赖和职业语义，但版本/地区差异继续保留；
-- 2007 伤害/暴击候选公式继续只用于 `ReconstructionCombatBalance` 校准，不因本轮 UI/NPC 修复升级为原版公式；
-- 2.1↔2.2 文件级差分保留为静态考古支线：只有发现 UI、Set/Quest、地图或可执行结构的有效差异才继续深入；仍禁止在普通开发环境执行原 EXE/DLL。
-
-M5.1 拆成 **S20–S24 五个 Session**。S20–S23 并行恢复证据、UI 与交互；S24 前半程并行准备真实玩家 E2E，后半程在前四线收口后负责最终集成/验收。通过后才重新讨论 M6 双职业完整化。
+M6 的完成标准是：**剑士和巫师都能从初始阶段持续成长到第十阶段，并通过真实玩家输入完成代表任务、装备/技能使用、战斗、转职/阶段推进和存档恢复。** 自动测试仍不能替代关键视觉与玩法人工 spot-check。
 ---
 
 ## 1. 项目目标
@@ -274,8 +267,8 @@ M5.1 拆成 **S20–S24 五个 Session**。S20–S23 并行恢复证据、UI 与
 | M3 Web 可玩切片 | field→battle→return→NPC/地图→存档 | **工程闭环通过** |
 | M4 行为校准/玩家壳 | readiness、AI、damage boundary、Quest/NPC、UI、双职业、SaveV2 | **S14 工程验收通过，但人工试玩确认仍不足以称“可玩”** |
 | M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **工程/私有验收通过；2026-09-19 用户试玩暴露阻断，转 M5.1** |
-| M5.1 用户试玩修复 | 原版 UI 外壳、NPC pointer/hitbox、对话/任务交互、真实输入验收 | **进行中：S20–S24** |
-| M6 双职业完整化 | 十阶段职业矩阵 | 未开始 |
+| M5.1 用户试玩修复 | 原版 UI 外壳、NPC pointer/hitbox、对话/任务交互、真实输入验收 | **通过：S20–S24 + 用户最终试玩** |
+| M6 双职业完整化 | 十阶段职业矩阵 | **进行中：S25–S29** |
 | M7 Web 发布 | 性能、兼容、访问控制、版权、回滚 | 未开始 |
 | M8 可选联网 | 单机稳定后的独立权威服务端 | 暂缓 |
 
@@ -284,7 +277,7 @@ M5.1 拆成 **S20–S24 五个 Session**。S20–S23 并行恢复证据、UI 与
 - **G0 / G1 / G2-Web：已通过。**
 - **G3：通过。** field/battle/readiness/M4 runtime 与 M5 viewport/NPC/monster/scene transition 已整合并通过 fixed-hash 浏览器验收。
 - **G4：部分通过。** 大量 client behavior 已固定；旧服务器规则继续由 reconstruction policy 补齐。
-- **M5 Playability Gate：未通过。** S15–S19、private-original 自动闭环与 30 分钟 soak 继续记为工程证据，但 2026-09-19 用户真实试玩确认 NPC 点击交互不可用、HUD 与原版结构偏差明显。只有 M5.1 完成原版 UI 外壳、真实 NPC 点击→对话/任务链并重新由用户试玩通过，才关闭该门。
+- **M5 Playability Gate：通过。** 2026-09-19 首轮人工试玩暴露的 NPC 点击与 HUD 阻断已由 M5.1 S20–S24 修复；2026-09-20 用户对最终 S24 standalone HTML 亲自试玩确认通过。工程证据与人工体感门均已闭合，后续缺陷进入普通 M6 backlog，不再阻塞 M6。
 - **G5：**双职业矩阵完成或批准例外；否则不称 V1。
 - **G6：**公开发布前完成访问控制、版权、构建检查并取得发布授权。
 
@@ -339,7 +332,7 @@ S15–S19 已全部合并并由协调 Session 完成共享运行时接线。PR #
 
 2026-09-19 用户亲自试玩已经实际触发这一规则：M5 工程收口保留，但 **Playability Gate 判定失败**，后续由 M5.1 修复，不得用 run `35405864082` 的 green CI 覆盖人工反馈。
 
-### 5.5 M5.1 User Playtest Repair — S20–S24
+### 5.5 M5.1 User Playtest Repair — S20–S24 — 已完成
 
 统一起点：`main@abf05e1873b18bc89aaeb8dcb89aed491d4f4306`。计划由协调分支 `codex/m5-1-playtest-repair-plan` 固化为 v3.3；五条工作线从该计划提交切出，任何 Session 都不得自行回退到 v3.2 或旧 M5 基线。
 
@@ -406,7 +399,23 @@ S20/S23 必须读取 `docs/research/external-web-research-20260918.md`。其中�
 - 点击 NPC 的 E2E 必须使用真实浏览器 pointer/keyboard event；
 - fixed-hash 2.2 private-original single HTML、Chromium、offline、必要 wall-clock soak 重新通过；
 - 最终仍由用户亲自试玩决定 M5 Playability Gate 是否关闭。
-### 5.6 PR 合并规则
+### 5.6 M6 Dual-class Completion — S25–S29
+
+统一基线：M5.1 PR #36 合并后的最新 `main`。五条线从同一 M6 起点切出，禁止回退到 M5/M5.1 旧基线。
+
+| Session | 分支 | 主任务 | 关键交付 |
+| --- | --- | --- | --- |
+| S25 | `codex/s25-m6-dual-class-matrix` | Dual-class Matrix / Data Archaeology | 20 阶段视觉/属性/技能/装备/成长证据矩阵、缺口与 provenance |
+| S26 | `codex/s26-m6-swordsman-progression` | Swordsman Ten-stage Progression | 剑士十阶段成长、技能/装备/阶段切换、单元与浏览器验收 |
+| S27 | `codex/s27-m6-wizard-progression` | Wizard Ten-stage Progression | 巫师十阶段成长、魔法/MP/装备/阶段切换、单元与浏览器验收 |
+| S28 | `codex/s28-m6-world-progression-content` | World / Quest / Equipment Expansion | 等级/背包/装备/转职/任务/地图流程与奖励 policy |
+| S29 | `codex/s29-m6-integration-acceptance` | M6 Integration / Acceptance | 统一 runtime、SaveV2 migration、双职业真实输入 E2E、private-original/offline/soak |
+
+并行原则：S25 以 research/tools/data/docs 为主；S26/S27 分职业域文件；S28 负责 progression/world/quest/equipment 域；`scene.ts`、`main.ts`、`battle.ts`、`Plan.md`、`Backlog.md`、`docs/evidence-ledger.md` 在并行期继续由协调/集成线控制。S29 只在前四线形成稳定 integration notes 后修改共享核心。
+
+证据原则继续沿用：原客户端 authored data 原样保存；未知 server condition、公式、成长或奖励规则必须集中到 `RECONSTRUCTION_POLICY`，不得包装成原版恢复。
+
+### 5.7 PR 合并规则
 
 - S1–S19 已关闭，不再往旧分支追加 M5.1 runtime 改动。
 - v3.3 计划先在 `codex/m5-1-playtest-repair-plan` 形成独立 PR；未经负责人明确批准不直接合并 main。
