@@ -104,7 +104,9 @@ async function selectTarget(page:Page,id:string){
   await page.locator('#battle-pause').click();
 }
 
-function overlap(a:DOMRect,b:DOMRect){
+type RectLike={left:number;top:number;right:number;bottom:number;width:number;height:number};
+
+function overlap(a:RectLike,b:RectLike){
   return Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))
     *Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
 }
@@ -145,9 +147,7 @@ test('S24 preflight: required desktop viewports stay inside the player shell wit
       expect(region.bottom).toBeLessThanOrEqual(size.height+1);
     }
     for(let i=0;i<regions.length;i++)for(let j=i+1;j<regions.length;j++){
-      const a=new DOMRect(regions[i].left,regions[i].top,regions[i].width,regions[i].height);
-      const b=new DOMRect(regions[j].left,regions[j].top,regions[j].width,regions[j].height);
-      expect(overlap(a,b)).toBe(0);
+      expect(overlap(regions[i],regions[j])).toBe(0);
     }
 
     geometries[`${size.width}x${size.height}`]=geometry;
