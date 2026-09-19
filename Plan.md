@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.2｜更新：2026-09-19｜Web-first  
+> 版本：v3.3｜更新：2026-09-19｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -23,6 +23,7 @@
 - M5 S15–S19 已完成并统一接线，集成 PR #29 合并为 `efbadaf0b0781ee205bd7a2541b265a41c7929e9`。fixed-hash 2.2 final run `35405864082` 的 synthetic、private-original Chromium/offline 与 30 分钟 M5 soak 全部 success。
 - M5 private pack 已实际使用原客户端 map 1 / map 7、B1001 world visual、B4524/B4544 monster visual；具体“训练引导员/训练怪物/训练屋”绑定继续明确标记 `RECONSTRUCTION_POLICY`。
 - 最终 M5 单 HTML：11,190,078 bytes；SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。自动/人工式浏览器链路已经证明自然闭环；**最终玩家体感验收仍以用户亲自试玩为准。**
+- 2026-09-19 用户亲自试玩已给出 M5 体感门结论：**未通过**。NPC 虽可见，但世界 NPC 当前不是可点击交互目标；点击引导员会落入地图点击移动路径，无法自然触发对话/任务。HUD 也仍明显偏开发壳：状态栏过大、引导框和下方框位置不合理、遮挡偏重，且未优先复用已经搜集到的原版/同期界面证据。项目立即转入 **M5.1 User Playtest Repair**，不进入 M6。
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -151,6 +152,8 @@ S4 已到达明确的 client evidence boundary：
 - field/building/interior 等场景的空间触发和自动切换，不再由玩家手点调试框；
 - 第二个及更多可靠 field/interior map 的实际可走区域、入口/出口、NPC 放置；
 - death、MagicRes placement/blend/stage、foreground occlusion、完整音效触发等仍影响体验的视觉表现。
+- **原版 UI 外壳尚未恢复。** 当前 `web/src/ui/*` 主要是 reconstruction shell；下一轮要以原版客户端资源、同期截图/攻略图和已归档外部资料为结构依据，优先恢复原版 HUD 的区域、尺寸、锚点和层级。功能未实现时允许原位占位，不再自由设计一套替代 HUD。
+- **NPC 交互链未达到玩家可用标准。** 当前 `scene.ts` 的场景 `pointerdown` 在非战斗状态最终进入 `moveTo(...)`，而 `worldVisualActors` 只创建视觉 actor/label，没有 NPC pointer hit target。`talkGuide()` 虽存在，但仍是独立命令路径。下一轮必须打通 pointer/hitbox → NPC interaction intent → 对话/任务/战斗引导，并保留键盘交互作为辅助。
 
 其中已有明确线索：`NPC350.Tip` 已验证为 sprite library，但还没有完成“图像/动作 → NPC archetype → 地图实体”的运行时恢复。
 
@@ -168,28 +171,25 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-下一阶段先进入 **M5.1 User Playtest / 可玩性打磨**，不立即跳到 M6 扩职业内容。
+下一阶段正式进入 **M5.1 User Playtest Repair / 用户试玩修复**。M5 的自动化、fixed-hash private-original 和 soak 结果继续有效，但它们只证明工程链路；2026-09-19 用户真实试玩已经证明 **M5 Playability Gate 仍未通过**。
 
-当前 M5 工程验收已经证明：
+本轮按实际阻断优先级处理：
 
-1. 全屏、zoom、responsive viewport 和角色 camera-follow 可工作；
-2. B1001 原客户端 world visual 已作为重构训练引导员真实渲染；
-3. B4524/B4544 原客户端怪物 visual 已进入战斗；
-4. 玩家接任务后走到门口会自动进入 map 7 重构训练屋，靠近怪物自动进入 battle；
-5. S19 simulator 与 live `battle.ts` 已对齐到 `m5-reconstruction-combat-balance-v2`；真实 2v1 验收可胜利；
-6. 返回 NPC、奖励、Lv3 / 300 EXP / 15 gold、SaveV2 完整闭环；
-7. final run `35405864082` synthetic/private-original 全绿，30 分钟 M5 soak 为 `1,800,406 ms` / 59 samples / 0 page error / 0 external request。
+- **P0 — NPC 可点击与自然交互。** NPC 必须成为真实 pointer target；点击 NPC 不得穿透成地图移动；在 zoom / fullscreen / camera-follow 下 hit-test 仍正确；点击或键盘交互均进入统一 interaction intent。训练引导员至少要能自然完成“点击 → 对话/提示 → 接任务 → 进入既有训练流程”。
+- **P1 — 原版 UI 外壳恢复。** 当前 HUD 不再继续自由设计。优先从 fixed-hash 2.2 客户端资产、既有 Drive 预览、已归档历史截图/攻略图和可复现外部资料建立原版 UI reference pack，再按原版结构恢复。当前试玩明确要求：顶部状态区整体缩小；右上引导/任务框贴右上；下方两个主要框下沉到底部；左下子框缩小；HUD 背景适度半透明，减少地图遮挡。
+- **P1 — 未实现功能用原位占位。** 如果原版 UI 某区域功能尚未恢复，保留正确位置/轮廓/禁用态或 placeholder，不因功能缺失改变整体构图。
+- **P1 — Debug 与正式 UI 分层。** Debug Panel、场景/战斗测试和诊断信息继续保留，但默认 opt-in，不作为正式 HUD 的一部分，也不能遮挡正常玩家路径。
+- **P1 — 真实点击验收。** 新 E2E 不再允许只调用内部 `talkGuide()` 或调试 selector 冒充 NPC 交互；必须通过浏览器真实 pointer/keyboard 输入完成至少一次 NPC 任务链。
 
-M5.1 只接受用户真实试玩暴露的问题，按以下优先级处理：
+2026-09-18 外部深度调研已经并入本仓库与私有 Drive，本轮必须按证据等级吸收：
 
-- **P0 阻断**：无法移动、NPC/怪物不可见、无法交互、场景无法切换、战斗无法完成、存档损坏；
-- **P1 明显违和**：视角/缩放手感、NPC/怪物尺寸/anchor、动作节奏、战斗难度、入口/出口可读性；
-- **P2 可后置**：更多 NPC/怪物身份考据、更多地图、death/MagicRes/occlusion、完整音频、UI polish。
+- `docs/research/external-web-research-20260918.md` 与 Drive `lapis-rebuild-assets/00_inbox/external-web-research-20260918/` 作为统一外部研究入口；
+- 2006 日服村庄/设施资料和 `kaosia.gif` 中“训练场有两个入口、通往不同地图”等信息，只按 **VERIFIED-HISTORICAL / 同源候选约束** 使用，必须与本地 2.2 map/object/transition 交叉验证，不直接当国服坐标/对象 ID；
+- 2011 日服/繁中技能与任务前置表可帮助解释 UI 文案、任务依赖和职业语义，但版本/地区差异继续保留；
+- 2007 伤害/暴击候选公式继续只用于 `ReconstructionCombatBalance` 校准，不因本轮 UI/NPC 修复升级为原版公式；
+- 2.1↔2.2 文件级差分保留为静态考古支线：只有发现 UI、Set/Quest、地图或可执行结构的有效差异才继续深入；仍禁止在普通开发环境执行原 EXE/DLL。
 
-用户确认 M5 基础体验可接受后，再进入 **M6 双职业完整化**：剑士/巫师十阶段职业矩阵、技能树、成长/转职、正式任务链和更多地图流程。
-
-外部研究 PR #27 中的 2.1 客户端、日服/韩服资料和候选公式继续作为后续静态差分/校准线索；不能自动升级为 mainland retail truth。
-
+M5.1 拆成 **S20–S24 五个 Session**。S20–S23 并行恢复证据、UI 与交互；S24 前半程并行准备真实玩家 E2E，后半程在前四线收口后负责最终集成/验收。通过后才重新讨论 M6 双职业完整化。
 ---
 
 ## 1. 项目目标
@@ -273,7 +273,8 @@ M5.1 只接受用户真实试玩暴露的问题，按以下优先级处理：
 | M2 Web 诊断 | 地图、角色、逐帧/方向/碰撞/Debug/离线 HTML | **G2-Web 通过** |
 | M3 Web 可玩切片 | field→battle→return→NPC/地图→存档 | **工程闭环通过** |
 | M4 行为校准/玩家壳 | readiness、AI、damage boundary、Quest/NPC、UI、双职业、SaveV2 | **S14 工程验收通过，但人工试玩确认仍不足以称“可玩”** |
-| M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **工程/私有验收通过；等待用户亲自试玩确认体感** |
+| M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **工程/私有验收通过；2026-09-19 用户试玩暴露阻断，转 M5.1** |
+| M5.1 用户试玩修复 | 原版 UI 外壳、NPC pointer/hitbox、对话/任务交互、真实输入验收 | **进行中：S20–S24** |
 | M6 双职业完整化 | 十阶段职业矩阵 | 未开始 |
 | M7 Web 发布 | 性能、兼容、访问控制、版权、回滚 | 未开始 |
 | M8 可选联网 | 单机稳定后的独立权威服务端 | 暂缓 |
@@ -283,7 +284,7 @@ M5.1 只接受用户真实试玩暴露的问题，按以下优先级处理：
 - **G0 / G1 / G2-Web：已通过。**
 - **G3：通过。** field/battle/readiness/M4 runtime 与 M5 viewport/NPC/monster/scene transition 已整合并通过 fixed-hash 浏览器验收。
 - **G4：部分通过。** 大量 client behavior 已固定；旧服务器规则继续由 reconstruction policy 补齐。
-- **M5 Playability Gate：工程门通过 / 用户体感门待确认。** S15–S19、private-original 玩家闭环与 30 分钟 soak 已通过；仍需用户对最终 HTML 做亲自试玩，确认操作手感、画面可读性和难度。
+- **M5 Playability Gate：未通过。** S15–S19、private-original 自动闭环与 30 分钟 soak 继续记为工程证据，但 2026-09-19 用户真实试玩确认 NPC 点击交互不可用、HUD 与原版结构偏差明显。只有 M5.1 完成原版 UI 外壳、真实 NPC 点击→对话/任务链并重新由用户试玩通过，才关闭该门。
 - **G5：**双职业矩阵完成或批准例外；否则不称 V1。
 - **G6：**公开发布前完成访问控制、版权、构建检查并取得发布授权。
 
@@ -336,60 +337,84 @@ S15–S19 已全部合并并由协调 Session 完成共享运行时接线。PR #
 
 **注意：工程门通过不替代用户亲自试玩的体感门。**
 
-### 5.5 M5 Playable Recovery — S15–S19
+2026-09-19 用户亲自试玩已经实际触发这一规则：M5 工程收口保留，但 **Playability Gate 判定失败**，后续由 M5.1 修复，不得用 run `35405864082` 的 green CI 覆盖人工反馈。
 
-统一基线：`main@22f46efe3e55a7126647f7edc4ac59f43bb65442`。
+### 5.5 M5.1 User Playtest Repair — S20–S24
 
-五条并行线：
+统一起点：`main@abf05e1873b18bc89aaeb8dcb89aed491d4f4306`。计划由协调分支 `codex/m5-1-playtest-repair-plan` 固化为 v3.3；五条工作线从该计划提交切出，任何 Session 都不得自行回退到 v3.2 或旧 M5 基线。
 
-| Session | 主任务 | 关键交付 |
-| --- | --- | --- |
-| S15 | Viewport / Camera / Fullscreen | Fullscreen API、responsive viewport、zoom、camera follow/clamp、输入坐标换算、测试 |
-| S16 | NPC Visual Recovery | 全客户端 NPC 资产普查、NPC sprite/ANI/Tip catalog、方向/动作恢复、NPC archetype preview |
-| S17 | Monster Visual Recovery | 全客户端怪物资产普查、battle unit visual catalog、idle/move/attack/hit/death 动作与 preview |
-| S18 | World Scene Transition | spatial trigger、door/entrance/exit、field↔interior 自动切换、NPC interaction zone、world graph |
-| S19 | Reconstruction Combat Balance | HP/ATK/DEF/MATK/MDEF/hit/crit/skill/enemy scaling/reward 数值体系、模拟与平衡测试 |
+| Session | 分支 | 主任务 | 关键交付 |
+| --- | --- | --- | --- |
+| S20 | `codex/s20-original-ui-archaeology` | Original UI Archaeology / Reference Pack | 原版/同期 UI 证据清单、客户端 UI 资产 inventory、截图/素材与 HUD 区域映射、2.1↔2.2 可用时静态差分、可复现 reference pack |
+| S21 | `codex/s21-field-hud-restoration` | Original HUD Shell / Layout Polish | 缩小顶部状态区、右上任务/引导、底部面板下沉、左下子框缩小、半透明、原版结构 placeholder、Debug 分层 |
+| S22 | `codex/s22-npc-pointer-interaction` | NPC Pointer / Hitbox / Input Arbitration | NPC clickable hit target、hover/cursor、点击不穿透移动、zoom/fullscreen 坐标正确、pointer/E 统一 interaction intent |
+| S23 | `codex/s23-npc-dialogue-quest-flow` | NPC Dialogue / Quest / Guide Runtime | 引导员对话/任务状态机、interaction intent 消费、任务接受/推进/战斗引导、server-boundary provenance、可替换 reconstruction policy |
+| S24 | `codex/s24-m5-1-acceptance` | Player-input Acceptance / Integration | 真实 pointer/keyboard E2E、UI 多分辨率截图门禁、无 Debug 主流程、private-original fixed-hash 单 HTML/Chromium/offline/soak 与最终用户试玩包 |
 
-并行期间原则上禁止直接修改共享核心：
+#### 并行文件所有权
 
-- `web/src/scene.ts`
-- `web/src/main.ts`
-- `web/src/battle.ts`
+为避免再次让五条线争抢同一个核心文件：
+
+- **S20**：只改 research/tools/docs/reference manifests；不改生产 Web runtime。
+- **S21**：优先拥有 `web/src/ui/*`、相关 UI CSS 与 UI tests；不改 `scene.ts`、world/quest runtime。
+- **S22**：拥有 NPC pointer/hit-test/input adapter；`web/src/scene.ts` 在本轮并行期只允许 S22 做最小必要接线。不得改 UI shell 样式和任务语义。
+- **S23**：优先新增/修改 world/quest/dialogue/interaction domain 模块；不得并行修改 `scene.ts`、`web/src/ui/game-shell.css` 或 `battle.ts`。需要 scene glue 时通过明确接口与 integration note 交给 S24。
+- **S24**：并行期以 `web/e2e/*`、validation harness、docs 为主；S20–S23 收口后才同步最新 main 做最小共享 glue 和最终验收。
+
+全体冻结，除协调收口外原则上不改：
+
 - `Plan.md`
 - `Backlog.md`
 - `docs/evidence-ledger.md`
+- `web/src/main.ts`
+- `web/src/battle.ts`
 
-各 Session 优先新增独立模块、工具、tests、asset manifests、preview harness 和 `docs/integration-notes/s15..s19`。
+#### UI 恢复规则
 
-资产恢复要求：
+- 先证明“原版界面有哪些稳定区域、锚点、边框/背景/按钮素材”，再决定实现；原客户端资产优先级高于后期同源截图，同期官方/玩家资料用于补结构。
+- 已知功能缺失允许 placeholder，但 placeholder 必须占据原版结构中的对应位置，并明确 disabled / unavailable；不能因为功能没做就重新排版。
+- 半透明是当前重构的可读性要求，不自动宣称为原版 alpha；若找到原版透明度/混合证据，再升级证据等级。
+- Debug Panel 保留，但默认隐藏/opt-in；正式 HUD 与 Debug DOM/视觉层分开。
 
-- 必须对 fixed-hash 2.2 客户端做系统 inventory，不允许只凭文件名猜 NPC/怪物身份；
-- `NPC350.Tip` 已确认是 sprite library，可作为 S16 明确入口；
-- 怪物如果没有现成总表，S17 必须从 ANI/SPR/Tip/CombatMap/battle roster 等多源交叉建立 visual family；
-- 先恢复“这个资源族是什么、有哪些方向/动作/帧”，再做 ID 绑定；
-- 不能把 NPCScript block id、SMF object id、battle roster id 因数字相同就直接绑定。
+#### NPC 交互验收
 
-数值替代要求：
+至少证明：
 
-- authored retail stat 字段原样保留；
-- 所有公式放入一个 `ReconstructionCombatBalance` 层；
-- 数值目标是稳定可玩，而不是伪造“原版公式”；
-- 至少用自动模拟验证：普通怪 1v1、2v1、剑士/巫师、装备前后、技能 MP 成本、战斗时长、死亡率、奖励增长；
-- 避免“一刀秒”或“打不死”的极端，保留集中调参表。
+1. 玩家在 field 看见训练引导员；
+2. 鼠标 hover/点击命中 NPC visual/hitbox，而不是命中地图移动；
+3. 距离不满足时给出靠近/不可交互反馈，不能远距离无条件触发；
+4. 距离满足后点击 NPC，进入统一 interaction intent；
+5. 产生可见对话/任务提示并可接受任务；
+6. 后续既有“入口 → 训练屋 → 怪物 → battle → return → NPC 交任务”链路不回退；
+7. 键盘 E 作为辅助输入与鼠标进入同一逻辑，不维护两套任务推进；
+8. fullscreen / zoom / camera follow 后 pointer world coordinate 与 hitbox 仍正确。
 
-五个 PR 完成后由协调 Session 统一接入共享核心，验收必须实际走：
+#### 外部考古接入边界
 
-`启动 → 全屏/缩放 → 角色移动且镜头跟随 → 看见 NPC → 接任务 → 走进训练屋自动换场景 → 看见怪物 → 战斗 → HP/伤害合理 → 返回 NPC 交任务`
+S20/S23 必须读取 `docs/research/external-web-research-20260918.md`。其中村庄设施图、训练场双入口、任务条件、技能表和怪物行为属于同源历史证据；只有与 fixed-hash 2.2 客户端资产/对象/地图交叉确认后，才能升级为当前国服重构事实。S19 已使用的日本伤害候选公式仍维持校准候选，不在本轮借 UI/NPC 修复升级。
 
-之后重新执行 fixed-hash private-original single HTML、Chromium/offline、人工试玩；这一链路没通过前不再宣布“可玩”。
+#### M5.1 最终门禁
 
+最终验收必须由正常玩家输入自然完成：
+
+`启动 → 原版结构 HUD 可见且不遮挡 → 移动/缩放/全屏 → 鼠标点击 NPC → 对话/接任务 → 走入训练入口自动切场景 → 看见怪物 → 战斗 → 返回 → 再次点击 NPC → 交任务`
+
+同时要求：
+
+- 1366×768、1920×1080 至少两个桌面 viewport 无关键 HUD 重叠；
+- 不打开 Developer diagnostics、不调用测试专用内部方法也能完成主流程；
+- 点击 NPC 的 E2E 必须使用真实浏览器 pointer/keyboard event；
+- fixed-hash 2.2 private-original single HTML、Chromium、offline、必要 wall-clock soak 重新通过；
+- 最终仍由用户亲自试玩决定 M5 Playability Gate 是否关闭。
 ### 5.6 PR 合并规则
 
-- S1–S5 已关闭，不再往旧分支追加共享运行时改动。
-- S6 从第一波全部收口后的最新 `main` 新建。
-- S7 从 S6 合并后的最新 `main` 新建。
-- `Plan.md`、`Backlog.md`、`docs/evidence-ledger.md` 由协调 Session 在阶段收口时统一更新。
-- 公共运行时重构不要拆成多个并行 PR 同时争抢 `scene/main/battle`。
+- S1–S19 已关闭，不再往旧分支追加 M5.1 runtime 改动。
+- v3.3 计划先在 `codex/m5-1-playtest-repair-plan` 形成独立 PR；未经负责人明确批准不直接合并 main。
+- S20–S24 从同一个 v3.3 计划提交切分；各自只修改上表归属范围，禁止把共享文档顺手带进功能 PR。
+- S20–S23 的功能 PR 在进入最终集成前必须同步当时最新 main；若计划 PR 采用 squash merge，工作分支需正常 merge/rebase 解决共同祖先差异，不 force push 共享分支。
+- S24 是本轮后置集成/验收线：前半程并行准备测试，后半程在 S20–S23 收口后同步最新 main，做最小 glue、跑完整 private-original 验收并产出人工试玩包。
+- `Plan.md`、`Backlog.md`、`docs/evidence-ledger.md` 继续由协调 Session 在阶段收口时统一更新。
+- 未经负责人对具体 PR 的明确批准，不合并 main；不因 CI green 自动宣告用户体感门通过。
 
 ---
 
@@ -451,3 +476,5 @@ CI 不运行原安装器、`NeoDark.exe`、未知 DLL、兼容注入或 Frida �
 - **2026-09-18 v3.1：依据 S14 后真实人工试玩反馈，将 M5 重新定义为 Playable Recovery。新增 S15–S19 五条并行主线：viewport/camera/fullscreen、NPC visual、monster visual、world scene transition、reconstruction combat balance。明确 NPC350.Tip 是可继续恢复的 sprite library；旧服务端数值不再等待 exact formula，而以独立可替换的平衡层保证可玩性。**
 
 - **2026-09-19 v3.2：S15–S19 与统一 M5 runtime integration 收口。final run `35405864082` synthetic/private-original/Chromium/offline/30min soak 全通过；S19 升级为 balance v2 并对齐 live cadence；最终 M5 single HTML 固定为 11,190,078 bytes / SHA-256 `12cd5154...3d9140`。下一步转为 M5.1 用户真实试玩打磨，不再以自动测试代替体感验收。**
+
+- **2026-09-19 v3.3：用户真实试玩判定 M5 Playability Gate 未通过。确认 NPC visual 尚无 pointer hit target、点击会落入地图移动路径；HUD 仍偏开发壳且未按原版结构收敛。启动 M5.1 S20–S24：原版 UI 考古、HUD 恢复、NPC pointer/hitbox、对话/任务 runtime、真实玩家输入验收。同步纳入 2026-09-18 外部深调资料（村庄设施/训练场双入口/任务技能表/2.1 差分线索），并继续严格区分 fixed-hash 2.2 事实与同源历史候选。**
