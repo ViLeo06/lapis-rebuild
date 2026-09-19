@@ -1,6 +1,6 @@
 # Backlog
 
-> 2026-09-19 | Web-first | Plan v3.2 | M5 engineering closure | next: M5.1 user playtest
+> 2026-09-20 | Web-first | Plan v3.4 | M5.1 user gate passed | active: M6 S25-S29
 
 ## 已完成基线
 
@@ -126,15 +126,52 @@
 - [x] private M5 玩家闭环：可见 NPC → 接任务 → 自动进屋 → 可见怪物 → 2v1 胜利 → 返回交任务 → SaveV2。
 - [x] 30 分钟 M5 wall-clock soak：`1,800,406 ms` / 59 samples / 0 page error / 0 external request。
 - [x] 最终 M5 HTML：11,190,078 bytes；SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。
-- [ ] 用户亲自试玩最终 HTML，确认操作手感、画面可读性、任务理解和战斗难度；反馈进入 M5.1。
+- [x] 用户亲自试玩最终 M5.1 S24 HTML：2026-09-20 明确确认通过；M5 Playability Gate 关闭。
 
-## M5.1 / M6+ 后续
+## M5.1 S20–S24 — 已收口
 
-- [ ] 按用户试玩反馈修 P0/P1 可玩性问题。
-- [ ] 完整背包/装备规则、等级/转职、技能树、正式任务链和地图流程。
-- [ ] 剑士/巫师十阶段职业矩阵。
-- [ ] 公开部署前完成访问控制、版权和发布授权审查。
+- [x] S20 Original UI Archaeology：原版/同期 UI reference pack、HUD 区域映射、TDG parser/probe、资产 manifest。
+- [x] S21 Original HUD Shell：紧凑顶部/底部结构、右上任务区、半透明、原版结构 placeholder、Developer diagnostics opt-in。
+- [x] S22 NPC Pointer：真实 world-space hit target、NPC click-before-move arbitration、pointer/E 共用 interaction authority。
+- [x] S23 NPC Dialogue/Quest：显式 Accept/Decline/Turn in/Close、stale-session 防重、胜负/任务阶段正确衔接。
+- [x] S24 desktop + mobile input：NPC 点击/触控、对话、移动、目标、技能、任务闭环。
+- [x] 延迟追中相机：移动时缓慢追赶，停下后收敛到中心；地图边界 clamp 保持。
+- [x] 战斗主动撤退：退出请求 → 确认/取消；退出不发奖励、不算胜利，并抑制立即重复触发。
+- [x] 最终 executable head：`97bd5063749a15e114ce85119015f9dcb8b7afc0`。
+- [x] run `35442734082`：synthetic + fixed-hash private-original + Chromium/offline success；E2E `58 passed / 4 skipped / 0 failed`。
+- [x] 最终 artifact `10583854810`；single HTML 11,214,215 bytes；SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。
+- [x] 2026-09-20 用户亲自试玩通过，批准收口并进入 M6。
 
+## M6 S25–S29 — 进行中
+
+### S25 Dual-class Matrix / Data Archaeology
+- [ ] 建立剑士 B100–B190、巫师 B109–B199 共 20 阶段的统一矩阵。
+- [ ] 对每阶段固定视觉 family、authored stats、技能、装备、成长/转职相关证据与来源等级。
+- [ ] 把 server-boundary 缺口单独列为 reconstruction policy，不因数字相同做无证据绑定。
+
+### S26 Swordsman Ten-stage Progression
+- [ ] 剑士十阶段可持续成长与阶段切换。
+- [ ] 每阶段合法装备、代表技能、主要属性与表现绑定。
+- [ ] 单元测试 + 浏览器真实输入回归。
+
+### S27 Wizard Ten-stage Progression
+- [ ] 巫师十阶段可持续成长与阶段切换。
+- [ ] MP/魔法/合法装备/代表技能完整接入。
+- [ ] 单元测试 + 浏览器真实输入回归。
+
+### S28 World / Quest / Equipment Expansion
+- [ ] 等级成长、背包/装备、转职/任务链、地图/场景与奖励闭环扩展。
+- [ ] 明确 authored data 与 reconstruction formula/reward/condition 分层。
+- [ ] SaveV2 向 M6 数据结构扩展并准备迁移策略。
+
+### S29 M6 Integration / Acceptance
+- [ ] S25–S28 integration notes 收口后统一接入共享 runtime。
+- [ ] 剑士/巫师从初始到第十阶段的代表成长路径 E2E。
+- [ ] 桌面 + 手机真实输入验收；Developer diagnostics 默认关闭。
+- [ ] fixed-hash private-original、standalone offline、SaveV2 migration 与 wall-clock soak。
+- [ ] 关键视觉/玩法人工 spot-check 后再关闭 M6 gate。
+
+## 边界
 ## 边界
 
 - 第一波 S1–S5 已关闭，不再向旧分支追加共享运行时改动。
