@@ -102,6 +102,39 @@ async function tapWorldCell(page:Page,cell:readonly[number,number]){
   );
 }
 
+async function touchTravelToWorldCell(page:Page,cell:readonly[number,number]){
+  const canvas=page.locator('canvas');
+  const worldX=(cell[0]+1)*32,worldY=(cell[1]+1)*16;
+  for(let attempt=0;attempt<8;attempt++){
+    const box=await canvas.boundingBox();
+    if(!box)throw new Error('Missing canvas');
+    const before=await scene(page);
+    if(before.inBattleView)return;
+    const screenX=(worldX-before.camera.x)*before.camera.zoom;
+    const screenY=(worldY-before.camera.y)*before.camera.zoom;
+    // A phone user cannot tap an off-screen destination. Advance toward it
+    // through a HUD-safe visible point, let camera-follow catch up, then tap
+    // the actual encounter cell once it enters the viewport.
+    const safeLeft=Math.min(64,box.width*.2),safeRight=Math.max(safeLeft+1,box.width-64);
+    const safeTop=Math.min(140,box.height*.3),safeBottom=Math.max(safeTop+1,box.height-130);
+    const tapX=Math.min(safeRight,Math.max(safeLeft,screenX));
+    const tapY=Math.min(safeBottom,Math.max(safeTop,screenY));
+    await page.touchscreen.tap(box.x+tapX,box.y+tapY);
+    await expect.poll(async()=>{
+      const next=await scene(page);
+      return next.inBattleView||next.routeLength>0
+        ||Math.abs(next.anchor.x-before.anchor.x)>1
+        ||Math.abs(next.anchor.y-before.anchor.y)>1;
+    },{timeout:5000,intervals:[50,100]}).toBe(true);
+    await expect.poll(async()=>{
+      const next=await scene(page);
+      return next.inBattleView||next.routeLength===0;
+    },{timeout:20000,intervals:[80]}).toBe(true);
+    if((await scene(page)).inBattleView)return;
+  }
+  throw new Error(`Touch travel did not reach world cell ${cell[0]},${cell[1]}`);
+}
+
 async function tapEnemy(page:Page,id:string){
   const state=await scene(page);
   const enemy=state.enemies.find(row=>row.id===id&&row.hp>0);
@@ -329,7 +362,7 @@ test.describe('S24 mobile touch contract',()=>{
     await expect.poll(async()=>(await scene(page)).mapId,{timeout:30000,intervals:[100]}).toBe(7);
     await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('objective');
 
-    await tapWorldCell(page,plan.encounterCell as [number,number]);
+    await touchTravelToWorldCell(page,plan.encounterCell as [number,number]);
     await expect.poll(async()=>(await scene(page)).inBattleView,{timeout:30000,intervals:[100]}).toBe(true);
     await expect.poll(async()=>{
       const state=await scene(page);
