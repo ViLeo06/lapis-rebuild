@@ -20,9 +20,17 @@ async function assertDiagnosticsOff(page:Page){
 async function clickAction(page:Page,action:string){
   const button=page.locator(`[data-action="${action}"]`).first();
   await expect(button).toBeVisible();
-  const box=await button.boundingBox();
-  if(!box)throw new Error(`Missing visible action ${action}`);
-  await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
+  const point=await page.evaluate(value=>{
+    const nodes=[...document.querySelectorAll<HTMLElement>(`[data-action="${value}"]`)];
+    const node=nodes.find(candidate=>{
+      const rect=candidate.getBoundingClientRect(),style=getComputedStyle(candidate);
+      return rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden';
+    });
+    if(!node)throw new Error(`Missing visible action ${value}`);
+    const rect=node.getBoundingClientRect();
+    return{x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+  },action);
+  await page.mouse.click(point.x,point.y);
 }
 
 async function clickWorldCell(page:Page,cell:readonly[number,number]){
