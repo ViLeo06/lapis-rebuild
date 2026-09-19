@@ -19,7 +19,14 @@ Frozen in this preflight:
 
 ## Baseline audit
 
-At the plan baseline, S20–S24 branches all point at the same plan commit. No S20–S23 implementation commit or PR is available yet.
+At the initial preflight read, S20–S24 branches all pointed at the same plan commit. During the S24 preflight, read-only synchronization then observed upstream work beginning without integrating it prematurely:
+
+- S20 remained at the plan baseline;
+- S21 advanced to `85d6f9141716ab860042188f69af208a0308f9a6`;
+- S22 advanced to `e3dc2483dae22be466a56cc275b8fb419ee4dd60` and opened PR #32;
+- S23 advanced to `8d62b2e2b979928e66b0d5b665e1bce11ab66096` and opened PR #33.
+
+Those heads are dependency observations only. S24 does not treat them as integrated until their own validation/PR closure and the M5.1 coordination point.
 
 The existing M5 private-original acceptance proves the broad quest/battle loop, but it does **not** prove the user-reported P0 interaction requirement:
 
@@ -59,18 +66,22 @@ When `LAPIS_OFFLINE_PREVIEW` is supplied, the player shell must start from the p
 
 The final gate is written around actual Playwright input:
 
-`pointer NPC -> visible dialogue/quest accept -> pointer movement -> spatial door -> visible monsters -> battle -> return -> pointer NPC turn-in`
+`pointer NPC -> visible S23 dialogue (no quest mutation) -> click Accept -> pointer movement -> spatial door -> visible monsters -> battle -> return -> pointer NPC -> click Turn in`
 
 Additional requirements:
 
 - zoom/fullscreen use real keyboard events;
 - menu/actions use Playwright `locator.click()`, not DOM `.click()` injected through `page.evaluate()`;
-- NPC interaction uses a real mouse click against the visible guide location;
+- NPC interaction uses a real mouse click against the S22 live rendered pointer bounds;
 - NPC click must leave field movement route empty, proving no click-through;
+- the first pointer activation must leave the quest at `not_started` and render an S23 dialogue session;
+- quest accept must come from a real click on `[data-dialogue-choice="accept-quest"]`;
+- final turn-in must come from a second NPC pointer activation plus a real click on `[data-dialogue-choice="turn-in-quest"]`;
+- the S23 compatibility `interact(...)` auto-accept/auto-turn-in path cannot satisfy S24;
 - diagnostics remain opt-in/off for the complete player flow;
 - diagnostics/snapshots may be read for assertions and coordinate observation, but are never used to mutate/advance gameplay.
 
-The final pointer case currently marks itself `fixme` only when the visible NPC does not expose the S22-required pointer cursor. This is an explicit upstream dependency, not a passing acceptance. Once S22 is on the integration head, that condition must be false and the entire flow must execute.
+The final pointer case currently marks itself `fixme` only when the visible NPC does not expose the S22-required pointer cursor. This is an explicit upstream dependency, not a passing acceptance. Once S22 is on the integration head, that condition must be false and the entire flow must execute. After S23 is integrated, the test deliberately fails unless pointer activation opens an explicit dialogue and the user must choose Accept / Turn in; an auto-advancing compatibility path is not accepted.
 
 ## Required post-S20–S23 integration pass
 
