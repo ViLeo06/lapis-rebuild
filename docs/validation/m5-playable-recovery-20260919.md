@@ -94,6 +94,59 @@ RECONSTRUCTION_POLICY:
 - enemy timing policy where old-server authority is missing
 - rewards/progression values
 
-## Final remaining gate
+## Final result
 
-A final fixed-hash private smoke plus real M5 wall-clock soak is intentionally triggered from this documentation-only commit. The executable runtime tree is unchanged from `ce37fa870e09ab7ae3fc628e2acb0a04a50932ff`.
+Final smoke/soak head:
+
+`6c174516f6575a26c1cc2583a07a24acf51c39b9`
+
+Final GitHub Actions run:
+
+`35405864082`
+
+Final result:
+
+- synthetic: **success**
+- fixed-hash 2.2 private-original: **success**
+- private standalone HTML: **success**
+- real-resource Chromium/offline: **success**
+- M5 private playable-recovery acceptance: **success**
+- real M5 30-minute wall-clock soak: **success**
+
+The final soak recorded:
+
+- status: `passed`
+- elapsed: `1,800,406 ms`
+- samples: `59`
+- browser/page errors: `[]`
+- external HTTP(S) requests: `[]`
+- camera follow: active throughout sampled field states
+- B1001 guide visual: visible throughout sampled field states
+- repeated swordsman/wizard switching, legal equipment, SaveV2 save/load and diagnostics toggling
+
+Final private HTML:
+
+- bytes: `11,190,078`
+- SHA-256: `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`
+- artifact: `10572758666`
+
+Final player-flow acceptance ended with:
+
+- battle phase: `won`
+- sampled player HP at victory: `44 / 125`
+- both training enemies: `0 HP`
+- quest: `complete`
+- gold: `15`
+- EXP: `300`
+- level: `3`
+- SaveV2 receipt/state persisted
+
+## Acceptance conclusion
+
+**M5 Playable Recovery engineering acceptance: PASSED.**
+
+This proves the fixed-hash private reconstruction can now execute the complete intended M5 loop with recovered client visuals and explicit reconstruction authority.
+
+It does **not** prove that B1001/B4524/B4544/map7 were the historical retail identities for this exact training flow, nor that balance v2 reproduces the retired-server formula.
+
+The remaining gate is user-experience validation: the user should play the final HTML and judge control feel, readability, navigation clarity and difficulty. Those findings belong to M5.1.
