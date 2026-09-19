@@ -192,6 +192,35 @@ test('S24 preflight: standalone player shell opens offline without diagnostics o
   expect(external).toEqual([]);
 });
 
+test('S24 synthetic glue: keyboard interaction opens explicit dialogue before quest mutation',async({page})=>{
+  await ready(page);
+  await assertDiagnosticsOff(page);
+
+  const before=await runtime(page);
+  expect(before.quest.stage).toBe('not_started');
+
+  await page.keyboard.press('e');
+  const dialogue=page.locator('[data-ui="npc-dialogue"]');
+  await expect(dialogue).toBeVisible();
+  await expect(dialogue).toHaveAttribute('data-input-source','keyboard');
+  await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('not_started');
+
+  const accept=dialogue.locator('[data-dialogue-choice="accept-quest"]');
+  await expect(accept).toBeVisible();
+  await accept.click();
+  await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('accepted');
+  await expect(dialogue).toHaveCount(0);
+
+  await page.keyboard.press('e');
+  await expect(dialogue).toBeVisible();
+  await expect(dialogue).toHaveAttribute('data-input-source','keyboard');
+  await expect(dialogue.locator('[data-dialogue-choice="close"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialogue).toHaveCount(0);
+  await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('accepted');
+  await assertDiagnosticsOff(page);
+});
+
 test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer turn-in, no diagnostics',async({page})=>{
   test.setTimeout(240000);
   const pageErrors:string[]=[];
