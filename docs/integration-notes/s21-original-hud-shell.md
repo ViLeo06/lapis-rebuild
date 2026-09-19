@@ -8,6 +8,8 @@ Plan baseline: `57ff22363156bec7aad3acb7555208533485d193`
 
 S21 changes only the player-facing HUD shell, UI CSS, and UI tests/E2E. It does not change scene movement, NPC/quest authority, battle rules, world transitions, or evidence-ledger claims.
 
+`Plan.md` appears in PR #34 only because the branch was created from the shared M5.1 plan commit `57ff223...`; S21 did not author any further Plan changes.
+
 ## Evidence boundary
 
 - **VERIFIED**: the current M4/M5 runtime exposes player HP/MP/gold/level, map name/id, quest text, interaction prompt, menu actions, battle state, and developer diagnostics.
@@ -43,8 +45,8 @@ The S21 E2E harness checks both static shell and integrated M5 runtime at:
 Assertions include:
 
 - player plate <= 330 px wide and <= 64 px high;
-- quest frame <= 10 px from the right edge;
-- both bottom frames <= 10 px from the bottom edge;
+- quest frame 0–10 px from the right edge;
+- both bottom frames 0–10 px from the bottom edge;
 - left-bottom map subframe <= 140 px wide;
 - bottom left/right frames do not overlap;
 - no horizontal overflow;
@@ -59,6 +61,23 @@ Screenshots are emitted as:
 - `s21-runtime-1366x768.png`
 - `s21-runtime-1920x1080.png`
 
-## S20 synchronization rule
+Private Drive preview folder: `lapis-rebuild-assets/40_previews/S21-original-hud-shell-20260919/`. It contains a pre-S21 field screenshot, the successful first-pass artifact, and 1366×768 / 1920×1080 derived final screenshots after the inherited chrome fix.
 
-At PR-ready time, re-check `codex/s20-original-ui-archaeology`. If S20 supplies stronger evidence for exact region geometry or identified 2.2 UI assets, replace the temporary slot geometry/art before merge. Do not silently promote S20 historical/inferred evidence to VERIFIED retail behavior.
+## Validation
+
+A full synthetic validation completed successfully at commit `3ac902ae91f70e3cbd90569acc0809bc0e41d395`:
+
+- GitHub Actions run `35416808419`: success;
+- parser fixture preparation, locked install, TypeScript typecheck, unit tests, production build, Chromium integration/offline E2E all completed;
+- Playwright report: 56 expected, 0 unexpected, 0 flaky, 1 private-original-only scenario skipped as expected;
+- S21 emitted the four dual-resolution screenshots listed above.
+
+The current head is four commits ahead of that green checkpoint. The only code delta after the successful run is one CSS rule hiding inherited `#app > header/footer`; the other deltas are E2E assertion tightening and this integration note. The final screenshots were regenerated against that chrome-hiding state and visually reviewed.
+
+Current-head Web CI run `35417468392` was retried twice. Both attempts failed before checkout: the synthetic job had no assigned runner and `steps=[]`, so no project code executed. This is recorded as a GitHub Actions runner/infrastructure block, not a test failure.
+
+## S20 synchronization result
+
+At PR-ready time S20 was re-checked. `codex/s20-original-ui-archaeology` had advanced to `db4ba2d88234ff8dd46eebc4969a3816fd73c452`, but its delta from the shared plan baseline contained only the static archaeology workflow, TDG parser/test, and UI asset probing tool. It had not yet produced the Original UI Reference Pack or stronger 2.2 region geometry/art evidence.
+
+Therefore S21 does **not** promote the temporary placeholder slots or exact geometry to retail truth. When S20 produces stronger evidence, S24/integration should replace these temporary details before final merge where practical.
