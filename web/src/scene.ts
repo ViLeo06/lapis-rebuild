@@ -192,8 +192,17 @@ export class LabScene extends Phaser.Scene {
 
   private setupViewport(){
     const target=document.querySelector<HTMLElement>('.world')??document.getElementById('canvas-host');
+    const host=document.getElementById('canvas-host');
+    let lastViewportSize={width:this.scale.width,height:this.scale.height};
+    if(lastViewportSize.width<=0||lastViewportSize.height<=0){
+      lastViewportSize={width:host?.clientWidth??0,height:host?.clientHeight??0};
+    }
     const port={
-      viewportSize:()=>({width:this.scale.width,height:this.scale.height}),
+      viewportSize:()=>{
+        const width=this.scale.width,height=this.scale.height;
+        if(width>0&&height>0)lastViewportSize={width,height};
+        return{...lastViewportSize};
+      },
       worldBounds:()=>({x:0,y:0,width:this.currentMap().manifest.render.width,height:this.currentMap().manifest.render.height}),
       cameraState:()=>{
         const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
