@@ -20,7 +20,7 @@ export function renderFieldHud(player:PlayerHudState,field:FieldHudState):string
   const topCommands=[
     command('帮助'),
     command('状态'),
-    command('物品','inventory'),
+    command('物品'),
     command('魔法'),
     command('队伍'),
     command('聊天'),
