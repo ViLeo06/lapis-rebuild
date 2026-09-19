@@ -256,7 +256,7 @@ export class M4RuntimeIntegration{
       const target=(event.target as HTMLElement).closest<HTMLElement>('[data-action]');
       if(!target)return;
       const action=target.dataset.action;
-      if(action==='menu'||action==='battle-menu'){this.menuOpen=true;this.render(this.scene.snapshot());}
+      if(action==='menu'||action==='battle-menu'){this.activeDialogue=null;this.menuOpen=true;this.render(this.scene.snapshot());}
       else if(action==='menu-close'){this.menuOpen=false;this.render(this.scene.snapshot());}
       else if(action==='save')void this.save();
       else if(action==='load')void this.load();
@@ -300,6 +300,7 @@ export class M4RuntimeIntegration{
 
   private changeClass(id:'100'|'109'):void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再切换职业');return;}
+    this.activeDialogue=null;
     this.scene.setCharacter(id);
     this.menuOpen=false;
     this.render(this.scene.snapshot());
@@ -556,6 +557,7 @@ export class M4RuntimeIntegration{
 
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
+    this.activeDialogue=null;
     const save=migrateSave(raw,this.saveContext());
     const quest=parseM4Quest(save.quest,this.worldAuthority.content.questId);
     this.rewards={gold:save.gold,inventory:save.inventory,progression:save.progression,questFlags:save.questFlags,rewardReceipts:save.rewardReceipts};
