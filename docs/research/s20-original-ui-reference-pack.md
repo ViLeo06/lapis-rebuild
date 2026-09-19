@@ -188,6 +188,14 @@ Unknowns require placeholders inside the recovered structure, not a return to fr
 
 The S20 workflow produces private artifact `s20-original-ui-reference-pack` with full TDG/TIP inventory JSON, selected contact sheets, historical source captures, an HTML comparison page and Chromium full-page screenshot. Copy those original-derived previews to Drive `lapis-rebuild-assets/40_previews/`; do not commit them to Git.
 
+## Delivery / validation status
+
+- Private Drive pack: `lapis-rebuild-assets/40_previews/S20-original-ui-reference-pack-20260919/`.
+- Drive pack contains the evidence-comparison board, fixed-hash 2.2 `NPC350.Tip` derived contact sheet, pre-M5 reconstruction baseline, S21 evidence-informed checkpoint, and a provenance/source index.
+- Local parser regression: `python3 -m unittest -v tests/parsers/test_tdg.py` => **2/2 passed**.
+- Local static syntax validation: `python3 -m py_compile tools/convert/tdg.py tools/probe_original_ui_assets.py` => **passed**.
+- GitHub Actions run `35419253429` was retried twice. Both attempts ended before any step ran (`runner_id=0`, empty step list). This is recorded as runner/infrastructure unavailability, not as a successful or failed S20 parser/probe execution.
+- The workflow remains in the branch so the full fixed-hash TDG/TIP private contact-sheet job can execute normally when Actions runners are available.
 ## Acceptance answer
 
 If functionality is ignored and the UI is redrawn only from current evidence: keep the thin top menu, upper-left optional map, lower-left portrait/status anchor, low bottom chat/command deck, bottom/right quick slots, bottom-docked portrait dialogue, lower-left battle commands and compact right/upper-right battle status. Preserve missing original categories as disabled placeholders. Keep the M5.1 tracker as a compact upper-right reconstruction overlay and Developer diagnostics separate/opt-in.
