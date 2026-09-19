@@ -1,0 +1,143 @@
+name: s20-original-ui-archaeology
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/convert/tdg.py'
+      - 'tools/probe_original_ui_assets.py'
+      - 'tests/parsers/test_tdg.py'
+      - '.github/workflows/s20-original-ui-archaeology.yml'
+      - 'docs/research/s20-original-ui-reference-pack.md'
+      - 'docs/integration-notes/s20-original-ui-handoff.md'
+      - 'manifests/s20-original-ui-assets.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: TDG parser regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests/parsers/test_tdg.py
+
+      - name: Fetch and verify official UPX decompressor
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 60 \
+            https://github.com/upx/upx/releases/download/v5.2.1/upx-5.2.1-amd64_linux.tar.xz \
+            -o "$RUNNER_TEMP/upx.tar.xz"
+          echo "402162aad30af47e60dbd767fb2e64ca394ace9727ba1f40283641f1d1b91657  $RUNNER_TEMP/upx.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/upx.tar.xz" -C "$RUNNER_TEMP"
+
+      - name: Static extract fixed-hash 2.2 client
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --max-time 180 --retry 1 \
+            https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe \
+            -o "$RUNNER_TEMP/client.exe"
+          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
+          python3 tools/extract/extract_client.py \
+            "$RUNNER_TEMP/client.exe" \
+            --payload "$RUNNER_TEMP/payload.7z" \
+            --extract-dir "$RUNNER_TEMP/extracted" \
+            --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
+          echo "c1be05eb2977a8aae8cbe8b716bc1e3957263edde8187d5269d554b327f13cbd  $RUNNER_TEMP/extracted/client/NeoDark.exe" | sha256sum -c -
+          "$RUNNER_TEMP/upx-5.2.1-amd64_linux/upx" -d \
+            -o "$RUNNER_TEMP/neodark-unpacked.bin" \
+            "$RUNNER_TEMP/extracted/client/NeoDark.exe" >/dev/null
+          echo "432636dd2129b6dd688527eaecdf183a46567112a8d9f6ffc4569d25697c2de7  $RUNNER_TEMP/neodark-unpacked.bin" | sha256sum -c -
+
+      - name: Download historical UI cross-check images
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/s20/historical"
+          mkdir -p "$OUT"
+          fetch() {
+            local name="$1" url="$2"
+            if ! curl --fail --location --max-time 30 --retry 1 -A 'Mozilla/5.0' "$url" -o "$OUT/$name"; then
+              rm -f "$OUT/$name"
+              printf '%s\t%s\n' "$name" "$url" >> "$RUNNER_TEMP/s20/historical-download-failures.tsv"
+            fi
+          }
+          fetch 17173-field-a.jpg 'https://i.17173cdn.com/0561y4/YWxqaGBf/gamebase/screenshot/WasEGvbmCgolAEe.jpg'
+          fetch 17173-field-b.jpg 'https://i.17173cdn.com/0561y4/YWxqaGBf/gamebase/screenshot/KmDszWbmCgolAjA.jpg'
+          fetch sina-field-a.jpg 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/zhan0513_02.jpg'
+          fetch sina-field-b.jpg 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/zhan0513_05.jpg'
+          fetch sina-npc-dialogue.jpg 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/feibing.jpg'
+          fetch sina-interface-86.gif 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/Image86.gif'
+          fetch sina-interface-89.gif 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/Image89.gif'
+          fetch sina-interface-90.gif 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/Image90.gif'
+          fetch sina-interface-91.gif 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/Image91.gif'
+          fetch sina-interface-92.gif 'https://image2.sina.com.cn/gm/zhuanqu/yb/images/Image92.gif'
+          fetch jp-kaosia.gif 'https://lapis-online-memories.github.io/image-lapis/kaosia.gif'
+          cat > "$RUNNER_TEMP/s20/historical-sources.json" <<'JSON'
+          {
+            "provenance": "VERIFIED-HISTORICAL or RECOVERED_SECONDARY; none are fixed-hash mainland 2.2 bytes",
+            "sources": [
+              {"file":"17173-field-a.jpg","url":"https://newgame.17173.com/album-view-58966.html","role":"same-era field HUD cross-check"},
+              {"file":"17173-field-b.jpg","url":"https://newgame.17173.com/album-view-58966.html","role":"same-era field HUD / party portraits cross-check"},
+              {"file":"sina-field-a.jpg","url":"https://games.sina.com.cn/zhqu/yb/","role":"same-era portal field screenshot; visible locale may be Korean source material"},
+              {"file":"sina-field-b.jpg","url":"https://games.sina.com.cn/zhqu/yb/","role":"same-era portal field screenshot; visible locale may be Korean source material"},
+              {"file":"sina-npc-dialogue.jpg","url":"https://games.sina.com.cn/zhqu/yb/rwgl/zhixian.shtml","role":"bottom-docked NPC dialogue cross-check"},
+              {"file":"sina-interface-86.gif","url":"https://games.sina.com.cn/zhqu/yb/article/2003-05-20/7640.shtml","role":"2003 interface guide illustration"},
+              {"file":"sina-interface-89.gif","url":"https://games.sina.com.cn/zhqu/yb/article/2003-05-20/7640.shtml","role":"2003 interface guide illustration"},
+              {"file":"sina-interface-90.gif","url":"https://games.sina.com.cn/zhqu/yb/article/2003-05-20/7640.shtml","role":"2003 interface guide illustration"},
+              {"file":"sina-interface-91.gif","url":"https://games.sina.com.cn/zhqu/yb/article/2003-05-20/7640.shtml","role":"2003 interface guide illustration"},
+              {"file":"sina-interface-92.gif","url":"https://games.sina.com.cn/zhqu/yb/article/2003-05-20/7640.shtml","role":"2003 interface guide illustration"},
+              {"file":"jp-kaosia.gif","url":"https://lapis-online-memories.github.io/kaosia.htm","role":"Japanese historical village/facility topology; not mainland 2.2 UI truth"}
+            ]
+          }
+          JSON
+
+      - name: Build fixed-hash UI inventory and private preview pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p web/test-results/s20/previews web/test-results/s20/historical
+          cp -a "$RUNNER_TEMP/s20/historical/." web/test-results/s20/historical/ 2>/dev/null || true
+          cp "$RUNNER_TEMP/s20/historical-sources.json" web/test-results/s20/
+          cp "$RUNNER_TEMP/s20/historical-download-failures.tsv" web/test-results/s20/ 2>/dev/null || true
+          python3 tools/probe_original_ui_assets.py \
+            --client-root "$RUNNER_TEMP/extracted/client" \
+            --image "$RUNNER_TEMP/neodark-unpacked.bin" \
+            --out web/test-results/s20/original-ui-assets.json \
+            --preview-dir web/test-results/s20/previews \
+            --historical-dir web/test-results/s20/historical \
+            --html web/test-results/s20/reference-pack.html
+
+      - name: Capture private reference-pack contact sheet
+        working-directory: web
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+          PAGE="file://$GITHUB_WORKSPACE/web/test-results/s20/reference-pack.html"
+          npx playwright screenshot \
+            --browser=chromium \
+            --viewport-size=1600,1000 \
+            --full-page \
+            --wait-for-timeout=1200 \
+            "$PAGE" test-results/s20/reference-pack-contact-sheet.png
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: s20-original-ui-reference-pack
+          path: web/test-results/s20/
+          retention-days: 5
+          if-no-files-found: error

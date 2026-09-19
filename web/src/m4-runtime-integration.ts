@@ -26,10 +26,12 @@ import {applyWarp} from './world/warp-policy.ts';
 import {START_STATE,TRAINING_BATTLE_ZONE_ID,TRAINING_QUEST_ID,WORLD_ENTITIES} from './world/world-content.ts';
 import {initialQuestRuntime} from './world/quest-runtime.ts';
 import type {QuestRuntimeState,QuestStage} from './world/quest-runtime.ts';
+import type {NpcDialogueChoiceId,NpcDialogueSession,NpcInteractionInputSource} from './world/npc-dialogue-runtime.ts';
 import {renderFieldHud} from './ui/field-hud.ts';
 import {renderBattleHud} from './ui/battle-hud.ts';
 import {renderGameMenu} from './ui/game-menu.ts';
 import {renderDebugPanel} from './ui/debug-panel.ts';
+import {escapeHtml} from './ui/ui-utils.ts';
 import type {BattleHudState,DiagnosticsState,FieldHudState,PlayerHudState} from './ui/types.ts';
 import {readM4Save,writeM4Save} from './m4-save-store.ts';
 import {equipmentBonus as legacyEquipmentBonus} from './inventory.ts';
@@ -102,6 +104,13 @@ export class M4RuntimeIntegration{
   menuOpen=false;
   developerMode=false;
   inventoryOpen=false;
+  private activeDialogue:NpcDialogueSession|null=null;
+  private battleExitConfirm=false;
+  private suppressEncounterUntilLeave=false;
+  private hudHtml='';
+  private menuHtml='';
+  private debugHtml='';
+  private dialogueHtml='';
   private noticeText='M4 游戏化运行时已接入';
   private lastSnapshot:Snapshot|null=null;
   private lastAudio='';
@@ -109,6 +118,7 @@ export class M4RuntimeIntegration{
   private hudRoot!:HTMLDivElement;
   private menuRoot!:HTMLDivElement;
   private debugRoot!:HTMLDivElement;
+  private dialogueRoot!:HTMLDivElement;
   private feedbackRoot!:HTMLDivElement;
 
   constructor(scene:LabScene){
@@ -131,6 +141,7 @@ export class M4RuntimeIntegration{
     this.mountRoots();
     this.installSceneAdapters();
     this.installInput();
+    this.scene.setWorldInteractionHandler(entityId=>this.beginNpcInteraction(entityId,'pointer'));
     this.syncSceneInventory();
     const initial=this.m5World?.content.start??START_STATE;
     this.applyWorldState(initial);
@@ -159,6 +170,12 @@ export class M4RuntimeIntegration{
       inventory:{items:this.rewards.inventory.items.map(item=>({itemId:item.itemId,quantity:item.quantity})),equipped:{...this.rewards.inventory.equipped}},
       gold:this.rewards.gold,
       pendingEncounter:this.pendingEncounter?{...this.pendingEncounter}:null,
+      dialogue:this.activeDialogue?{
+        sessionId:this.activeDialogue.sessionId,
+        inputSource:this.activeDialogue.inputSource,
+        phase:this.activeDialogue.view.phase,
+        choices:this.activeDialogue.view.choices.map(choice=>choice.id),
+      }:null,
       developerMode:this.developerMode,
       lastAudio:this.lastAudio,
       playableRecovery:!!this.m5World,
@@ -172,8 +189,9 @@ export class M4RuntimeIntegration{
     this.hudRoot=document.createElement('div');this.hudRoot.id='m4-hud-root';
     this.menuRoot=document.createElement('div');this.menuRoot.id='m4-menu-root';
     this.debugRoot=document.createElement('div');this.debugRoot.id='m4-debug-root';
+    this.dialogueRoot=document.createElement('div');this.dialogueRoot.id='m4-dialogue-root';
     this.feedbackRoot=document.createElement('div');this.feedbackRoot.id='m4-feedback-root';
-    world.append(this.hudRoot,this.menuRoot,this.debugRoot,this.feedbackRoot);
+    world.append(this.hudRoot,this.menuRoot,this.debugRoot,this.dialogueRoot,this.feedbackRoot);
   }
 
   private installSceneAdapters():void{
@@ -201,6 +219,8 @@ export class M4RuntimeIntegration{
 
     const originalEnter=this.scene.enterBattle.bind(this.scene);
     this.scene.enterBattle=()=>{
+      this.activeDialogue=null;
+      this.battleExitConfirm=false;
       this.prepareReconstructionBattle();
       originalEnter();
       if(!this.scene.inBattleView)return;
@@ -234,10 +254,16 @@ export class M4RuntimeIntegration{
 
   private installInput():void{
     document.addEventListener('click',event=>{
+      const choice=(event.target as HTMLElement).closest<HTMLButtonElement>('[data-dialogue-choice]');
+      if(choice){
+        const choiceId=choice.dataset.dialogueChoice as NpcDialogueChoiceId|undefined;
+        if(choiceId)this.chooseNpcInteraction(choiceId);
+        return;
+      }
       const target=(event.target as HTMLElement).closest<HTMLElement>('[data-action]');
       if(!target)return;
       const action=target.dataset.action;
-      if(action==='menu'||action==='battle-menu'){this.menuOpen=true;this.render(this.scene.snapshot());}
+      if(action==='menu'||action==='battle-menu'){this.activeDialogue=null;this.menuOpen=true;this.render(this.scene.snapshot());}
       else if(action==='menu-close'){this.menuOpen=false;this.render(this.scene.snapshot());}
       else if(action==='save')void this.save();
       else if(action==='load')void this.load();
@@ -246,9 +272,13 @@ export class M4RuntimeIntegration{
       else if(action==='zoom-in'){this.scene.zoomIn();this.setNotice('视角已放大');}
       else if(action==='zoom-out'){this.scene.zoomOut();this.setNotice('视角已缩小');}
       else if(action==='zoom-reset'){this.scene.resetZoom();this.scene.focusPlayer();this.setNotice('视角已恢复 1:1 并居中角色');}
+      else if(action==='interact')this.beginNpcInteraction(undefined,'pointer');
       else if(action==='attack')this.scene.attack(null);
       else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
       else if(action==='rest')this.rest();
+      else if(action==='battle-exit-request')this.requestBattleExit();
+      else if(action==='battle-exit-cancel')this.cancelBattleExit();
+      else if(action==='battle-exit-confirm')this.confirmBattleExit();
       else if(action==='return')this.returnFromBattle();
       else if(action==='class-swordsman')this.changeClass('100');
       else if(action==='class-wizard')this.changeClass('109');
@@ -262,12 +292,16 @@ export class M4RuntimeIntegration{
     });
     window.addEventListener('keydown',event=>{
       if((event.target as HTMLElement).closest('input,select,button,textarea'))return;
-      if(event.key==='Escape'){this.menuOpen=!this.menuOpen;this.render(this.scene.snapshot());return;}
+      if(event.key==='Escape'){
+        if(this.battleExitConfirm){this.cancelBattleExit();return;}
+        if(this.activeDialogue){this.activeDialogue=null;this.render(this.scene.snapshot());return;}
+        this.menuOpen=!this.menuOpen;this.render(this.scene.snapshot());return;
+      }
       if(event.key==='f'||event.key==='F'){event.preventDefault();void this.scene.toggleFullscreen();return;}
       if(event.key==='+'||event.key==='='){event.preventDefault();this.scene.zoomIn();return;}
       if(event.key==='-'){event.preventDefault();this.scene.zoomOut();return;}
       if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
-      if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.interactWorld();return;}
+      if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.beginNpcInteraction(undefined,'keyboard');return;}
       if(this.scene.inBattleView&&['1','2','3'].includes(event.key)){
         const skills=playableClassById(this.scene.character).availableSkillIds;
         const skillId=skills[Number(event.key)-1];if(skillId)this.useSkill(skillId);
@@ -278,6 +312,7 @@ export class M4RuntimeIntegration{
 
   private changeClass(id:'100'|'109'):void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再切换职业');return;}
+    this.activeDialogue=null;
     this.scene.setCharacter(id);
     this.menuOpen=false;
     this.render(this.scene.snapshot());
@@ -306,13 +341,118 @@ export class M4RuntimeIntegration{
     this.setNotice('休息：已按恢复出的 REST readiness cost 消耗行动槽；额外效果尚无原版证据。');
   }
 
-  interactWorld():void{
+  private requestBattleExit():void{
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active'){this.setNotice('当前没有可退出的进行中战斗');return;}
+    this.menuOpen=false;
+    this.battleExitConfirm=true;
+    this.scene.battlePaused=true;
+    this.render(this.scene.snapshot());
+  }
+
+  private cancelBattleExit():void{
+    if(!this.battleExitConfirm)return;
+    this.battleExitConfirm=false;
+    if(this.scene.inBattleView&&this.scene.state.phase==='active')this.scene.battlePaused=false;
+    this.render(this.scene.snapshot());
+  }
+
+  private confirmBattleExit():void{
+    if(!this.battleExitConfirm)return;
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active'){
+      this.battleExitConfirm=false;
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.battleExitConfirm=false;
+    this.retreatFromBattle();
+  }
+
+  private retreatFromBattle():void{
+    this.scene.leaveBattle();
+    this.scene.gold=this.rewards.gold;
+    this.world={...this.world,world:this.currentWorldState()};
+    this.pendingEncounter=null;
+    this.lastSnapshot=null;
+    this.suppressEncounterUntilLeave=true;
+    if(this.spatial){
+      const actor=this.currentWorldState();
+      this.spatial.start({mapId:actor.mapId,cell:[actor.x,actor.y]});
+    }
+    this.setNotice('已退出战斗：未结算奖励，任务目标保持未完成。离开怪物触发范围后可再次进入战斗。');
+    this.render(this.scene.snapshot());
+  }
+
+  private beginNpcInteraction(entityId:string|undefined,inputSource:NpcInteractionInputSource):void{
+    if(this.scene.inBattleView)return;
+    const actor=this.currentWorldState();
+    this.world={...this.world,world:actor};
+    const entities=this.m5World?[this.m5World.content.guide.entity]:WORLD_ENTITIES.filter(entity=>entity.kind==='npc');
+    const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
+    if(!entity){
+      if(!this.m5World&&!entityId){
+        const objective=WORLD_ENTITIES.find(candidate=>candidate.kind!=='npc'&&canInteract(candidate,actor));
+        if(objective){this.interactWorld(objective.id);return;}
+      }
+      this.activeDialogue=null;
+      this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互 NPC');
+      this.render(this.scene.snapshot());
+      return;
+    }
+    const resolved=this.worldAuthority.beginNpcInteraction(this.world,{
+      entityId:entity.id,
+      mapId:actor.mapId,
+      actorX:actor.x,
+      actorY:actor.y,
+      inputSource,
+      provenance:'RECONSTRUCTION_POLICY',
+    });
+    if(!resolved.dialogue.accepted){
+      this.activeDialogue=null;
+      this.setNotice(`NPC 对话未开启：${resolved.dialogue.reason}`);
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.activeDialogue=resolved.dialogue.session;
+    this.setNotice(`${this.activeDialogue.view.speaker}：${this.activeDialogue.view.lines.join(' ')}`);
+    this.render(this.scene.snapshot());
+  }
+
+  private chooseNpcInteraction(choiceId:NpcDialogueChoiceId):void{
+    const session=this.activeDialogue;
+    if(!session)return;
+    const previousStage=this.world.quest.stage;
+    const resolved=this.worldAuthority.chooseNpcInteraction(this.world,session,choiceId);
+    if(!resolved.outcome.accepted){
+      this.setNotice(`NPC 选择未执行：${resolved.outcome.reason}`);
+      this.activeDialogue=null;
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.world=resolved.state;
+    const action=resolved.outcome.action;
+    this.activeDialogue=null;
+    if(action==='quest-completed'&&previousStage!=='complete'&&this.world.quest.stage==='complete'){
+      this.applyQuestSettlement();
+    }else if(action==='quest-accepted'){
+      if(!this.m5World&&this.worldAuthority.content.warpOnAccept){
+        this.applyWorldState({...this.worldAuthority.content.objectiveEntry});
+        this.setNotice('已接受训练委托：已前往外城训练点 / RECONSTRUCTION_POLICY');
+      }else this.setNotice('已接受训练委托 / RECONSTRUCTION_POLICY');
+    }else if(action==='declined'){
+      this.setNotice('暂未接受训练委托');
+    }else{
+      this.setNotice('对话已关闭');
+    }
+    this.render(this.scene.snapshot());
+  }
+
+  interactWorld(entityId?:string):void{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
     const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
-    const entity=entities.find(candidate=>canInteract(candidate,actor));
-    if(!entity){this.setNotice('附近没有可交互对象');return;}
+    const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
+    if(!entity){this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互对象');return;}
     const previousStage=this.world.quest.stage;
     const resolved=this.worldAuthority.interact(this.world,{entityId:entity.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
     this.world=resolved.state;
@@ -337,6 +477,8 @@ export class M4RuntimeIntegration{
     if(!this.scene.inBattleView)return;
     const phase=this.scene.state.phase;
     if(phase==='active'){this.setNotice('战斗尚未结束');return;}
+    this.battleExitConfirm=false;
+    if(phase==='lost')this.suppressEncounterUntilLeave=true;
     let returnState:WorldState|null=null;
     if(this.pendingEncounter){
       const outcome=phase==='won'?'won':'lost';
@@ -436,6 +578,7 @@ export class M4RuntimeIntegration{
 
   private applyWorldState(state:WorldState):void{
     if(this.scene.inBattleView)return;
+    this.activeDialogue=null;
     this.scene.setMap(state.mapId);
     const [x,y]=referenceCellToScreen([state.x,state.y]);
     this.scene.anchor={x,y};
@@ -476,6 +619,7 @@ export class M4RuntimeIntegration{
 
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
+    this.activeDialogue=null;
     const save=migrateSave(raw,this.saveContext());
     const quest=parseM4Quest(save.quest,this.worldAuthority.content.questId);
     this.rewards={gold:save.gold,inventory:save.inventory,progression:save.progression,questFlags:save.questFlags,rewardReceipts:save.rewardReceipts};
@@ -535,7 +679,12 @@ export class M4RuntimeIntegration{
       this.setNotice(committed.mapId===this.m5World.content.objectiveMapId?'已自动进入训练屋 / RECONSTRUCTION_POLICY':'已离开训练屋，返回外城 / RECONSTRUCTION_POLICY');
       this.lastSnapshot=null;this.render(this.scene.snapshot());return true;
     }
-    if(this.world.quest.stage==='objective'&&actor.mapId===this.m5World.content.objectiveMapId&&!this.pendingEncounter&&!this.scene.route.length&&canInteract(this.m5World.content.objective,actor)){
+    const nearObjective=actor.mapId===this.m5World.content.objectiveMapId&&canInteract(this.m5World.content.objective,actor);
+    if(this.suppressEncounterUntilLeave){
+      if(!nearObjective)this.suppressEncounterUntilLeave=false;
+      else return false;
+    }
+    if(this.world.quest.stage==='objective'&&nearObjective&&!this.pendingEncounter&&!this.scene.route.length){
       const resolved=this.worldAuthority.interact(this.world,{entityId:this.m5World.content.objective.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,provenance:'RECONSTRUCTION_POLICY'});
       this.world=resolved.state;
       if(resolved.result.encounter){
@@ -584,6 +733,7 @@ export class M4RuntimeIntegration{
     };
     const quest=questHud(this.world.quest.stage);
     const field:FieldHudState={mapId:snapshot.mapId,mapName:snapshot.mapName,...quest,interactionPrompt:this.nearestInteraction(snapshot)};
+    let hudHtml:string;
     if(snapshot.inBattleView){
       const target=snapshot.enemies.find(enemy=>enemy.id===snapshot.target&&enemy.hp>0);
       const battle:BattleHudState={
@@ -593,22 +743,67 @@ export class M4RuntimeIntegration{
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
         skills:definition.availableSkillIds.map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
       };
-      this.hudRoot.innerHTML=renderBattleHud(player,battle);
-    }else this.hudRoot.innerHTML=renderFieldHud(player,field);
+      hudHtml=renderBattleHud(player,battle);
+    }else hudHtml=renderFieldHud(player,field);
+    if(hudHtml!==this.hudHtml){
+      this.hudRoot.innerHTML=hudHtml;
+      this.hudHtml=hudHtml;
+    }
 
-    this.menuRoot.innerHTML=renderGameMenu({open:this.menuOpen,canSave:!snapshot.inBattleView,canLoad:!snapshot.inBattleView,devEnabled:this.developerMode});
-    const grid=this.menuRoot.querySelector('.menu-grid');
-    if(grid)grid.insertAdjacentHTML('beforeend','<button type="button" data-action="class-swordsman">切换剑士</button><button type="button" data-action="class-wizard">切换巫师</button>');
+    const menuHtml=renderGameMenu({open:this.menuOpen,canSave:!snapshot.inBattleView,canLoad:!snapshot.inBattleView,devEnabled:this.developerMode});
+    if(menuHtml!==this.menuHtml){
+      this.menuRoot.innerHTML=menuHtml;
+      const grid=this.menuRoot.querySelector('.menu-grid');
+      if(grid)grid.insertAdjacentHTML('beforeend','<button type="button" data-action="class-swordsman">切换剑士</button><button type="button" data-action="class-wizard">切换巫师</button>');
+      this.menuHtml=menuHtml;
+    }
     const diagnostics:DiagnosticsState={
       open:this.developerMode,mapSelector:String(snapshot.mapId).padStart(4,'0'),rawTiming:`${snapshot.timing} → ${snapshot.duration.toFixed(2)}ms`,
       actionSlot:snapshot.slot,direction:String(snapshot.direction),bounds:snapshot.debugBounds?'visible':'hidden',magicRes:snapshot.effect?`#${snapshot.effect.id} ${snapshot.effect.cursor+1}/${snapshot.effect.length}`:'idle',
       provenance:`battle=${snapshot.battleEntryProvenance}; damage=${snapshot.damagePolicy.provenance}; quest=${this.worldAuthority.provenance}; progression=RECONSTRUCTION_POLICY${this.lastAudio?`; audio=${this.lastAudio}`:''}`,
     };
-    this.debugRoot.innerHTML=this.developerMode?renderDebugPanel(diagnostics):'';
+    const debugHtml=this.developerMode?renderDebugPanel(diagnostics):'';
+    if(debugHtml!==this.debugHtml){
+      this.debugRoot.innerHTML=debugHtml;
+      this.debugHtml=debugHtml;
+    }
+    const dialogueHtml=this.renderDialogue();
+    if(dialogueHtml!==this.dialogueHtml){
+      this.dialogueRoot.innerHTML=dialogueHtml;
+      this.dialogueHtml=dialogueHtml;
+    }
     document.body.classList.toggle('m4-dev-enabled',this.developerMode);
     document.body.classList.toggle('m4-inventory-open',this.inventoryOpen);
     const status=document.getElementById('m4-runtime-notice');
     if(status)status.textContent=this.noticeText;
+  }
+
+  private renderDialogue():string{
+    if(this.battleExitConfirm&&this.scene.inBattleView&&this.scene.state.phase==='active'){
+      return `<section class="npc-dialogue battle-exit-dialogue" data-ui="battle-exit-confirm" aria-label="退出战斗确认">
+        <div class="npc-dialogue-portrait" aria-hidden="true"><b>撤</b><span>RETREAT</span><small>战斗不会结算奖励</small></div>
+        <div class="npc-dialogue-body">
+          <div class="npc-dialogue-speaker">确认退出战斗？</div>
+          <div class="npc-dialogue-copy"><p>退出后返回进入战斗前的场景，本次战斗不计胜利，也不会获得奖励。</p></div>
+          <div class="npc-dialogue-actions"><button type="button" data-action="battle-exit-cancel">取消</button><button type="button" data-action="battle-exit-confirm">确认退出</button></div>
+          <small class="npc-dialogue-provenance">RECONSTRUCTION_POLICY</small>
+        </div>
+      </section>`;
+    }
+    const session=this.activeDialogue;
+    if(!session)return '';
+    const view=session.view;
+    const lines=view.lines.map(line=>`<p>${escapeHtml(line)}</p>`).join('');
+    const choices=view.choices.map(choice=>`<button type="button" data-dialogue-choice="${choice.id}">${escapeHtml(choice.label)}</button>`).join('');
+    return `<section class="npc-dialogue" data-ui="npc-dialogue" data-input-source="${session.inputSource}" aria-label="NPC 对话">
+      <div class="npc-dialogue-portrait" aria-label="NPC 头像占位"><b>NPC</b><span>PORTRAIT</span><small>头像绑定未恢复</small></div>
+      <div class="npc-dialogue-body">
+        <div class="npc-dialogue-speaker">${escapeHtml(view.speaker)}</div>
+        <div class="npc-dialogue-copy">${lines}</div>
+        <div class="npc-dialogue-actions">${choices}</div>
+        <small class="npc-dialogue-provenance">RECONSTRUCTION_POLICY</small>
+      </div>
+    </section>`;
   }
 
   private setNotice(message:string):void{

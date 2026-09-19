@@ -26,6 +26,15 @@ async function clickWorldCell(page:Page,cell:readonly[number,number]){
   await page.mouse.click(box.x+(worldX-state.camera.x)*state.camera.zoom,box.y+(worldY-state.camera.y)*state.camera.zoom);
 }
 
+async function clickWorldPointerTarget(page:Page,id:string){
+  const canvas=page.locator('canvas');
+  const box=await canvas.boundingBox();if(!box)throw new Error('Missing canvas');
+  const state=await snap(page),target=state.worldPointerTargets.find(row=>row.id===id&&row.visible);
+  if(!target)throw new Error(`Missing visible world pointer target ${id}`);
+  const worldX=(target.bounds.left+target.bounds.right)/2,worldY=(target.bounds.top+target.bounds.bottom)/2;
+  await page.mouse.click(box.x+(worldX-state.camera.x)*state.camera.zoom,box.y+(worldY-state.camera.y)*state.camera.zoom);
+}
+
 async function selectTarget(page:Page,id:string){
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
   const state=await snap(page),enemy=state.enemies.find(row=>row.id===id&&row.hp>0);
@@ -37,6 +46,7 @@ async function selectTarget(page:Page,id:string){
 }
 
 // Final gate intentionally uses real pointer delivery after the Phaser logical-scroll adapter fix.
+// S22 private-smoke must traverse the rendered training-guide pointer target against the fixed-hash M5 pack.
 // Fixed-hash rerun follows a fully green synthetic Chromium suite with battle focus center semantics preserved.
 test('M5 private-original playable recovery: camera NPC door monsters balance quest',async({page})=>{
   test.setTimeout(210000);
@@ -58,6 +68,22 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   const initialZoom=start.camera.zoom;
   await page.keyboard.press('+');
   await expect.poll(async()=>(await snap(page)).camera.zoom).toBeGreaterThan(initialZoom);
+
+  // S22: a real browser pointer click on the rendered guide must be consumed as
+  // NPC interaction at non-default zoom; it must not fall through to moveTo().
+  const beforeNpcClick=await snap(page);
+  await clickWorldPointerTarget(page,'training-guide');
+  await expect.poll(async()=>(await m5(page)).quest.stage).toBe('not_started');
+  const offer=page.locator('[data-ui="npc-dialogue"]');
+  await expect(offer).toBeVisible();
+  await expect(offer).toHaveAttribute('data-input-source','pointer');
+  await offer.locator('[data-dialogue-choice="accept-quest"]').click();
+  await expect.poll(async()=>(await m5(page)).quest.stage).toBe('accepted');
+  const afterNpcClick=await snap(page);
+  expect(afterNpcClick.anchor).toEqual(beforeNpcClick.anchor);
+  expect(afterNpcClick.routeLength).toBe(0);
+  expect(afterNpcClick.mapId).toBe(1);
+
   await page.keyboard.press('0');
   await expect.poll(async()=>(await snap(page)).camera.zoom).toBe(1);
   const viewport=(await snap(page)).viewport;
@@ -77,9 +103,8 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   await page.keyboard.press('Escape');
   await expect.poll(async()=>{const s=await snap(page);return `${s.inventory.weapon}/${s.inventory.armor}`;}).toBe('3/25');
 
-  // Accept from the visible guide. M5 must not warp immediately.
-  await page.keyboard.press('e');
-  await expect.poll(async()=>(await m5(page)).quest.stage).toBe('accepted');
+  // Quest acceptance above came from the visible guide pointer target. M5 must not warp immediately.
+  expect((await m5(page)).quest.stage).toBe('accepted');
   expect((await snap(page)).mapId).toBe(1);
 
   const plan=(await m5(page)).worldPlan!;
@@ -147,6 +172,10 @@ test('M5 private-original playable recovery: camera NPC door monsters balance qu
   expect(postBattle.progression.exp).toBe(70);
 
   await page.keyboard.press('e');
+  const turnIn=page.locator('[data-ui="npc-dialogue"]');
+  await expect(turnIn).toBeVisible();
+  await expect(turnIn).toHaveAttribute('data-input-source','keyboard');
+  await turnIn.locator('[data-dialogue-choice="turn-in-quest"]').click();
   await expect.poll(async()=>(await m5(page)).quest.stage).toBe('complete');
   const done=await m5(page);
   expect(done.gold).toBe(15);

@@ -38,9 +38,12 @@ async function start(){
   const host=el('canvas-host');
   const game=new Phaser.Game({
     type:Phaser.AUTO,parent:host,backgroundColor:'#111b1b',pixelArt:true,antialias:false,
-    scale:{mode:Phaser.Scale.RESIZE,width:host.clientWidth,height:host.clientHeight},scene:[scene],audio:{noAudio:true}
+    scale:{mode:Phaser.Scale.NONE,width:host.clientWidth,height:host.clientHeight},scene:[scene],audio:{noAudio:true}
   });
-  const resize=new ResizeObserver(()=>game.scale.resize(host.clientWidth,host.clientHeight));
+  const resize=new ResizeObserver(()=>{
+    const width=host.clientWidth,height=host.clientHeight;
+    if(width>0&&height>0)game.scale.resize(width,height);
+  });
   resize.observe(host);
   window.addEventListener('beforeunload',()=>{resize.disconnect();game.destroy(true);});
   el('pack-kind').textContent=pack.manifest.provenance?.kind==='synthetic'?'SYNTHETIC / 测试样本':'PRIVATE / 原版资源';

@@ -17,6 +17,8 @@ import {createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY} from './
 import type {BattleEntry,InteractionIntent} from './runtime-boundaries.ts';
 import {ViewportController,BrowserFullscreenPort} from './view/viewport-controller.ts';
 import {VisualActor} from './visual-actor.ts';
+import {inflatePointerBounds,pickWorldPointerTarget,unionPointerBounds} from './input/world-pointer-arbitration.ts';
+import type {WorldPointerBounds,WorldPointerTarget} from './input/world-pointer-arbitration.ts';
 
 type FieldReturn = {mapId:number;anchor:{x:number;y:number};direction:number;camera:{x:number;y:number;zoom:number}};
 export type WorldVisualSpec={id:string;mapId:number;cell:Cell;resourceId:number;label:string;kind:'npc'|'encounter'};
@@ -62,6 +64,7 @@ export class LabScene extends Phaser.Scene {
   private cameraFollowEnabled=false;
   private reconstructionBattleSetup?:ReconstructionBattleSetup;
   private worldVisualActors=new Map<string,{spec:WorldVisualSpec;actor:VisualActor;label:Phaser.GameObjects.Text}>();
+  private worldInteractionHandler?: (entityId:string)=>void;
   private worldMarkers=new Map<string,{spec:WorldMarkerSpec;label:Phaser.GameObjects.Text}>();
   private enemyVisualActors=new Map<string,VisualActor>();
   private overlay!: Phaser.GameObjects.Graphics;
@@ -121,9 +124,18 @@ export class LabScene extends Phaser.Scene {
     this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
       this.hover={x:Math.round(world.x),y:Math.round(world.y)};
+      this.game.canvas.style.cursor=!this.inBattleView&&this.worldPointerTargetAt(world.x,world.y)?'pointer':'default';
     });
     this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
+      if(!this.inBattleView){
+        const target=this.worldPointerTargetAt(world.x,world.y);
+        if(target){
+          if(this.worldInteractionHandler)this.worldInteractionHandler(target.id);
+          else this.notice('NPC 交互运行时尚未接入');
+          return;
+        }
+      }
       if(this.inBattleView){
         const enemy=this.state.enemies.find(e=>e.hp>0&&Math.hypot(e.x-world.x,e.y-world.y)<30);
         if(enemy){
@@ -180,8 +192,17 @@ export class LabScene extends Phaser.Scene {
 
   private setupViewport(){
     const target=document.querySelector<HTMLElement>('.world')??document.getElementById('canvas-host');
+    const host=document.getElementById('canvas-host');
+    let lastViewportSize={width:this.scale.width,height:this.scale.height};
+    if(lastViewportSize.width<=0||lastViewportSize.height<=0){
+      lastViewportSize={width:host?.clientWidth??0,height:host?.clientHeight??0};
+    }
     const port={
-      viewportSize:()=>({width:this.scale.width,height:this.scale.height}),
+      viewportSize:()=>{
+        const width=this.scale.width,height=this.scale.height;
+        if(width>0&&height>0)lastViewportSize={width,height};
+        return{...lastViewportSize};
+      },
       worldBounds:()=>({x:0,y:0,width:this.currentMap().manifest.render.width,height:this.currentMap().manifest.render.height}),
       cameraState:()=>{
         const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
@@ -221,6 +242,27 @@ export class LabScene extends Phaser.Scene {
   resetZoom(){if(this.viewport)return this.viewport.resetZoom();this.cameras.main.setZoom(1);return 1;}
   async toggleFullscreen(){return this.viewport?.toggleFullscreen()??false}
   viewportSnapshot(){return this.viewport?.snapshot()??null}
+
+  setWorldInteractionHandler(handler:((entityId:string)=>void)|undefined){this.worldInteractionHandler=handler;}
+
+  private worldPointerTargets():WorldPointerTarget[]{
+    const targets:WorldPointerTarget[]=[];
+    for(const row of this.worldVisualActors.values()){
+      if(!row.actor.image.visible||row.spec.mapId!==this.mapId)continue;
+      const image=row.actor.image.getBounds();
+      let bounds:WorldPointerBounds={left:image.x,top:image.y,right:image.x+image.width,bottom:image.y+image.height};
+      if(row.label.visible){
+        const label=row.label.getBounds();
+        bounds=unionPointerBounds(bounds,{left:label.x,top:label.y,right:label.x+label.width,bottom:label.y+label.height});
+      }
+      targets.push({id:row.spec.id,kind:row.spec.kind,visible:true,bounds:inflatePointerBounds(bounds),depth:row.actor.image.depth});
+    }
+    return targets;
+  }
+
+  private worldPointerTargetAt(x:number,y:number):WorldPointerTarget|null{
+    return pickWorldPointerTarget({x,y},this.worldPointerTargets(),'npc');
+  }
 
   setReconstructionBattleSetup(setup:ReconstructionBattleSetup|undefined){this.reconstructionBattleSetup=setup;}
 
@@ -545,6 +587,7 @@ export class LabScene extends Phaser.Scene {
       battleZoneId:this.state.battleZoneId,battleEntryProvenance:this.state.battleEntryProvenance,damagePolicy:{id:this.state.damagePolicyId,provenance:this.state.damagePolicyProvenance},
       enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),visualResourceId:enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null,aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
       worldVisuals:[...this.worldVisualActors.values()].map(row=>({id:row.spec.id,mapId:row.spec.mapId,resourceId:row.spec.resourceId,visible:row.actor.image.visible,cell:row.spec.cell})),
+      worldPointerTargets:this.worldPointerTargets().map(target=>({id:target.id,kind:target.kind,visible:target.visible,bounds:{...target.bounds},depth:target.depth})),
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,duration:this.effectDuration,timingPolicy:'RETAIL_COMMON' as const,playing:this.effectPlaying}:null,
       fps:Math.round(this.game.loop.actualFps)
     };

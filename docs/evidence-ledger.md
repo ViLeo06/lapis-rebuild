@@ -82,6 +82,18 @@
 | WEB-069 | VERIFIED-ENGINEERING | Final M5 private single HTML is 11,190,078 bytes with SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140` | artifact `10572758666` from run `35405864082`; fixed-hash 2.2 pipeline |
 | WEB-070 | VERIFIED-ENGINEERING | In the final private M5 acceptance, the equipped level-1 swordsman defeats both training enemies and remains alive (sampled victory HP 44/125); quest turn-in ends at 15 gold / 300 EXP / Lv3 | `m5-playable-recovery.json` in final private artifact; values are reconstruction balance/progression, not retail claims |
 
+## 2026-09-20 / M5.1 user-playtest repair closure
+
+| ID | Level | Claim | Reproduction / scope |
+| --- | --- | --- | --- |
+| WEB-071 | VERIFIED-STATIC-RESOURCE / VERIFIED-HISTORICAL | S20 establishes an original-structure UI reference pack from fixed-hash 2.2 candidate UI assets plus separately provenance-tagged historical/same-family screenshots; exact unrecovered pixels/alpha/fonts remain reconstruction choices | PR #35 integrated by PR #36; `docs/research/s20-original-ui-reference-pack.md`, `manifests/s20-original-ui-assets.json` |
+| WEB-072 | VERIFIED-ENGINEERING | M5.1 NPC pointer arbitration derives live world hit targets from rendered actors, consumes NPC clicks before click-to-move, and routes pointer plus keyboard E through the same world interaction authority | PR #32 integrated by PR #36; S22 tests + fixed-hash browser acceptance |
+| WEB-073 | VERIFIED-ENGINEERING | M5.1 explicit NPC dialogue/quest runtime requires player choice for accept/decline/turn-in/close, rejects stale sessions, and preserves defeat/retreat vs victory task-state distinctions | PR #33 integrated by PR #36; S23 unit/state-machine coverage and S24 browser gate |
+| WEB-074 | VERIFIED-ENGINEERING | Final S24 runtime head `97bd5063749a15e114ce85119015f9dcb8b7afc0` passed run `35442734082`: synthetic and fixed-hash private-original build/Chromium/offline acceptance; E2E `58 passed / 4 skipped / 0 failed` | PR #36; run `35442734082`; latest incremental run reused the already-passed S24 long-soak evidence because runtime follow-up was camera/retreat focused |
+| WEB-075 | VERIFIED-ENGINEERING | Final M5.1 private single HTML is 11,214,215 bytes with SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7` | artifact `10583854810` from run `35442734082`; fixed-hash 2.2 pipeline |
+| WEB-076 | VERIFIED-ENGINEERING | Post-playtest camera contract eases toward the player's geometric center and converges after stop while retaining map-edge clamp; active battle supports confirmed retreat with cancel/resume, no reward/win credit and encounter re-trigger suppression until leaving radius | PR #36 latest runtime/tests; mobile acceptance executes retreat request → cancel → request → confirm |
+| WEB-077 | USER-ACCEPTED | On 2026-09-20 the user personally played the final S24 standalone HTML and explicitly accepted it for closeout and progression to M6 | Manual playtest gate; this is a player-experience acceptance, not evidence that reconstruction-only game rules are historical retail truth |
+
 ## Interpretation boundaries
 
 - `Body_` direction evidence applies to checked character families; it must not be mechanically applied to `FOCUS` MagicRes or other layer families.

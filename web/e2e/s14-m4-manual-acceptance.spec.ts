@@ -30,6 +30,11 @@ async function m4Action(page:Page,action:string){
     button.click();
   },action);
 }
+async function chooseDialogue(page:Page,id:string){
+  const choice=page.locator(`[data-dialogue-choice="${id}"]`);
+  await expect(choice).toBeVisible();
+  await choice.click();
+}
 
 async function selectLiveTarget(page:Page,targetId:string){
   await legacyPause(page);
@@ -70,9 +75,10 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   await m4Action(page,'inventory');
   await page.keyboard.press('Escape');
 
-  // Player-facing world flow: E accepts the reconstruction quest and warps to
-  // the objective position on the currently validated field map.
+  // Player-facing world flow: E opens the dialogue; explicit Accept mutates
+  // the reconstruction quest and then uses the compatibility warp.
   await page.keyboard.press('e');
+  await chooseDialogue(page,'accept-quest');
   await expect.poll(async()=>(await m4(page)).quest.stage).toBe('accepted');
   expect((await m4(page)).world.mapId).toBe(1);
   checkpoints.accepted={m4:await m4(page),scene:await snap(page)};
@@ -147,6 +153,7 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   await page.screenshot({path:'test-results/s14-07-returned.png',fullPage:true});
 
   await page.keyboard.press('e');
+  await chooseDialogue(page,'turn-in-quest');
   await expect.poll(async()=>(await m4(page)).quest.stage).toBe('complete');
   state=await m4(page);
   expect(state.gold).toBe(15);
@@ -181,6 +188,7 @@ test('S14 M4 wizard uses authored vitals, visible magic and opt-in diagnostics',
   });
   await expect.poll(async()=>(await snap(page)).character).toBe('109');
   await page.keyboard.press('e');
+  await chooseDialogue(page,'accept-quest');
   await page.keyboard.press('e');
   await expect.poll(async()=>(await snap(page)).inBattleView).toBe(true);
   await expect(page.locator('[data-skill-id="19101"]')).toBeVisible();
