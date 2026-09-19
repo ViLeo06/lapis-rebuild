@@ -1,6 +1,6 @@
 # Backlog
 
-> 2026-09-18 | Web-first | Plan v3.0 | M4 S8–S14 closure | next: M5 playtest iteration
+> 2026-09-19 | Web-first | Plan v3.2 | M5 engineering closure | next: M5.1 user playtest
 
 ## 已完成基线
 
@@ -50,7 +50,7 @@
 - [x] `ability.atr` column 25 `cry` 已证明是受击表现选择字段。
 - [x] 本地 `%9/%5` RNG 位于 HP 结果已知之后，不作为 damage RNG 证据。
 - [x] 正式结论：exact retail physical/magic hit/damage/critical/defence/elemental formula 当前不能从 client path 恢复。
-- [ ] S6 若需要离线可玩数值，只能集中实现显式 `RECONSTRUCTION_POLICY`，authored retail stats 与公式分层保存。
+- [x] 离线可玩数值已集中进入 S19 `ReconstructionCombatBalance`；authored retail stats 与 reconstruction formula 分层保存。
 - [ ] 若未来反推原公式，需 packet/stat/video corpus 做单变量控制和 held-out 验证。
 
 ## S4 Quest/NPC — 已收口
@@ -113,8 +113,24 @@
 - [x] 最终 HTML：8,709,711 bytes；SHA-256 `28ef2dcadeb0e3e7216f9b21cff44e725b54b2854944230df0db7c5433fd462c`。
 - [x] 验收报告：`docs/validation/s14-m4-release-20260918.md`。
 
-## M5+ 后续
+## M5 S15–S19 — 工程验收已收口
 
+- [x] S15 Viewport / Camera / Fullscreen：全屏、responsive viewport、zoom、camera-follow/clamp、坐标适配。
+- [x] S16 NPC Visual Recovery：NPC/world-character visual inventory、catalog/gallery；M5 private runtime 使用 B1001 原客户端像素。
+- [x] S17 Monster Visual Recovery：monster visual catalog/gallery；M5 runtime 使用 B4524/B4544 原客户端像素。
+- [x] S18 World Scene Transition：空间 door/exit trigger；map1 → map7 → map1 自动场景切换。
+- [x] S19 Reconstruction Combat Balance：集中数值层、simulator、enemy tiers、reward；live battle 已对齐 S19 cadence。
+- [x] S19 balance v2：减算型 reconstruction `round(offense * multiplier - defense * 0.65)`；PR #27 日服候选式仅作为外部校准方向，不当 mainland retail formula。
+- [x] PR #29 M5 统一接线已合并 main：`efbadaf0b0781ee205bd7a2541b265a41c7929e9`。
+- [x] fixed-hash final run `35405864082`：synthetic + private-original + Chromium/offline success。
+- [x] private M5 玩家闭环：可见 NPC → 接任务 → 自动进屋 → 可见怪物 → 2v1 胜利 → 返回交任务 → SaveV2。
+- [x] 30 分钟 M5 wall-clock soak：`1,800,406 ms` / 59 samples / 0 page error / 0 external request。
+- [x] 最终 M5 HTML：11,190,078 bytes；SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。
+- [ ] 用户亲自试玩最终 HTML，确认操作手感、画面可读性、任务理解和战斗难度；反馈进入 M5.1。
+
+## M5.1 / M6+ 后续
+
+- [ ] 按用户试玩反馈修 P0/P1 可玩性问题。
 - [ ] 完整背包/装备规则、等级/转职、技能树、正式任务链和地图流程。
 - [ ] 剑士/巫师十阶段职业矩阵。
 - [ ] 公开部署前完成访问控制、版权和发布授权审查。
