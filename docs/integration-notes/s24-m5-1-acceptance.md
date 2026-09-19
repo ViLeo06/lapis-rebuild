@@ -3,18 +3,18 @@
 Date: 2026-09-19  
 Branch: `codex/s24-m5-1-acceptance`  
 Plan baseline: `57ff22363156bec7aad3acb7555208533485d193`  
-Validated executable head: `3eb57f19d0bfcb9ea60d1ca05f2af39c76ca8cf7`
+Validated executable head: `dcc0c412635245b4d26118ce5ec3f675bc959001`
 
 ## Final engineering status
 
-**PASSED.** GitHub Actions run `35429647238` completed successfully on the exact executable head above.
+**PASSED.** GitHub Actions run `35433856641` completed successfully on the exact executable head above, including the mobile-touch extension.
 
 - `synthetic`: **success**
 - `private-original`: **success**
 - private-original `Real thirty-minute diagnostic soak`: **success**
-- `private-original-validation` artifact: `10581071412`
-- artifact archive size: `51,953,619` bytes
-- artifact digest: `sha256:9b0c133fd631750d235bb509eb1de27f1fd86740b662c47c02dd8ecaf6442474`
+- `private-original-validation` artifact: `10582154008`
+- artifact archive size: `53,011,314` bytes
+- artifact digest: `sha256:99627bfc7bc0934b8e0a48ef3d711b1ab244c808f77f3aeae2a4d0bff1c68da0`
 
 The earlier hosted-runner allocation issue is resolved for this acceptance run. The prior local/static screenshots remain useful historical preflight evidence, but they are no longer the final acceptance basis.
 
@@ -44,28 +44,29 @@ The S24 E2E gate proves the following on private original resources:
 16. SaveV2 exports quest stage `complete`;
 17. Developer diagnostics remain off throughout the final player gate and no page errors are accepted.
 
-The private E2E report for the run records `57 expected`, `4 skipped`, `0 unexpected`, `0 flaky`. The four S24 acceptance specs all executed and passed, including the final pointer gate. The skipped cases are older compatibility choreography superseded by the private M5 path; they are not S24 acceptance skips.
+The private E2E report for the run records `58 passed`, `4 skipped`, `0 unexpected`, `0 flaky`. All five S24 acceptance specs executed and passed, including the mobile-touch gate and the final desktop pointer gate. The skipped cases are older compatibility choreography superseded by the private M5 path; they are not S24 acceptance skips.
 
 ## Standalone private HTML / offline evidence
 
-Final standalone private HTML from artifact `10581071412`:
+Final standalone private HTML from artifact `10582154008`:
 
 - file: `_temp/lapis-private.html`
-- bytes: `11,210,188`
-- SHA-256: `b08b9b851f6dd89a4fb265d91c2fd6000a4c5726ca588efaabaa2f0fac8be8d5`
+- bytes: `11,211,980`
+- SHA-256: `768bf6e26eb3f933733f19fb290940e62c5fea33d6d3a284c0a1f2fb8806c696`
 
-The S24 standalone test opens this file through `file://`, waits for the M4/M5 player runtime and formal HUD, asserts Developer diagnostics are absent, records every HTTP(S) request, and requires that request list to remain empty. That test passed in run `35429647238`.
+The S24 standalone test opens this file through `file://`, waits for the M4/M5 player runtime and formal HUD, asserts Developer diagnostics are absent, records every HTTP(S) request, and requires that request list to remain empty. That test passed in run `35433856641`.
 
 ## Thirty-minute soak
 
 Artifact `test-results/soak/report.json` records:
 
 - status: `passed`
-- elapsed: `1,800,632 ms`
-- samples: `59`
+- elapsed: `1,800,712 ms`
+- samples: `58`
 - errors: `[]`
-- final sample elapsed: `1,800,026 ms`
-- final sampled FPS: `35`
+- external HTTP(S) requests: `[]`
+- final sample elapsed: `1,800,054 ms`
+- final sampled FPS: `32`
 - `playableRecovery=true`
 - `cameraFollow=true`
 - recovered guide visible
@@ -99,11 +100,35 @@ The same artifact also contains the visual chain:
 
 These corroborate the runtime assertions for visible guide -> interior monsters -> battle -> victory -> completed field return.
 
+## Mobile-touch revalidation
+
+S24 now treats phone interaction as a first-class player-input contract rather than a desktop fallback.
+
+At a Playwright mobile viewport of `390x844` with touch enabled, the fixed-hash private-original gate proves:
+
+1. keyboard `E` remains available on desktop, but phone play does not require a keyboard;
+2. directly tapping the visible guide NPC opens the same S23 dialogue authority used by desktop pointer interaction;
+3. a nearby-NPC `data-action="interact"` control provides an explicit touch fallback and routes through the same NPC authority;
+4. Accept / Decline / Turn in / Close dialogue choices are touch controls;
+5. touch movement reaches the training-house door and transitions to the interior;
+6. when the encounter target is initially off-screen, repeated touches on visible HUD-safe world points plus camera-follow can advance naturally until the target enters the viewport;
+7. touch target selection works in battle;
+8. skill `1301` is activated by tapping the rendered skill button, consuming MP/readiness without keyboard hotkeys;
+9. primary phone controls used by this gate are at least 44 px high;
+10. the mobile document remains within the 390 px viewport with no horizontal overflow.
+
+The first private mobile attempt failed because the test tried to tap an encounter cell outside the phone viewport. The runtime itself had already transitioned correctly to the interior. Commit `dcc0c412...` corrected the acceptance choreography to use only visible touch points, matching actual phone interaction.
+
+Final mobile screenshots in artifact `10582154008`:
+
+- `test-results/s24-mobile-touch-field-390x844.png` — exactly `390x844`
+- `test-results/s24-mobile-touch-battle-390x844.png` — exactly `390x844`
+
 ## Evidence boundary
 
 ### VERIFIED / VERIFIED-ENGINEERING
 
-- run `35429647238` executed successfully on executable head `3eb57f19...`;
+- run `35433856641` executed successfully on executable head `dcc0c412...`;
 - synthetic and fixed-hash private-original jobs are green;
 - final S24 pointer/dialogue/spatial/battle/turn-in gate passed;
 - standalone private HTML loads offline with zero HTTP(S) requests;
