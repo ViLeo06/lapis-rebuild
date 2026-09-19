@@ -386,6 +386,7 @@ test.describe('S24 mobile touch contract',()=>{
     expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
     await page.screenshot({path:'test-results/s24-mobile-touch-battle-390x844.png',fullPage:true});
 
+    // Active-battle retreat is accepted as a real touch flow: request -> cancel -> request -> confirm.
     const exitButton=page.locator('[data-action="battle-exit-request"]');
     await expect(exitButton).toBeVisible();
     expect((await exitButton.boundingBox())?.height??0).toBeGreaterThanOrEqual(44);
