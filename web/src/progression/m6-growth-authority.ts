@@ -22,6 +22,7 @@ import {
   applyM6Promotion,
   createM6StageProgression,
   validateM6PromotionRequirement,
+  validateM6StageProgressionState,
   validateM6StageTrack,
 } from './m6-stage-promotion.ts';
 import type {
@@ -115,8 +116,7 @@ export class ReconstructionM6GrowthAuthority{
   validate(raw:M6GrowthState):M6GrowthState{
     const rewards=validateRewardState(raw.rewards);
     validateM6InventoryCapacity(rewards.inventory,this.inventoryPolicy);
-    const stage=createM6StageProgression(this.stageTrack,raw.stage.stageId);
-    stage.promotionReceipts=[...raw.stage.promotionReceipts];
+    const stage=validateM6StageProgressionState(raw.stage,this.stageTrack);
     const questChain=validateM6QuestChainStateForDefinition(raw.questChain,this.questChain);
     const context={characterId:String(stage.stageId),family:stage.family,stageId:stage.stageId,level:rewards.progression.level};
     const equipment=validateM6EquipmentLoadout(raw.equipment,rewards.inventory,this.equipmentRules,context);
