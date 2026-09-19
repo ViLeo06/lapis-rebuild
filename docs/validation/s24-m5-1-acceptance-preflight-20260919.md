@@ -1,123 +1,126 @@
-# S24 M5.1 Player-input Acceptance — preflight
+# S24 M5.1 Player-input Acceptance — Preflight + Final Record
 
 Date: 2026-09-19  
 Branch: `codex/s24-m5-1-acceptance`  
-Plan baseline: `57ff22363156bec7aad3acb7555208533485d193`
+Plan baseline: `57ff22363156bec7aad3acb7555208533485d193`  
+Validated executable head: `3eb57f19d0bfcb9ea60d1ca05f2af39c76ca8cf7`
 
-## Scope
+## Purpose
 
-S24 is the M5.1 acceptance/integration line. During the parallel phase it owns acceptance E2E, screenshot gates and validation documentation. Shared runtime glue is intentionally deferred until S20–S23 have produced integration-ready heads.
+This file began as the S24 preflight record. It now also records the final post-integration acceptance so the earlier runner outage is not mistaken for the current status.
 
-Frozen in this preflight:
+S24 closes the M5.1 engineering path:
 
-- `Plan.md`
-- `Backlog.md`
-- `docs/evidence-ledger.md`
-- `web/src/main.ts`
-- `web/src/battle.ts`
-- production HUD/runtime files owned by S21–S23
+`pointer NPC -> explicit dialogue -> click Accept -> spatial entrance -> visible monsters -> battle -> return -> pointer NPC -> click Turn in`
 
-## Post-integration status
+The player flow must use browser input rather than debug selectors or direct gameplay mutation helpers.
 
-This file began as the S24 preflight record. The integration has since advanced beyond the dependency states described below.
+## Integrated dependency heads
 
-Current integrated state on 2026-09-19:
+Final S24 integration uses:
 
-- S20 final delivered head: `a457cf5cbc06b6a6b4a0b1580e8527b331aec047`;
-- S21 final note/head: `a30f0e388cc1ed778e32336a4c7568951b69643b`, with S20 relationship corrections applied by S24;
-- S22 pointer head: `e3dc2483dae22be466a56cc275b8fb419ee4dd60`;
-- S23 dialogue/quest head: `994ea9146e73ff258bd8b4dbf19a54727f494caa`;
-- S24 real-input gate no longer carries the old pointer `fixme`; pointer hover/click is a hard assertion;
-- NPC activation now opens the explicit S23 dialogue session and leaves the quest unchanged until the player clicks Accept / Turn in;
-- the hidden `#battle-pause` shortcut was removed from S24 target selection;
-- S20 edge-chrome relationships are now enforced: top strip, upper-left small map, lower-left player status, bottom-center deck, lower-right quick slots, bottom-docked portrait dialogue, lower-left battle commands and compact right-side battle status.
+- S20 UI archaeology/reference pack: `a457cf5cbc06b6a6b4a0b1580e8527b331aec047`
+- S21 HUD final note/head: `a30f0e388cc1ed778e32336a4c7568951b69643b`
+- S22 pointer: `e3dc2483dae22be466a56cc275b8fb419ee4dd60`
+- S23 dialogue/quest: `994ea9146e73ff258bd8b4dbf19a54727f494caa`
 
-Local non-private validation after the S20 correction is recorded in `docs/integration-notes/s24-m5-1-acceptance.md`. GitHub-hosted runs after approximately 02:50 UTC are blocked before checkout with `runner_id=0` and no step/log payload, so this preflight file must not be read as a final green CI record.
+S24 applies the S20 edge-chrome relationships to the integrated player shell and binds S22 pointer arbitration to the S23 explicit dialogue authority.
 
-## Baseline audit
+## Final workflow evidence
 
-At the initial preflight read, S20–S24 branches all pointed at the same plan commit. During the S24 preflight, read-only synchronization then observed upstream work beginning without integrating it prematurely:
+GitHub Actions run `35429647238` on head `3eb57f19...` completed successfully.
 
-- S20 remained at the plan baseline;
-- S21 advanced to `85d6f9141716ab860042188f69af208a0308f9a6`;
-- S22 advanced to `e3dc2483dae22be466a56cc275b8fb419ee4dd60` and opened PR #32;
-- S23 advanced to `8d62b2e2b979928e66b0d5b665e1bce11ab66096` and opened PR #33.
+| Gate | Result |
+| --- | --- |
+| synthetic job | PASS |
+| private-original job | PASS |
+| parser / locked dependency / typecheck / unit / build steps | PASS |
+| Chromium integration tests | PASS |
+| private standalone preview | PASS |
+| real-resource browser + offline tests | PASS |
+| Real thirty-minute diagnostic soak | PASS |
 
-Those heads are dependency observations only. S24 does not treat them as integrated until their own validation/PR closure and the M5.1 coordination point.
+Private E2E report:
 
-The existing M5 private-original acceptance proves the broad quest/battle loop, but it does **not** prove the user-reported P0 interaction requirement:
+- expected/pass: `57`
+- skipped: `4`
+- unexpected: `0`
+- flaky: `0`
 
-- quest accept uses `page.keyboard.press('e')`;
-- quest turn-in uses `page.keyboard.press('e')`;
-- button helpers in the older flow use DOM `.click()` from `page.evaluate()`;
-- current `scene.ts` field `pointerdown` selects battle enemies and otherwise falls through to `moveTo(...)`;
-- current world visual actors are presentation objects only, without an NPC pointer target.
+All four S24 specs executed and passed:
 
-Therefore the old M5 green result cannot close M5.1.
+- required desktop viewport geometry / diagnostics-off gate;
+- standalone offline/no-network gate;
+- synthetic explicit-dialogue glue gate;
+- final real-pointer private gate.
 
-## S24 gates prepared here
+## Final private artifact
 
-`web/e2e/s24-m5-1-acceptance.spec.ts` adds three gates.
+`private-original-validation`
 
-### 1. Desktop HUD preflight
+- artifact id: `10581071412`
+- archive size: `51,953,619` bytes
+- artifact digest: `sha256:9b0c133fd631750d235bb509eb1de27f1fd86740b662c47c02dd8ecaf6442474`
 
-Runs at:
+Standalone HTML inside the artifact:
 
-- 1366×768
-- 1920×1080
+- `_temp/lapis-private.html`
+- size: `11,210,188` bytes
+- SHA-256: `b08b9b851f6dd89a4fb265d91c2fd6000a4c5726ca588efaabaa2f0fac8be8d5`
 
-It records player/map/quest/menu geometry, asserts no horizontal overflow or region escape, verifies the formal HUD has no Developer diagnostics by default, and captures screenshots.
+The offline S24 spec loads that HTML through `file://`, asserts the field HUD is active with diagnostics off, records HTTP(S) requests and requires the list to be empty. It passed.
 
-This is deliberately a structural preflight. S21 owns the final original-structure geometry. Once S21 is integrated, S24 must tighten the geometry assertions against the actual S20/S21 region contract instead of inventing selectors or retail dimensions in advance.
+## Real-pointer acceptance proof
 
-### 2. Standalone/offline preflight
+The final private S24 gate is not an internal helper simulation. It uses Playwright mouse/keyboard input and validates state only through read-only snapshots/assertions.
 
-When `LAPIS_OFFLINE_PREVIEW` is supplied, the player shell must start from the packaged single HTML with:
+It proves:
 
-- M4/M5 player runtime active;
-- formal field HUD visible;
-- Developer diagnostics absent;
-- zero external HTTP(S) requests.
+1. recovered guide visible; hover cursor is `pointer`;
+2. pointer click is consumed by NPC and produces no movement route;
+3. quest remains `not_started` while dialogue is merely open;
+4. explicit player click on Accept advances to `accepted`;
+5. real keyboard zoom/reset/fullscreen path works;
+6. player UI equipment changes apply;
+7. pointer movement to the door transitions to map 7 / objective stage;
+8. recovered resource IDs 4524 and 4544 are visible;
+9. pointer movement to encounter enters battle zone 0;
+10. tactical target/move/attack input wins under `m5-reconstruction-combat-balance-v2`;
+11. Return restores the field with `ready_to_turn_in`;
+12. second pointer NPC activation opens the turn-in dialogue without click-through movement;
+13. explicit Turn in click produces `complete`;
+14. final reconstruction result is 15 gold / 300 EXP / Lv.3;
+15. SaveV2 persists `quest.stage=complete`;
+16. diagnostics stay off and page errors remain empty.
 
-### 3. Final real-input player flow
+## Screenshot / geometry proof
 
-The final gate is written around actual Playwright input:
+Final screenshots from the same artifact were inspected directly:
 
-`pointer NPC -> visible S23 dialogue (no quest mutation) -> click Accept -> pointer movement -> spatial door -> visible monsters -> battle -> return -> pointer NPC -> click Turn in`
+- `s24-final-player-input-1366x768.png` — exactly 1366x768
+- `s24-final-player-input-1920x1080.png` — exactly 1920x1080
 
-Additional requirements:
+Both show the completed field state with no Developer diagnostics. `s24-hud-geometry.json` confirms no horizontal overflow and keeps the required desktop shell regions in bounds. The artifact also includes the visible-NPC, interior-monsters, battle, victory and quest-complete stage screenshots.
 
-- zoom/fullscreen use real keyboard events;
-- menu/actions use Playwright `locator.click()`, not DOM `.click()` injected through `page.evaluate()`;
-- NPC interaction uses a real mouse click against the S22 live rendered pointer bounds;
-- NPC click must leave field movement route empty, proving no click-through;
-- the first pointer activation must leave the quest at `not_started` and render an S23 dialogue session;
-- quest accept must come from a real click on `[data-dialogue-choice="accept-quest"]`;
-- final turn-in must come from a second NPC pointer activation plus a real click on `[data-dialogue-choice="turn-in-quest"]`;
-- the S23 compatibility `interact(...)` auto-accept/auto-turn-in path cannot satisfy S24;
-- diagnostics remain opt-in/off for the complete player flow;
-- diagnostics/snapshots may be read for assertions and coordinate observation, but are never used to mutate/advance gameplay.
+## Soak proof
 
-The final pointer case currently marks itself `fixme` only when the visible NPC does not expose the S22-required pointer cursor. This is an explicit upstream dependency, not a passing acceptance. Once S22 is on the integration head, that condition must be false and the entire flow must execute. After S23 is integrated, the test deliberately fails unless pointer activation opens an explicit dialogue and the user must choose Accept / Turn in; an auto-advancing compatibility path is not accepted.
+`test-results/soak/report.json`:
 
-## Required post-S20–S23 integration pass
+- status: `passed`
+- elapsed: `1,800,632 ms`
+- sample count: `59`
+- errors: `[]`
+- final sample at `1,800,026 ms`, `35 FPS`
+- playable recovery, camera follow, guide visibility and SaveV2 remained valid in the sampled state.
 
-Before S24 can be declared complete:
+## Evidence boundary
 
-1. sync the accepted S20–S23 results into the S24 integration head;
-2. read their integration notes and adapt only the acceptance selectors/contracts that they actually expose;
-3. tighten HUD geometry assertions from S20/S21 evidence;
-4. verify the S24 pointer case runs rather than being fixme/skipped on the fixed-hash private pack;
-5. run TypeScript typecheck, unit tests and production build;
-6. run Chromium E2E at both required desktop viewports;
-7. build the fixed-hash 2.2 private standalone HTML and rerun the player flow offline;
-8. run the required real wall-clock soak;
-9. record final HTML bytes/SHA-256, workflow run/artifact IDs and screenshots;
-10. place final before/after/acceptance screenshots in private Drive `lapis-rebuild-assets/40_previews/`;
-11. open the S24 PR without merging main.
+The green S24 gate is engineering proof for this reconstruction and fixed-hash private asset pipeline. It does **not** prove that the reconstruction-only NPC identities, monster encounter identities, map/trigger binding, quest rules, exact UI styling, combat formula or rewards match the retired retail server.
 
-## Final acceptance interpretation
+Those items remain `RECONSTRUCTION_POLICY` unless separately upgraded by stronger historical evidence.
 
-A green S24 engineering gate proves the player-facing reconstruction path works with real browser input and the required private fixed-hash asset pipeline. It does not upgrade reconstruction NPC identity, training-house binding, old-server quest logic, combat balance or UI alpha values to retail VERIFIED facts.
+## Final conclusion
 
-The M5 Playability Gate still requires the user's final hands-on playtest.
+**S24 M5.1 engineering acceptance: PASSED.**
+
+PR #36 can be moved from Draft to **Ready for review**. Do not merge `main` yet. The final gate is the user's hands-on playtest of the standalone private HTML for control feel, readability, navigation clarity and difficulty.
