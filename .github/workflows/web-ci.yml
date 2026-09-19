@@ -1,3 +1,4 @@
+# S24 final acceptance trigger: 2026-09-19
 name: Web and parser validation
 on:
   push:
