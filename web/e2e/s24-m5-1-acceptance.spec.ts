@@ -89,7 +89,6 @@ async function equipSwordsman(page:Page){
 }
 
 async function selectTarget(page:Page,id:string){
-  await page.locator('#battle-pause').click();
   const state=await scene(page);
   const enemy=state.enemies.find(row=>row.id===id&&row.hp>0);
   if(!enemy)throw new Error(`Missing enemy ${id}`);
@@ -101,7 +100,6 @@ async function selectTarget(page:Page,id:string){
     box.y+(enemy.y-state.camera.y)*state.camera.zoom,
   );
   await expect.poll(async()=>(await scene(page)).target,{timeout:5000}).toBe(id);
-  await page.locator('#battle-pause').click();
 }
 
 type RectLike={left:number;top:number;right:number;bottom:number;width:number;height:number};
