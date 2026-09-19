@@ -105,6 +105,9 @@ export class M4RuntimeIntegration{
   developerMode=false;
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
+  private hudHtml='';
+  private menuHtml='';
+  private debugHtml='';
   private dialogueHtml='';
   private noticeText='M4 游戏化运行时已接入';
   private lastSnapshot:Snapshot|null=null;
@@ -674,6 +677,7 @@ export class M4RuntimeIntegration{
     };
     const quest=questHud(this.world.quest.stage);
     const field:FieldHudState={mapId:snapshot.mapId,mapName:snapshot.mapName,...quest,interactionPrompt:this.nearestInteraction(snapshot)};
+    let hudHtml:string;
     if(snapshot.inBattleView){
       const target=snapshot.enemies.find(enemy=>enemy.id===snapshot.target&&enemy.hp>0);
       const battle:BattleHudState={
@@ -683,18 +687,30 @@ export class M4RuntimeIntegration{
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
         skills:definition.availableSkillIds.map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
       };
-      this.hudRoot.innerHTML=renderBattleHud(player,battle);
-    }else this.hudRoot.innerHTML=renderFieldHud(player,field);
+      hudHtml=renderBattleHud(player,battle);
+    }else hudHtml=renderFieldHud(player,field);
+    if(hudHtml!==this.hudHtml){
+      this.hudRoot.innerHTML=hudHtml;
+      this.hudHtml=hudHtml;
+    }
 
-    this.menuRoot.innerHTML=renderGameMenu({open:this.menuOpen,canSave:!snapshot.inBattleView,canLoad:!snapshot.inBattleView,devEnabled:this.developerMode});
-    const grid=this.menuRoot.querySelector('.menu-grid');
-    if(grid)grid.insertAdjacentHTML('beforeend','<button type="button" data-action="class-swordsman">切换剑士</button><button type="button" data-action="class-wizard">切换巫师</button>');
+    const menuHtml=renderGameMenu({open:this.menuOpen,canSave:!snapshot.inBattleView,canLoad:!snapshot.inBattleView,devEnabled:this.developerMode});
+    if(menuHtml!==this.menuHtml){
+      this.menuRoot.innerHTML=menuHtml;
+      const grid=this.menuRoot.querySelector('.menu-grid');
+      if(grid)grid.insertAdjacentHTML('beforeend','<button type="button" data-action="class-swordsman">切换剑士</button><button type="button" data-action="class-wizard">切换巫师</button>');
+      this.menuHtml=menuHtml;
+    }
     const diagnostics:DiagnosticsState={
       open:this.developerMode,mapSelector:String(snapshot.mapId).padStart(4,'0'),rawTiming:`${snapshot.timing} → ${snapshot.duration.toFixed(2)}ms`,
       actionSlot:snapshot.slot,direction:String(snapshot.direction),bounds:snapshot.debugBounds?'visible':'hidden',magicRes:snapshot.effect?`#${snapshot.effect.id} ${snapshot.effect.cursor+1}/${snapshot.effect.length}`:'idle',
       provenance:`battle=${snapshot.battleEntryProvenance}; damage=${snapshot.damagePolicy.provenance}; quest=${this.worldAuthority.provenance}; progression=RECONSTRUCTION_POLICY${this.lastAudio?`; audio=${this.lastAudio}`:''}`,
     };
-    this.debugRoot.innerHTML=this.developerMode?renderDebugPanel(diagnostics):'';
+    const debugHtml=this.developerMode?renderDebugPanel(diagnostics):'';
+    if(debugHtml!==this.debugHtml){
+      this.debugRoot.innerHTML=debugHtml;
+      this.debugHtml=debugHtml;
+    }
     const dialogueHtml=this.renderDialogue();
     if(dialogueHtml!==this.dialogueHtml){
       this.dialogueRoot.innerHTML=dialogueHtml;
