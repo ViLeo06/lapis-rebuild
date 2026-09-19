@@ -46,7 +46,7 @@ body.m4-active{margin:0;background:#0b1211;overflow:hidden}body.m4-active #app>h
 body.m4-active #canvas-host canvas{touch-action:none}
 body.m4-active .game-menu button,#m4-dialogue-root button{touch-action:manipulation}
 @media(max-width:560px){
-  #m4-runtime-notice{top:50px;max-width:calc(100vw - 12px)}
+  #m4-runtime-notice{top:58px;max-width:calc(100vw - 12px)}
   body.m4-active .menu-panel button{min-height:44px}
   .npc-dialogue-actions button{min-width:96px;min-height:44px;padding:8px 10px}
 }
