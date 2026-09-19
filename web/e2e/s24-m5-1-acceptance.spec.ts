@@ -83,6 +83,40 @@ async function clickGuide(page:Page){
   return {before,after:await scene(page)};
 }
 
+async function tapGuide(page:Page){
+  const before=await scene(page);
+  const point=await guidePointerPoint(page);
+  await page.touchscreen.tap(point.x,point.y);
+  return {before,after:await scene(page)};
+}
+
+async function tapWorldCell(page:Page,cell:readonly[number,number]){
+  const canvas=page.locator('canvas');
+  const box=await canvas.boundingBox();
+  if(!box)throw new Error('Missing canvas');
+  const state=await scene(page);
+  const worldX=(cell[0]+1)*32,worldY=(cell[1]+1)*16;
+  await page.touchscreen.tap(
+    box.x+(worldX-state.camera.x)*state.camera.zoom,
+    box.y+(worldY-state.camera.y)*state.camera.zoom,
+  );
+}
+
+async function tapEnemy(page:Page,id:string){
+  const state=await scene(page);
+  const enemy=state.enemies.find(row=>row.id===id&&row.hp>0);
+  if(!enemy)throw new Error(`Missing enemy ${id}`);
+  const canvas=page.locator('canvas');
+  const box=await canvas.boundingBox();
+  if(!box)throw new Error('Missing canvas');
+  await page.touchscreen.tap(
+    box.x+(enemy.x-state.camera.x)*state.camera.zoom,
+    box.y+(enemy.y-state.camera.y)*state.camera.zoom,
+  );
+  await expect.poll(async()=>(await scene(page)).target,{timeout:5000}).toBe(id);
+}
+
+
 async function equipSwordsman(page:Page){
   await clickAction(page,'menu');
   await clickAction(page,'inventory');
@@ -243,6 +277,82 @@ test('S24 synthetic glue: keyboard interaction opens explicit dialogue before qu
   // interaction, not to a second guide-dialogue assertion.
   await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('accepted');
   await assertDiagnosticsOff(page);
+});
+
+test.describe('S24 mobile touch contract',()=>{
+  test.use({hasTouch:true,viewport:{width:390,height:844}});
+
+  test('S24 mobile touch: NPC interaction and skill activation need no keyboard',async({page})=>{
+    test.setTimeout(180000);
+    const pageErrors:string[]=[];
+    page.on('pageerror',error=>pageErrors.push(error.message));
+
+    await ready(page);
+    const startRuntime=await runtime(page);
+    test.skip(!startRuntime.playableRecovery,'Private fixed-hash M5 resources are required.');
+    await assertDiagnosticsOff(page);
+
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    const menuBox=await page.locator('[data-action="menu"]').boundingBox();
+    expect(menuBox?.height??0).toBeGreaterThanOrEqual(44);
+
+    const before=await scene(page);
+    const offeredTap=await tapGuide(page);
+    expect(offeredTap.after.routeLength).toBe(0);
+    expect(offeredTap.after.anchor.x).toBeCloseTo(before.anchor.x,2);
+    expect(offeredTap.after.anchor.y).toBeCloseTo(before.anchor.y,2);
+
+    const dialogue=page.locator('[data-ui="npc-dialogue"]');
+    await expect(dialogue).toBeVisible();
+    await expect(dialogue).toHaveAttribute('data-input-source','pointer');
+    await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('not_started');
+
+    const decline=dialogue.locator('[data-dialogue-choice="decline-quest"]');
+    await expect(decline).toBeVisible();
+    expect((await decline.boundingBox())?.height??0).toBeGreaterThanOrEqual(44);
+    await decline.tap();
+    await expect(dialogue).toHaveCount(0);
+    await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('not_started');
+
+    const interact=page.locator('[data-action="interact"]');
+    await expect(interact).toBeVisible();
+    expect((await interact.boundingBox())?.height??0).toBeGreaterThanOrEqual(44);
+    await interact.tap();
+    await expect(dialogue).toBeVisible();
+    await expect(dialogue).toHaveAttribute('data-input-source','pointer');
+    await dialogue.locator('[data-dialogue-choice="accept-quest"]').tap();
+    await expect.poll(async()=>(await runtime(page)).quest.stage,{timeout:5000}).toBe('accepted');
+
+    const plan=(await runtime(page)).worldPlan!;
+    await tapWorldCell(page,plan.doorCell as [number,number]);
+    await expect.poll(async()=>(await scene(page)).mapId,{timeout:30000,intervals:[100]}).toBe(7);
+    await expect.poll(async()=>(await runtime(page)).quest.stage).toBe('objective');
+
+    await tapWorldCell(page,plan.encounterCell as [number,number]);
+    await expect.poll(async()=>(await scene(page)).inBattleView,{timeout:30000,intervals:[100]}).toBe(true);
+    await expect.poll(async()=>{
+      const state=await scene(page);
+      return state.phase!=='active'||state.actionReady;
+    },{timeout:12000,intervals:[80]}).toBe(true);
+
+    const battle=await scene(page);
+    expect(battle.phase).toBe('active');
+    const touchTarget=battle.enemies.find(row=>row.id==='dummy-ranged'&&row.hp>0)??battle.enemies.find(row=>row.hp>0);
+    if(!touchTarget)throw new Error('No live enemy available for touch targeting');
+    await tapEnemy(page,touchTarget.id);
+
+    const skill=page.locator('[data-action="skill"][data-skill-id="1301"]');
+    await expect(skill).toBeVisible();
+    await expect(skill).toBeEnabled();
+    expect((await skill.boundingBox())?.height??0).toBeGreaterThanOrEqual(44);
+    const beforeSkill=await scene(page);
+    await skill.tap();
+    await expect.poll(async()=>(await scene(page)).mp,{timeout:5000}).toBeLessThan(beforeSkill.mp);
+    expect((await scene(page)).action).toBeLessThan(beforeSkill.action);
+
+    await assertDiagnosticsOff(page);
+    expect(pageErrors).toEqual([]);
+  });
 });
 
 test('S24 final gate: real pointer NPC -> quest -> spatial battle -> pointer turn-in, no diagnostics',async({page})=>{
