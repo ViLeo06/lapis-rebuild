@@ -61,25 +61,30 @@ class MatrixProbeTest(unittest.TestCase):
         manifest = ROOT / "manifests" / "m6-dual-class-ten-stage-matrix.json"
         import json
         data = json.loads(manifest.read_text(encoding="utf-8"))
-        stages = [stage for family in data["families"] for stage in family["stages"]]
+        self.assertEqual(data["schema"], 3)
+        self.assertEqual(data["authority"], "S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX")
+        self.assertEqual(set(data["families"]), {"swordsman", "wizard"})
+        swordsman = data["families"]["swordsman"]["stages"]
+        wizard = data["families"]["wizard"]["stages"]
+        stages = swordsman + wizard
+        self.assertEqual([s["id"] for s in swordsman], probe.SWORDSMAN_IDS)
+        self.assertEqual([s["id"] for s in wizard], probe.WIZARD_IDS)
         self.assertEqual(len(stages), 20)
         self.assertEqual(sum(len(s["progression"]["levels"]) for s in stages), 200)
-        self.assertEqual(data["families"][0]["stage_ids"], probe.SWORDSMAN_IDS)
-        self.assertEqual(data["families"][1]["stage_ids"], probe.WIZARD_IDS)
-        self.assertEqual(len(data["magic_catalog"]), 10)
-        self.assertTrue(all(len(s["visual"]["resources"]) == 5 for s in stages))
-        self.assertTrue(all(s["ability"]["evidence"] == "VERIFIED-STATIC-ORIGINAL" for s in stages))
-        self.assertEqual(data["boundaries"]["promotion_semantics_and_conditions"], "SERVER-BOUNDARY")
-        self.assertEqual(data["boundaries"]["server_exp_authority_and_transition"], "SERVER-BOUNDARY")
-        self.assertEqual(data["item_requirement_schema"]["final_server_eligibility"], "SERVER-BOUNDARY")
-        item1 = data["representative_items"]["1"]
-        self.assertEqual(item1["known_authored_fields"]["con_requirement"], 10)
-        self.assertEqual(item1["known_authored_fields"]["str_requirement"], 11)
-        self.assertIsInstance(item1["class_flag_columns"], dict)
-        self.assertEqual(item1["class_flag_columns"]["보"], 1)
-        staff = data["representative_items"]["10"]
-        self.assertEqual(staff["known_authored_fields"]["int_requirement"], 11)
-        self.assertEqual(staff["class_flag_columns"]["마"], 1)
+        self.assertEqual(len(data["skills_by_id"]), 10)
+        self.assertEqual(data["visual"]["cross_check"], "200/200 files")
+        self.assertEqual(data["visual"]["semantics"]["03"], "VERIFIED-STATIC-ORIGINAL:hit-reaction")
+        self.assertEqual(data["boundaries"]["retail_promotion_level_or_trigger"], "SERVER-BOUNDARY")
+        self.assertEqual(data["boundaries"]["retail_exp_formula"], "SERVER-BOUNDARY")
+        self.assertEqual(data["equipment"]["final_class_stage_eligibility"], "SERVER-BOUNDARY")
+        self.assertEqual(data["equipment"]["class_flag_mapping_hypothesis"]["evidence"], "INFERRED")
+        item1 = data["equipment"]["representative_items"]["1"]
+        self.assertEqual(item1["fields"]["con"], 10)
+        self.assertEqual(item1["fields"]["str"], 11)
+        self.assertEqual(item1["class_flags"][0], 1)
+        staff = data["equipment"]["representative_items"]["10"]
+        self.assertEqual(staff["fields"]["int"], 11)
+        self.assertEqual(staff["class_flags"][8], 1)
 
     def test_known_hash_verifier_rejects_wrong_sources(self):
         with tempfile.TemporaryDirectory() as td:
