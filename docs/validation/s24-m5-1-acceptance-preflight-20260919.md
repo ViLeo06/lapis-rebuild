@@ -17,6 +17,23 @@ Frozen in this preflight:
 - `web/src/battle.ts`
 - production HUD/runtime files owned by S21–S23
 
+## Post-integration status
+
+This file began as the S24 preflight record. The integration has since advanced beyond the dependency states described below.
+
+Current integrated state on 2026-09-19:
+
+- S20 final delivered head: `a457cf5cbc06b6a6b4a0b1580e8527b331aec047`;
+- S21 final note/head: `a30f0e388cc1ed778e32336a4c7568951b69643b`, with S20 relationship corrections applied by S24;
+- S22 pointer head: `e3dc2483dae22be466a56cc275b8fb419ee4dd60`;
+- S23 dialogue/quest head: `994ea9146e73ff258bd8b4dbf19a54727f494caa`;
+- S24 real-input gate no longer carries the old pointer `fixme`; pointer hover/click is a hard assertion;
+- NPC activation now opens the explicit S23 dialogue session and leaves the quest unchanged until the player clicks Accept / Turn in;
+- the hidden `#battle-pause` shortcut was removed from S24 target selection;
+- S20 edge-chrome relationships are now enforced: top strip, upper-left small map, lower-left player status, bottom-center deck, lower-right quick slots, bottom-docked portrait dialogue, lower-left battle commands and compact right-side battle status.
+
+Local non-private validation after the S20 correction is recorded in `docs/integration-notes/s24-m5-1-acceptance.md`. GitHub-hosted runs after approximately 02:50 UTC are blocked before checkout with `runner_id=0` and no step/log payload, so this preflight file must not be read as a final green CI record.
+
 ## Baseline audit
 
 At the initial preflight read, S20–S24 branches all pointed at the same plan commit. During the S24 preflight, read-only synchronization then observed upstream work beginning without integrating it prematurely:
