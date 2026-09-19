@@ -135,19 +135,40 @@ test('S24 preflight: required desktop viewports stay inside the player shell wit
         map:rect('.map-plate'),
         quest:rect('.quest-tracker'),
         menu:rect('.menu-button'),
+        bottomLeft:rect('.field-bottom-left'),
+        bottomRight:rect('.field-bottom-right'),
+        legacySlots:[...document.querySelectorAll<HTMLButtonElement>('.legacy-slot')].map(node=>({disabled:node.disabled})),
       };
     });
     expect(geometry.scrollWidth).toBeLessThanOrEqual(size.width);
 
-    const regions=[geometry.player,geometry.map,geometry.quest,geometry.menu].filter(Boolean) as Array<{left:number;top:number;right:number;bottom:number;width:number;height:number}>;
+    const regions=[geometry.player,geometry.map,geometry.quest,geometry.menu,geometry.bottomLeft,geometry.bottomRight].filter(Boolean) as RectLike[];
     for(const region of regions){
       expect(region.left).toBeGreaterThanOrEqual(-1);
       expect(region.top).toBeGreaterThanOrEqual(-1);
       expect(region.right).toBeLessThanOrEqual(size.width+1);
       expect(region.bottom).toBeLessThanOrEqual(size.height+1);
     }
-    for(let i=0;i<regions.length;i++)for(let j=i+1;j<regions.length;j++){
-      expect(overlap(regions[i],regions[j])).toBe(0);
+    // S21 capability gate: once the original-structure-first bottom regions
+    // exist, enforce S21's published geometry contract rather than merely
+    // recording screenshots.
+    if(geometry.bottomLeft&&geometry.bottomRight){
+      expect(geometry.player).not.toBeNull();
+      expect(geometry.quest).not.toBeNull();
+      expect(geometry.map).not.toBeNull();
+      expect(geometry.player!.width).toBeLessThanOrEqual(330);
+      expect(geometry.player!.height).toBeLessThanOrEqual(64);
+      expect(size.width-geometry.quest!.right).toBeLessThanOrEqual(10);
+      expect(size.height-geometry.bottomLeft.bottom).toBeLessThanOrEqual(10);
+      expect(size.height-geometry.bottomRight.bottom).toBeLessThanOrEqual(10);
+      expect(geometry.map!.width).toBeLessThanOrEqual(140);
+      expect(overlap(geometry.bottomLeft,geometry.bottomRight)).toBe(0);
+      expect(geometry.legacySlots.length).toBeGreaterThanOrEqual(7);
+      expect(geometry.legacySlots.every(slot=>slot.disabled)).toBe(true);
+    }else{
+      for(let i=0;i<regions.length;i++)for(let j=i+1;j<regions.length;j++){
+        expect(overlap(regions[i],regions[j])).toBe(0);
+      }
     }
 
     geometries[`${size.width}x${size.height}`]=geometry;
