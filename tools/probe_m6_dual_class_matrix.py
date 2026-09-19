@@ -39,6 +39,19 @@ ABILITY_FIELDS = {
     1: "portrait_id",
     2: "hp",
     3: "mp",
+    4: "con",
+    5: "mcon",
+    6: "wis",
+    7: "mwis",
+    8: "str",
+    9: "mstr",
+    10: "dex",
+    11: "mdex",
+    12: "int",
+    13: "mint",
+    14: "reg",
+    15: "mreg",
+    16: "speed_sp",
     17: "move",
     18: "hit",
     19: "evasion",
@@ -46,26 +59,68 @@ ABILITY_FIELDS = {
     21: "magic_hit",
     22: "magic_evasion",
     23: "range",
+    24: "unit_class_raw",
     25: "cry_hit_reaction_selector",
+    26: "move_tick_decrement",
+    27: "attack_tick_decrement",
+    28: "rest_tick_decrement",
+    29: "magic_tick_rate",
+    30: "command_raw",
+    31: "acom_raw",
+    32: "pcom_raw",
+    33: "authored_gold_field",
+    34: "authored_exp_field",
     35: "attribute",
     36: "weapon_damage",
     37: "defence",
     38: "magic_damage",
     39: "magic_defence",
+    40: "sub_magic_raw",
+    41: "price",
+    42: "face",
+    43: "shadow",
     44: "class_name_raw",
     45: "class_description_raw",
 }
+
+LEVELABL_COLUMNS = [
+    "class_id",
+    "level",
+    "con_delta",
+    "wis_delta",
+    "str_delta",
+    "dex_delta",
+    "int_delta",
+    "reg_delta",
+    "magic_level_up_raw",
+    "points",
+    "class_link_raw",
+    "secondary_money_raw",
+    "secondary_exp_raw",
+    "experience",
+    "sub_magic_id",
+    "usable_skill_id",
+    "hire_mercenary_id",
+]
 MAGIC_COLUMNS = [
     "skill_id", "name", "attack_type", "distance", "area", "mp_cost", "time_raw",
     "team_mask", "unit_mask", "effect_a", "effect_b", "effect_c", "tick",
     "skill_level", "magic_pattern_id", "icon_index", "iteration", "explanation",
 ]
 ITEM_FIELDS = {
+    3: "equip_slot_raw",
+    5: "equip_level_requirement",
     21: "minimum_damage", 22: "maximum_damage", 23: "defence", 24: "attack_range",
     25: "magic_power", 26: "minimum_magic_damage", 27: "maximum_magic_damage",
     28: "magic_defence", 29: "magic_range", 31: "accuracy_rate", 32: "evasion_rate",
     33: "critical_rate_label_conservative", 34: "magic_accuracy_rate", 35: "magic_evasion_rate",
     44: "damage_field_semantics_unexpanded", 45: "damage_type_field_semantics_unexpanded",
+    47: "con_requirement", 48: "str_requirement", 49: "dex_requirement",
+    50: "int_requirement", 51: "wis_requirement", 52: "reg_requirement",
+}
+ITEM_CLASS_FLAG_COLUMNS = {
+    7: "보", 8: "비", 9: "기", 10: "수", 11: "창",
+    12: "궁", 13: "승", 14: "신", 15: "마", 16: "사",
 }
 TRAINING_ITEM_IDS = (1, 3, 10, 12, 25, 31)
 
@@ -206,7 +261,13 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
             continue
         if cid not in level_by_class:
             continue
-        rec = {"level_field": level, "skill_id_column14": skill_id, "raw_fields": [int_or_raw(v) for v in row]}
+        known = {name: int_or_raw(row[i]) for i, name in enumerate(LEVELABL_COLUMNS)}
+        rec = {
+            "level_field": level,
+            "skill_id_column14": skill_id,
+            "known_fields": known,
+            "raw_fields": [int_or_raw(v) for v in row],
+        }
         level_by_class[cid].append(rec)
         if skill_id > 0:
             skill_ids.add(skill_id)
@@ -248,6 +309,9 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
             items[iid] = {
                 "item_id": iid,
                 "known_authored_fields": typed_fields(row, ITEM_FIELDS),
+                "class_flag_columns": {
+                    label: int_or_raw(row[index]) for index, label in ITEM_CLASS_FLAG_COLUMNS.items()
+                },
                 "name": row[53],
                 "description": row[54],
                 "raw_fields": [int_or_raw(v) for v in row],
@@ -255,7 +319,10 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
 
     if client_root is not None:
         visuals = visual_from_root(client_root)
-        visual_source = {"kind": "fixed-client-root", "path": str(client_root)}
+        visual_source = {
+            "kind": "fixed-hash-2.2-client-root",
+            "note": "Runner-local path intentionally omitted; every target ANI/SPR file is identified by relative path, byte size and SHA-256.",
+        }
     elif client_files_csv is not None:
         visuals = visual_from_csv(client_files_csv)
         visual_source = {"kind": "verified-file-inventory-csv", "sha256": sha256(client_files_csv)}
@@ -268,6 +335,18 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
             row = ability_by_id[cid]
             stage_skills = level_by_class[cid]
             stage_skill_ids = sorted({int(r["skill_id_column14"]) for r in stage_skills if int(r["skill_id_column14"]) > 0})
+            transition_candidates = [
+                {
+                    "level_field": int(r["level_field"]),
+                    "class_link_raw": int(r["known_fields"]["class_link_raw"]),
+                    "evidence": "INFERRED",
+                    "reason": "levelabl.atr column 10 changes from the current class id to another target stage id on this authored row; server-side promotion semantics are not proven.",
+                }
+                for r in stage_skills
+                if isinstance(r["known_fields"].get("class_link_raw"), int)
+                and int(r["known_fields"]["class_link_raw"]) != cid
+                and int(r["known_fields"]["class_link_raw"]) in TARGET_IDS
+            ]
             stages.append({
                 "family": family,
                 "stage_ordinal": ordinal,
@@ -290,9 +369,12 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
                 },
                 "levelabl_rows": {
                     "evidence": "VERIFIED-STATIC-ORIGINAL",
-                    "note": "Raw rows are preserved. column 0=class, column 1=level and column 14=skill id follow the existing project converter; this does not prove a server-side unlock/promotion condition.",
+                    "source_columns": LEVELABL_COLUMNS,
+                    "note": "All 17 authored columns are preserved. The source header explicitly labels class, level, six stat increments, points and experience; columns with uncertain localized semantics keep *_raw names. Nonzero column 14 values match Magictbl.atr IDs. This still does not prove server-side unlock or promotion decisions.",
                     "rows": stage_skills,
                     "skill_ids": stage_skill_ids,
+                    "magic_ids": stage_skill_ids,
+                    "transition_candidates": transition_candidates,
                 },
                 "skills": [magic_by_id[sid] for sid in stage_skill_ids if sid in magic_by_id],
                 "missing_magic_rows": [sid for sid in stage_skill_ids if sid not in magic_by_id],
@@ -305,6 +387,26 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
         "table_sources": table_info,
         "visual_source": visual_source,
         "target_stage_ids": {"swordsman": SWORDSMAN_IDS, "wizard": WIZARD_IDS},
+        "ability_schema": {
+            "evidence": "VERIFIED-STATIC-ORIGINAL",
+            "known_columns": {str(index): name for index, name in ABILITY_FIELDS.items()},
+            "boundary": "Authored fields are client table facts. They are not a recovered server combat formula.",
+        },
+        "levelabl_schema": {
+            "evidence": "VERIFIED-STATIC-ORIGINAL",
+            "known_columns": {str(index): name for index, name in enumerate(LEVELABL_COLUMNS)},
+            "transition_interpretation": "INFERRED",
+            "server_application": "SERVER-BOUNDARY",
+        },
+        "item_requirement_schema": {
+            "evidence": "VERIFIED-STATIC-ORIGINAL",
+            "equip_slot_column": 3,
+            "equip_level_column": 5,
+            "class_flag_columns": {str(index): label for index, label in ITEM_CLASS_FLAG_COLUMNS.items()},
+            "stat_requirement_columns": {"con": 47, "str": 48, "dex": 49, "int": 50, "wis": 51, "reg": 52},
+            "class_flag_to_swordsman_wizard_mapping": "RECOVERED_SECONDARY",
+            "final_server_eligibility": "SERVER-BOUNDARY",
+        },
         "stages": stages,
         "skills_by_id": {str(k): magic_by_id[k] for k in sorted(magic_by_id)},
         "magic_patterns_by_id": {str(k): patterns[k] for k in sorted(patterns)},
@@ -314,7 +416,9 @@ def build(setlib_dir: Path, *, client_root: Path | None = None, client_files_csv
             "promotion_conditions": "SERVER-BOUNDARY",
             "retail_exp_curve": "SERVER-BOUNDARY",
             "skill_unlock_condition": "SERVER-BOUNDARY",
-            "equipment_class_stage_eligibility": "UNVERIFIED",
+            "equipment_class_stage_eligibility": "SERVER-BOUNDARY",
+            "ability_authored_gold_exp_application": "SERVER-BOUNDARY",
+            "levelabl_transition_application": "SERVER-BOUNDARY",
             "retail_damage_formula": "SERVER-BOUNDARY",
             "retail_reward_formula": "SERVER-BOUNDARY",
             "quest_npc_class_stage_decision": "SERVER-BOUNDARY",
