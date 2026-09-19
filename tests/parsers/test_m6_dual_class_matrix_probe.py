@@ -72,6 +72,14 @@ class MatrixProbeTest(unittest.TestCase):
         self.assertEqual(data["boundaries"]["promotion_semantics_and_conditions"], "SERVER-BOUNDARY")
         self.assertEqual(data["boundaries"]["server_exp_authority_and_transition"], "SERVER-BOUNDARY")
         self.assertEqual(data["item_requirement_schema"]["final_server_eligibility"], "SERVER-BOUNDARY")
+        item1 = data["representative_items"]["1"]
+        self.assertEqual(item1["known_authored_fields"]["con_requirement"], 10)
+        self.assertEqual(item1["known_authored_fields"]["str_requirement"], 11)
+        self.assertIsInstance(item1["class_flag_columns"], dict)
+        self.assertEqual(item1["class_flag_columns"]["보"], 1)
+        staff = data["representative_items"]["10"]
+        self.assertEqual(staff["known_authored_fields"]["int_requirement"], 11)
+        self.assertEqual(staff["class_flag_columns"]["마"], 1)
 
     def test_known_hash_verifier_rejects_wrong_sources(self):
         with tempfile.TemporaryDirectory() as td:
