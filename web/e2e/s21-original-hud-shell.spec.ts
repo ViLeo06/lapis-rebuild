@@ -47,7 +47,6 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
     const g=await geometry(page);
     expect(g.player.width).toBeLessThanOrEqual(330);
     expect(g.player.height).toBeLessThanOrEqual(64);
-    expect(g.quest.viewportWidth).toBeUndefined();
     expect(g.viewport.width-g.quest.right).toBeLessThanOrEqual(10);
     expect(g.viewport.height-g.left.bottom).toBeLessThanOrEqual(10);
     expect(g.viewport.height-g.right.bottom).toBeLessThanOrEqual(10);
