@@ -199,8 +199,8 @@ test('S23 explicit completion composes with the S12 receipt guard so turn-in rew
   assert.equal(completed.outcome.accepted,true);
   if(!completed.outcome.accepted)return;
   assert.equal(completed.outcome.action,'quest-completed');
-  state=completed.state;
-  assert.equal(state.quest.stage,'complete');
+  const completedState=completed.state;
+  assert.equal(completedState.quest.stage,'complete');
 
   const receipt=`quest:${TRAINING_QUEST_ID}:turn-in`;
   const first=applyQuestReward(
