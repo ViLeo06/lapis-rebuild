@@ -26,13 +26,15 @@ async function geometry(page:Page){
       const r=node.getBoundingClientRect();
       return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};
     };
-    const map=rect('.map-plate');
-    const player=rect('.player-plate');
-    const quest=rect('.quest-tracker');
-    const left=rect('.field-bottom-left');
-    const right=rect('.field-bottom-right');
+    const quickSlots=[...document.querySelectorAll<HTMLButtonElement>('.legacy-quick-slot')];
     return{
-      player,quest,left,right,map,
+      top:rect('.top-command-strip'),
+      map:rect('.small-map-plate'),
+      player:rect('.player-plate'),
+      quest:rect('.quest-tracker'),
+      deck:rect('.field-bottom-center'),
+      quick:rect('.field-bottom-right'),
+      quickSlots:quickSlots.map(node=>({disabled:node.disabled,text:node.textContent??''})),
       viewport:{width:innerWidth,height:innerHeight},
       scroll:{client:document.documentElement.clientWidth,width:document.documentElement.scrollWidth},
       background:getComputedStyle(document.querySelector<HTMLElement>('.quest-tracker')!).backgroundImage,
@@ -41,24 +43,41 @@ async function geometry(page:Page){
 }
 
 function expectDesktopGeometry(g:Awaited<ReturnType<typeof geometry>>){
-  expect(g.player.width).toBeLessThanOrEqual(330);
-  expect(g.player.height).toBeLessThanOrEqual(64);
+  expect(g.top.y).toBeGreaterThanOrEqual(0);
+  expect(g.top.y).toBeLessThanOrEqual(1);
+  expect(g.top.height).toBeGreaterThanOrEqual(28);
+  expect(g.top.height).toBeLessThanOrEqual(36);
+  expect(g.top.width).toBeGreaterThanOrEqual(g.viewport.width-1);
+
+  expect(g.player.width).toBeLessThanOrEqual(300);
+  expect(g.player.height).toBeLessThanOrEqual(70);
+  expect(g.player.x).toBeLessThanOrEqual(10);
+  expect(g.viewport.height-g.player.bottom).toBeLessThanOrEqual(10);
+
+  expect(g.map.x).toBeLessThanOrEqual(10);
+  expect(g.map.y).toBeGreaterThanOrEqual(g.top.bottom);
+  expect(g.map.width).toBeLessThanOrEqual(160);
+
   const questRightGap=g.viewport.width-g.quest.right;
-  const leftBottomGap=g.viewport.height-g.left.bottom;
-  const rightBottomGap=g.viewport.height-g.right.bottom;
   expect(questRightGap).toBeGreaterThanOrEqual(0);
   expect(questRightGap).toBeLessThanOrEqual(10);
-  expect(leftBottomGap).toBeGreaterThanOrEqual(0);
-  expect(leftBottomGap).toBeLessThanOrEqual(10);
-  expect(rightBottomGap).toBeGreaterThanOrEqual(0);
-  expect(rightBottomGap).toBeLessThanOrEqual(10);
-  expect(g.map.width).toBeLessThanOrEqual(140);
-  expect(g.left.right).toBeLessThan(g.right.x);
+  expect(g.quest.y).toBeGreaterThanOrEqual(g.top.bottom);
+
+  expect(g.deck.height).toBeLessThanOrEqual(138);
+  expect(g.viewport.height-g.deck.bottom).toBeLessThanOrEqual(10);
+  expect(g.viewport.height-g.quick.bottom).toBeLessThanOrEqual(10);
+  expect(g.viewport.width-g.quick.right).toBeLessThanOrEqual(10);
+  expect(g.player.right).toBeLessThan(g.deck.x);
+  expect(g.deck.right).toBeLessThan(g.quick.x);
+
+  expect(g.quickSlots).toHaveLength(8);
+  expect(g.quickSlots.every(slot=>slot.disabled)).toBe(true);
+  for(const key of ['A','S','D','F','Z','X','C','V'])expect(g.quickSlots.some(slot=>slot.text.includes(key))).toBe(true);
   expect(g.scroll.width).toBeLessThanOrEqual(g.scroll.client);
 }
 
 for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
-  test(`S21 static HUD anchors at ${viewport.width}x${viewport.height}`,async({page})=>{
+  test(`S20/S21 static HUD anchors at ${viewport.width}x${viewport.height}`,async({page})=>{
     await page.setViewportSize(viewport);
     await show(page,base);
     const g=await geometry(page);
@@ -68,7 +87,7 @@ for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
   });
 }
 
-test('S21 diagnostics remain opt-in and can be closed',async({page})=>{
+test('S20/S21 diagnostics remain opt-in and can be closed',async({page})=>{
   await page.setViewportSize({width:1366,height:768});
   await show(page,{...base,menu:{...base.menu,devEnabled:true},diagnostics:{...base.diagnostics,open:true}});
   const panel=page.locator('#developer-diagnostics');
@@ -78,7 +97,7 @@ test('S21 diagnostics remain opt-in and can be closed',async({page})=>{
 });
 
 for(const viewport of [{width:1366,height:768},{width:1920,height:1080}]){
-  test(`S21 integrated M5 HUD remains anchored at ${viewport.width}x${viewport.height}`,async({page})=>{
+  test(`S20/S21 integrated M5 HUD remains anchored at ${viewport.width}x${viewport.height}`,async({page})=>{
     await page.setViewportSize(viewport);
     await page.goto('/?m4=1');
     await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready&&!!window.lapisM4);
