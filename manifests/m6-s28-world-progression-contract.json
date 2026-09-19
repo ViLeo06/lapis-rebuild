@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "id": "s28-m6-world-progression-contract",
+  "baseline": "4aea5b81fa4cca00c9a80b3ff2389eb391c09b17",
+  "provenance": "RECONSTRUCTION_POLICY",
+  "contracts": {
+    "inventory": {
+      "module": "web/src/progression/m6-inventory.ts",
+      "authority": "validateM6InventoryCapacity",
+      "default_policy_id": "m6-technical-inventory-guardrails-v1"
+    },
+    "equipment": {
+      "module": "web/src/progression/m6-equipment.ts",
+      "authority": "validateM6EquipmentLoadout",
+      "supports": [
+        "weapon",
+        "armor",
+        "accessory"
+      ],
+      "evidence_labels": [
+        "VERIFIED",
+        "VERIFIED-STATIC-ORIGINAL",
+        "VERIFIED-HISTORICAL",
+        "RECOVERED_SECONDARY",
+        "INFERRED",
+        "SERVER-BOUNDARY",
+        "RECONSTRUCTION_POLICY",
+        "UNVERIFIED"
+      ]
+    },
+    "quest_chain": {
+      "module": "web/src/world/m6-quest-chain.ts",
+      "objectives": [
+        "battle",
+        "item",
+        "npc"
+      ],
+      "lifecycle": [
+        "locked",
+        "available",
+        "active",
+        "ready_to_turn_in",
+        "complete"
+      ],
+      "turn_in": "explicit"
+    },
+    "promotion": {
+      "module": "web/src/progression/m6-stage-promotion.ts",
+      "transition": "adjacent-stage-only",
+      "receipt": "promotion receipt persisted in M6 save extension"
+    },
+    "world_gates": {
+      "module": "web/src/world/m6-progression-gates.ts",
+      "targets": [
+        "scene-transition",
+        "npc-interaction",
+        "encounter"
+      ]
+    },
+    "growth_authority": {
+      "module": "web/src/progression/m6-growth-authority.ts",
+      "class_specific_data": "injected by S26/S27"
+    },
+    "save": {
+      "base_schema": "SaveV2",
+      "extension_field": "m6",
+      "extension_schema": 1,
+      "migration_entrypoint": "migrateSaveToM6",
+      "backward_compatible_with": [
+        "M5.1 SaveV2",
+        "S7 v1"
+      ]
+    }
+  },
+  "server_boundary": [
+    "retail quest eligibility and prerequisite evaluation",
+    "retail reward values and reward authority",
+    "retail promotion levels and promotion conditions",
+    "retail stage/level equipment eligibility",
+    "retail map/NPC/encounter progression bindings"
+  ],
+  "upstream_handoff": {
+    "S25": "replace legacy/unverified item and eligibility adapters when canonical matrix is available",
+    "S26": "provide swordsman stage track and class-specific progression contracts",
+    "S27": "provide wizard stage track and class-specific progression contracts",
+    "S29": "bind contracts into shared runtime, UI, scene, battle and final SaveV2 flow"
+  }
+}
