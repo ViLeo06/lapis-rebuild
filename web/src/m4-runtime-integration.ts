@@ -269,6 +269,7 @@ export class M4RuntimeIntegration{
       else if(action==='zoom-in'){this.scene.zoomIn();this.setNotice('视角已放大');}
       else if(action==='zoom-out'){this.scene.zoomOut();this.setNotice('视角已缩小');}
       else if(action==='zoom-reset'){this.scene.resetZoom();this.scene.focusPlayer();this.setNotice('视角已恢复 1:1 并居中角色');}
+      else if(action==='interact')this.beginNpcInteraction(undefined,'pointer');
       else if(action==='attack')this.scene.attack(null);
       else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
       else if(action==='rest')this.rest();
