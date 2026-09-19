@@ -46,6 +46,7 @@ async function selectTarget(page:Page,id:string){
 }
 
 // Final gate intentionally uses real pointer delivery after the Phaser logical-scroll adapter fix.
+// S22 private-smoke must traverse the rendered training-guide pointer target against the fixed-hash M5 pack.
 // Fixed-hash rerun follows a fully green synthetic Chromium suite with battle focus center semantics preserved.
 test('M5 private-original playable recovery: camera NPC door monsters balance quest',async({page})=>{
   test.setTimeout(210000);
