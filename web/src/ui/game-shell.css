@@ -526,3 +526,58 @@
   .battle-state{top:94px;right:5px;width:190px}
   .command-deck{left:5px;width:calc(100vw - 10px)}
 }
+
+
+/* S24 mobile touch contract: desktop evidence geometry above remains unchanged. */
+.top-command-button,.battle-command,.interaction-prompt{touch-action:manipulation}
+.interaction-prompt{
+  min-height:34px;
+  border-radius:0;
+  font:inherit;
+  cursor:pointer;
+}
+.interaction-prompt:focus-visible{outline:1px solid #d5ba82;outline-offset:2px}
+.touch-hint{display:none;color:#b9aa85;font:8px/1 ui-monospace,monospace;white-space:nowrap}
+
+@media(max-width:560px){
+  .top-command-strip{
+    height:44px;
+    padding:4px 5px;
+    justify-content:flex-end;
+    overflow:hidden;
+  }
+  .top-command-button:disabled{display:none}
+  .top-command-button:not(:disabled){
+    flex:0 0 auto;
+    min-width:72px;
+    height:36px;
+    padding:4px 10px;
+    font-size:10px;
+  }
+  .small-map-plate,.quest-tracker{top:50px}
+  .field-bottom-right{display:none}
+  .interaction-prompt{
+    bottom:70px;
+    min-height:44px;
+    max-width:calc(100vw - 20px);
+    padding:7px 10px;
+    font-size:11px;
+  }
+  .interaction-prompt .touch-hint{display:inline}
+  .target-plate{top:50px}
+  .battle-state{top:112px}
+  .command-deck{
+    display:flex;
+    flex-wrap:nowrap;
+    align-content:stretch;
+    gap:6px;
+    min-height:58px;
+    max-height:none;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+  .command-deck .skill-deck{flex:0 0 auto;overflow:visible}
+  .battle-command{min-width:88px;min-height:48px;padding:6px 8px}
+  .skill-command{min-width:112px}
+}
