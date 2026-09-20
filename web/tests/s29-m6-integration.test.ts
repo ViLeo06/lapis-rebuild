@@ -52,12 +52,7 @@ test('S29 promotion authority walks wizard 109 through 199 without direct stage 
   runTrack('109',[109,119,129,139,149,159,169,179,189,199]);
 });
 
-test('S29 staged player skill views remain bounded by implemented runtime effects',()=>{
-  assert.deepEqual(m6SkillIdsForCharacter(100),[1101]);
-  assert.deepEqual(m6SkillIdsForCharacter(110),[1101,1201]);
-  assert.deepEqual(m6SkillIdsForCharacter(120),[1101,1201,1301]);
-  assert.deepEqual(m6SkillIdsForCharacter(109),[19101]);
-  assert.deepEqual(m6SkillIdsForCharacter(119),[19101,19201]);
-  assert.deepEqual(m6SkillIdsForCharacter(129),[19101,19201,19301]);
-  assert.deepEqual(m6SkillIdsForCharacter(199),[19101,19201,19301]);
+test('S29 preserves the accepted M5.1 three-skill roster across all M6 stages',()=>{
+  for(const id of [100,110,120,130,140,150,160,170,180,190])assert.deepEqual(m6SkillIdsForCharacter(id),[1101,1201,1301]);
+  for(const id of [109,119,129,139,149,159,169,179,189,199])assert.deepEqual(m6SkillIdsForCharacter(id),[19101,19201,19301]);
 });
