@@ -98,14 +98,14 @@ def generate(client:Path,out:Path):
         tmp=Path(tmp_name);stage=tmp/'pack'
         subprocess.run([sys.executable,str(ROOT/'tools/prepare_prototype.py'),'--char-dir',str(client/'Char'),'--sgres-dir',str(client/'SGRes'),'--out',str(stage)],check=True,capture_output=True,text=True)
         manifest=json.loads((stage/'prototype.json').read_text())
-        manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets/content only. Map 7 and B1001/B4524/B4544 are original client resources; their M5 training-house/NPC/enemy gameplay bindings remain RECONSTRUCTION_POLICY.'}
+        manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets/content only. M6 character families B100..B190/B109..B199 plus map/NPC/monster resources are original client bytes; promotion, quest, encounter and reward bindings remain RECONSTRUCTION_POLICY.'}
         manifest['map']['render'].pop('output',None)
         maps={str(mid):map_payload(client/'SGRes',stage,mid,name) for mid,name in WEB_MAPS.items()}
         manifest['map']=maps['0'];manifest['maps']=maps
         manifest['visuals']={str(rid):visual_payload(client/'Char',stage,rid,label) for rid,label in WEB_VISUALS.items()}
         manifest['effects']={str(rid):effect_payload(client/'MagicRes',stage,rid) for rid in WEB_EFFECTS}
         manifest['content']=build_content(client,stage,tmp)
-        manifest['provenance']['pack_sha256']=hashlib.sha256(json.dumps({'schema':5,'inputs':sources,'maps':sorted(WEB_MAPS),'visuals':sorted(WEB_VISUALS),'effects':list(WEB_EFFECTS),'content':'quest-lib-v2'},sort_keys=True,separators=(',',':')).encode()).hexdigest()
+        manifest['provenance']['pack_sha256']=hashlib.sha256(json.dumps({'schema':6,'inputs':sources,'m6_characters':[100,110,120,130,140,150,160,170,180,190,109,119,129,139,149,159,169,179,189,199],'maps':sorted(WEB_MAPS),'visuals':sorted(WEB_VISUALS),'effects':list(WEB_EFFECTS),'content':'quest-lib-v2'},sort_keys=True,separators=(',',':')).encode()).hexdigest()
         for p in stage.rglob('index.json'):
             obj=json.loads(p.read_text());obj['source']=Path(obj['source']).name;p.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n')
         (stage/'prototype.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
