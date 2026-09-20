@@ -20,10 +20,11 @@ import type {JsonValue,SaveV2,SaveValidationContext} from './progression/save-sc
 import {applyM6Promotion} from './progression/m6-stage-promotion.ts';
 import type {M6StageProgressionState} from './progression/m6-stage-promotion.ts';
 import {createM6SaveExtension} from './progression/m6-save-extension.ts';
+import {equipM6Item} from './progression/m6-equipment.ts';
 import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration.ts';
 import type {M6SaveV2} from './progression/m6-save-migration.ts';
 import {
-  M6_CHARACTER_IDS,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
+  M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
   m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
 } from './m6-runtime-content.ts';
 import {ReconstructionWorldAuthority} from './world/world-authority.ts';
@@ -221,6 +222,15 @@ export class M4RuntimeIntegration{
     this.scene.equipItem=(id:number|null,slot:'weapon'|'armor')=>{
       try{
         if(this.scene.inBattleView)throw new Error('战斗中不能更换装备');
+        const definition=playableClassById(this.scene.character);
+        equipM6Item(
+          {weapon:this.rewards.inventory.equipped.weapon,armor:this.rewards.inventory.equipped.armor,accessory:null},
+          this.rewards.inventory,
+          M6_RUNTIME_EQUIPMENT_RULES,
+          {characterId:this.scene.character,family:definition.family,stageId:Number(this.scene.character),level:this.rewards.progression.level},
+          slot,
+          id,
+        );
         const inventory=equipProgression(this.rewards.inventory,this.scene.character,slot,id,CLASS_RESOLVER);
         this.rewards={...this.rewards,inventory};
         this.syncSceneInventory();
