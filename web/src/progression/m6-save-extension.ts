@@ -29,6 +29,7 @@ export function validateM6SaveExtension(raw:unknown,characterId:string):M6SaveEx
   if(characterFamily!==family)throw new Error('M6 save family does not match character');
   const stage=validateM6StageProgressionState(value.stage);
   if(stage.family!==family||classFamilyForCharacter(String(stage.stageId))!==family)throw new Error('M6 save stage family mismatch');
+  if(String(stage.stageId)!==characterId)throw new Error('M6 save stage does not match character');
   const questChain=validateM6QuestChainState(value.questChain);
   const equipment=validateM6EquipmentLoadoutShape(value.equipment);
   return{
