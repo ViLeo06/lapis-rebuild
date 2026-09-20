@@ -50,25 +50,25 @@
       "session": "S25",
       "integration_note": "docs/integration-notes/s25-m6-dual-class-matrix.md",
       "required": true,
-      "status": "pending"
+      "status": "integrated-pr-40"
     },
     {
       "session": "S26",
       "integration_note": "docs/integration-notes/s26-m6-swordsman-progression.md",
       "required": true,
-      "status": "pending"
+      "status": "integrated-pr-39"
     },
     {
       "session": "S27",
       "integration_note": "docs/integration-notes/s27-m6-wizard-progression.md",
       "required": true,
-      "status": "pending"
+      "status": "completed-directly-on-s29"
     },
     {
       "session": "S28",
       "integration_note": "docs/integration-notes/s28-m6-world-progression-content.md",
       "required": true,
-      "status": "pending"
+      "status": "integrated-pr-41"
     }
   ],
   "shared_runtime_owned_by_s29": [
@@ -83,19 +83,56 @@
   "current_baseline_constraints": {
     "playable_class_catalog_ids": [
       100,
-      109
+      110,
+      120,
+      130,
+      140,
+      150,
+      160,
+      170,
+      180,
+      190,
+      109,
+      119,
+      129,
+      139,
+      149,
+      159,
+      169,
+      179,
+      189,
+      199
     ],
     "runtime_save_character_ids": [
       "100",
-      "109"
+      "110",
+      "120",
+      "130",
+      "140",
+      "150",
+      "160",
+      "170",
+      "180",
+      "190",
+      "109",
+      "119",
+      "129",
+      "139",
+      "149",
+      "159",
+      "169",
+      "179",
+      "189",
+      "199"
     ],
-    "progression_scope": "single-global-state",
-    "save_shape": "single-character-plus-single-progression",
+    "progression_scope": "single-active-profession-per-save",
+    "save_shape": "SaveV2-plus-M6-extension-stage-quest-equipment",
     "equipment_slots": [
       "weapon",
-      "armor"
+      "armor",
+      "accessory-domain-placeholder"
     ],
-    "quest_model": "single-training-slice"
+    "quest_model": "M5.1 training player path mirrored into M6 quest/save authority; S28 generic quest-chain domain available for future content"
   },
   "required_upstream_contracts": {
     "S25": [
@@ -185,5 +222,25 @@
     "standalone-offline",
     "new-m6-wall-clock-soak",
     "user-playtest"
-  ]
+  ],
+  "integration_state": {
+    "s29_head": "2556c59e84b310ee559a1537c0b0c5422d0548f9",
+    "upstream_prs": {
+      "S25": 40,
+      "S26": 39,
+      "S27": "direct-on-S29",
+      "S28": 41
+    },
+    "production_runtime": {
+      "twenty_stage_class_catalog": true,
+      "twenty_stage_private_asset_pack": true,
+      "stage_aware_skills": true,
+      "stage_promotion": true,
+      "m6_save_extension": true,
+      "legacy_m5_1_save_migration": true,
+      "equipment_routed_through_m6_authority": true,
+      "single_active_profession_per_save": true
+    },
+    "final_validation": "RUNNING"
+  }
 }
