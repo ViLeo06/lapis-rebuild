@@ -1,4 +1,5 @@
 M6 final engineering validation trigger.
-Integrated runtime parent: 28b21cb3961e584e10535ed7ae35bab6f8c8e41b
-Validated preflight: 179/179 unit; 62 passed / 3 skipped browser E2E.
-This commit triggers fixed-hash private-original acceptance and the new M6 wall-clock soak.
+
+Runtime inputs: S25 + S26 + recovered S27 + S28 integrated through S29.
+Soak path: visible player menu -> new profession -> production reward/progression authority -> production promotion authority -> equipment -> SaveV2 load/save.
+Final validation head follows this trigger.
