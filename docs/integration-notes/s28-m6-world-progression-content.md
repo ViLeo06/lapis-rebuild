@@ -43,7 +43,7 @@ No retail promotion level, promotion quest, attribute-growth formula or server r
 
 - `web/src/progression/m6-canonical-evidence-adapter.ts`
   - consumes S25 canonical stage rows without turning `next_class_raw` into a retail promotion rule;
-  - preserves authored EXP / `next_class_raw` as `VERIFIED-STATIC-ORIGINAL` inputs;
+  - `canonicalProgressionEvidenceFromS25()` preserves authored EXP / `next_class_raw` as read-only `VERIFIED-STATIC-ORIGINAL` evidence for downstream consumers while keeping retail EXP formula/promotion trigger at `SERVER-BOUNDARY`;
   - converts S25 representative item evidence into S28 equipment candidates only through an explicit reconstruction adapter;
   - keeps raw `equip_level` and class flags separate from offline enforcement authority.
 
@@ -252,6 +252,7 @@ Stable S28 consumer surfaces remain:
 - `M6EquipmentRule`
 - `M6QuestChainDefinition`
 - `stageTrackFromS25CanonicalEvidence()`
+- `canonicalProgressionEvidenceFromS25()`
 - `equipmentRuleFromS25CanonicalItem()`
 
 ## S27 handoff
