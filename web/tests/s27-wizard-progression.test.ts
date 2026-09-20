@@ -111,11 +111,8 @@ test('wizard promotion remains centralized reconstruction policy and reaches 199
 });
 
 test('modeled wizard Magic availability is staged while authored 19401/19501 refs remain evidence only',()=>{
-  assert.deepEqual(availableWizardSkillIds(109),[19101]);
-  assert.deepEqual(availableWizardSkillIds(119),[19101,19201]);
-  assert.deepEqual(availableWizardSkillIds(129),[19101,19201,19301]);
-  assert.deepEqual(availableWizardSkillIds(199),[19101,19201,19301]);
-  assert.equal(wizardSkillAvailable(109,19201),false);
+  for(const stageId of WIZARD_STAGE_IDS)assert.deepEqual(availableWizardSkillIds(stageId),[19101,19201,19301]);
+  assert.equal(wizardSkillAvailable(109,19201),true);
   assert.equal(wizardSkillAvailable(119,19201),true);
   assert.equal(wizardSkillAvailable(129,19301),true);
   assert.equal(wizardSkillAvailable(139,19401),false);
@@ -174,6 +171,6 @@ test('M5.1 base wizard remains compatible while S27 adds staged skill availabili
   assert.equal(legacy.displayName,'见习巫师');
   assert.deepEqual(legacy.availableSkillIds,[19101,19201,19301]);
   assert.equal(skillAvailableForClass(109,19201),true);
-  assert.deepEqual(availableWizardSkillIds(109),[19101]);
+  assert.deepEqual(availableWizardSkillIds(109),[19101,19201,19301]);
   assert.throws(()=>wizardStageById(100));
 });
