@@ -380,4 +380,5 @@ test('M6 save extension fails closed on unknown fields and future extension sche
   const migrated=migrateSaveToM6(old,saveContext,content);
   assert.throws(()=>migrateSave({...migrated,m6:{...migrated.m6,unexpected:true}},saveContext),/Unknown M6 save extension field/);
   assert.throws(()=>migrateSave({...migrated,m6:{...migrated.m6,schema:2}},saveContext),/Unsupported M6 save extension/);
+  assert.throws(()=>migrateSave({...migrated,m6:{...migrated.m6,stage:{...migrated.m6.stage,stageId:110}}},saveContext),/stage does not match character/);
 });
