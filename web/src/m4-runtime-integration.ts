@@ -3,7 +3,7 @@ import type {Skill} from './battle.ts';
 import {actionReady,consumeAction} from './battle.ts';
 import {battleProfileForClass,magicReadinessCost} from './battle-profile.ts';
 import {nearestAnchor,referenceCellToScreen} from './coordinates.ts';
-import {playableClassById,isEquipmentCompatibleWithClass,skillAvailableForClass} from './content/classes/class-catalog.ts';
+import {playableClassById,isEquipmentCompatibleWithClass} from './content/classes/class-catalog.ts';
 import {skillById} from './content/skills/skill-catalog.ts';
 import rawSkills from '../../data/skills/mvp.json' with {type:'json'};
 import {BattlePresentation} from './presentation/battle-presentation.ts';
@@ -15,9 +15,17 @@ import type {EquipmentCompatibilityResolver} from './progression/equipment.ts';
 import {initialProgression} from './progression/progression.ts';
 import {applyBattleReward,applyQuestReward} from './progression/rewards.ts';
 import type {RewardState} from './progression/rewards.ts';
-import {migrateSave} from './progression/save-migration.ts';
-import {CURRENT_SAVE_VERSION,SAVE_KIND,serializeSaveV2} from './progression/save-schema.ts';
+import {CURRENT_SAVE_VERSION,SAVE_KIND} from './progression/save-schema.ts';
 import type {JsonValue,SaveV2,SaveValidationContext} from './progression/save-schema.ts';
+import {applyM6Promotion} from './progression/m6-stage-promotion.ts';
+import type {M6StageProgressionState} from './progression/m6-stage-promotion.ts';
+import {createM6SaveExtension} from './progression/m6-save-extension.ts';
+import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration.ts';
+import type {M6SaveV2} from './progression/m6-save-migration.ts';
+import {
+  M6_CHARACTER_IDS,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
+  m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
+} from './m6-runtime-content.ts';
 import {ReconstructionWorldAuthority} from './world/world-authority.ts';
 import type {WorldRuntimeState} from './world/world-authority.ts';
 import type {EncounterRequest,WorldState} from './world/world-model.ts';
@@ -100,6 +108,7 @@ export class M4RuntimeIntegration{
   readonly presentation=new BattlePresentation();
   world:WorldRuntimeState;
   rewards:RewardState;
+  m6Stage:M6StageProgressionState;
   pendingEncounter:EncounterRequest|null=null;
   menuOpen=false;
   developerMode=false;
@@ -132,6 +141,7 @@ export class M4RuntimeIntegration{
     this.spatial=m5?new SceneTransitionController(m5.house.graph,m5.house.triggers):null;
     this.world=this.worldAuthority.initial(m5?.content.start??START_STATE);
     this.rewards=createM4RewardState(scene.gold);
+    this.m6Stage=createM6StageState(scene.character);
   }
 
   install():void{
@@ -179,6 +189,7 @@ export class M4RuntimeIntegration{
       developerMode:this.developerMode,
       lastAudio:this.lastAudio,
       playableRecovery:!!this.m5World,
+      m6:{stageId:this.m6Stage.stageId,family:this.m6Stage.family,promotionReceipts:[...this.m6Stage.promotionReceipts],nextStageId:m6PromotionRuleForCharacter(this.scene.character)?.toStageId??null,canPromote:(m6PromotionRuleForCharacter(this.scene.character)?.minimumLevel??Infinity)<=this.rewards.progression.level},
       worldPlan:this.m5World?{doorCell:this.m5World.doorCell,interiorEntry:this.m5World.interiorEntry,interiorExit:this.m5World.interiorExit,encounterCell:this.m5World.encounterCell}:null,
     };
   }
@@ -198,7 +209,8 @@ export class M4RuntimeIntegration{
     const originalCharacter=this.scene.setCharacter.bind(this.scene);
     this.scene.setCharacter=(id:string)=>{
       originalCharacter(id);
-      if(!['100','109'].includes(this.scene.character))return;
+      if(!M6_CHARACTER_IDS.includes(this.scene.character))return;
+      if(String(this.m6Stage.stageId)!==this.scene.character)this.m6Stage=createM6StageState(this.scene.character);
       const reconciled=reconcileEquipmentForCharacter(this.rewards.inventory,this.scene.character,CLASS_RESOLVER);
       this.rewards={...this.rewards,inventory:reconciled.inventory};
       this.syncSceneInventory();
@@ -232,7 +244,7 @@ export class M4RuntimeIntegration{
 
     const originalAttack=this.scene.attack.bind(this.scene);
     this.scene.attack=(skill:Skill|null)=>{
-      if(skill&&!skillAvailableForClass(this.scene.character,skill.skill_id)){
+      if(skill&&!m6SkillAvailableForCharacter(this.scene.character,skill.skill_id)){
         this.setNotice('当前职业不能使用该技能');return;
       }
       const before=this.scene.snapshot();
@@ -282,6 +294,7 @@ export class M4RuntimeIntegration{
       else if(action==='return')this.returnFromBattle();
       else if(action==='class-swordsman')this.changeClass('100');
       else if(action==='class-wizard')this.changeClass('109');
+      else if(action==='m6-promote')this.promoteM6Stage();
     });
     document.addEventListener('change',event=>{
       const target=(event.target as HTMLElement).closest<HTMLInputElement>('[data-action="dev-toggle"]');
@@ -303,7 +316,7 @@ export class M4RuntimeIntegration{
       if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
       if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.beginNpcInteraction(undefined,'keyboard');return;}
       if(this.scene.inBattleView&&['1','2','3'].includes(event.key)){
-        const skills=playableClassById(this.scene.character).availableSkillIds;
+        const skills=m6SkillIdsForCharacter(this.scene.character);
         const skillId=skills[Number(event.key)-1];if(skillId)this.useSkill(skillId);
       }
       if(this.scene.inBattleView&&(event.key==='r'||event.key==='R'))this.rest();
@@ -311,17 +324,52 @@ export class M4RuntimeIntegration{
   }
 
   private changeClass(id:'100'|'109'):void{
-    if(this.scene.inBattleView){this.setNotice('请先结束战斗再切换职业');return;}
+    if(this.scene.inBattleView){this.setNotice('请先结束战斗再开始新职业档');return;}
     this.activeDialogue=null;
+    this.pendingEncounter=null;
+    this.rewards=createM4RewardState(0);
+    this.world=this.worldAuthority.initial(this.m5World?.content.start??START_STATE);
+    this.m6Stage=createM6StageState(id);
     this.scene.setCharacter(id);
+    this.m6Stage=createM6StageState(id);
+    this.syncSceneInventory();
+    this.applyWorldState(this.m5World?.content.start??START_STATE);
     this.menuOpen=false;
+    this.setNotice(id==='100'?'已开始新的剑士职业档':'已开始新的巫师职业档');
+    this.render(this.scene.snapshot());
+  }
+
+  private promoteM6Stage():void{
+    if(this.scene.inBattleView){this.setNotice('请先结束战斗再晋阶');return;}
+    const rule=m6PromotionRuleForCharacter(this.scene.character);
+    if(!rule){this.setNotice('当前已经是本职业第十阶段');return;}
+    const result=applyM6Promotion(
+      m6StageTrackForCharacter(this.scene.character),
+      this.m6Stage,
+      rule,
+      {
+        level:this.rewards.progression.level,
+        questFlags:this.rewards.questFlags,
+        questChain:m6QuestChainForLegacyStage(this.world.quest.stage,this.rewards.questFlags),
+        inventory:this.rewards.inventory,
+      },
+    );
+    if(!result.applied){
+      this.setNotice(result.duplicate?'该晋阶已经完成':`暂不能晋阶：${result.reasons.join('、')}`);
+      return;
+    }
+    this.scene.setCharacter(String(result.state.stageId));
+    this.m6Stage=result.state;
+    this.applyClassProfile(true);
+    this.menuOpen=false;
+    this.setNotice(`晋阶完成：${playableClassById(result.state.stageId).displayName} / RECONSTRUCTION_POLICY`);
     this.render(this.scene.snapshot());
   }
 
   private useSkill(skillId:number):void{
     try{
       const definition=skillById(skillId);
-      if(!skillAvailableForClass(this.scene.character,skillId))throw new Error('当前职业不能使用该技能');
+      if(!m6SkillAvailableForCharacter(this.scene.character,skillId))throw new Error('当前职业不能使用该技能');
       if(this.scene.state.mp<definition.mpCost)throw new Error('MP 不足');
       const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
       if(definition.targetType!=='self'&&!target)throw new Error('请选择存活目标');
@@ -521,7 +569,7 @@ export class M4RuntimeIntegration{
 
   private combatEquipment(){
     const bonus=legacyEquipmentBonus(this.scene.inventory,this.scene.character);
-    return this.scene.character==='109'?{defense:bonus.defense,magicAttack:bonus.attack}:{attack:bonus.attack,defense:bonus.defense};
+    return playableClassById(this.scene.character).family==='wizard'?{defense:bonus.defense,magicAttack:bonus.attack}:{attack:bonus.attack,defense:bonus.defense};
   }
 
   private playerCombatStats(){
@@ -537,7 +585,7 @@ export class M4RuntimeIntegration{
   }
 
   private applyClassProfile(resetVitals:boolean):void{
-    if(!['100','109'].includes(this.scene.character))return;
+    if(!M6_CHARACTER_IDS.includes(this.scene.character))return;
     const definition=playableClassById(this.scene.character);
     const profile=battleProfileForClass(this.scene.character);
     if(this.m5World){
@@ -591,17 +639,22 @@ export class M4RuntimeIntegration{
   private saveContext():SaveValidationContext{
     const mapBounds:Record<number,{width:number;height:number}>={};
     for(const map of Object.values(this.scene.pack.maps))mapBounds[map.manifest.id]={width:map.manifest.render.width,height:map.manifest.render.height};
-    return{pack:this.scene.pack.digest,characters:['100','109'],mapBounds};
+    return{pack:this.scene.pack.digest,characters:M6_CHARACTER_IDS,mapBounds};
   }
 
   makeSave():SaveV2{
     if(this.scene.inBattleView)throw new Error('战斗中不能存档');
     if(this.scene.route.length)throw new Error('请等待移动结束后再存档');
+    const m6=createM6SaveExtension(this.scene.character,{
+      stage:this.m6Stage,
+      questChain:m6QuestChainForLegacyStage(this.world.quest.stage,this.rewards.questFlags),
+      equipment:{weapon:this.rewards.inventory.equipped.weapon,armor:this.rewards.inventory.equipped.armor,accessory:null},
+    });
     return{
       kind:SAVE_KIND,version:CURRENT_SAVE_VERSION,pack:this.scene.pack.digest,character:this.scene.character,mapId:this.scene.mapId,
       x:this.scene.anchor.x,y:this.scene.anchor.y,gold:this.rewards.gold,inventory:this.rewards.inventory,
       quest:{questId:this.world.quest.questId,stage:this.world.quest.stage} as JsonValue,
-      questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],savedAt:new Date().toISOString(),
+      questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],m6,savedAt:new Date().toISOString(),
     };
   }
 
@@ -615,16 +668,17 @@ export class M4RuntimeIntegration{
     catch(error){this.setNotice(`读档失败：${String(error)}`);}
   }
 
-  exportJson():string{return serializeSaveV2(this.makeSave(),this.saveContext());}
+  exportJson():string{return serializeM6SaveV2(this.makeSave() as M6SaveV2,this.saveContext(),M6_SAVE_CONTENT);}
 
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
     this.activeDialogue=null;
-    const save=migrateSave(raw,this.saveContext());
+    const save=migrateSaveToM6(raw,this.saveContext(),M6_SAVE_CONTENT);
     const quest=parseM4Quest(save.quest,this.worldAuthority.content.questId);
     this.rewards={gold:save.gold,inventory:save.inventory,progression:save.progression,questFlags:save.questFlags,rewardReceipts:save.rewardReceipts};
     this.world={world:{mapId:save.mapId,...(()=>{const cell=nearestAnchor(save.x,save.y);return{x:cell[0],y:cell[1]};})()},quest};
     this.scene.setCharacter(save.character);
+    this.m6Stage=save.m6.stage;
     this.scene.setMap(save.mapId);
     this.scene.anchor={x:save.x,y:save.y};
     this.scene.route=[];
@@ -723,7 +777,7 @@ export class M4RuntimeIntegration{
   }
 
   private render(snapshot:Snapshot):void{
-    if(!['100','109'].includes(snapshot.character))return;
+    if(!M6_CHARACTER_IDS.includes(snapshot.character))return;
     const definition=playableClassById(snapshot.character);
     const fieldStats=this.m5World?this.playerCombatStats():null;
     const player:PlayerHudState={
@@ -741,7 +795,7 @@ export class M4RuntimeIntegration{
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
-        skills:definition.availableSkillIds.map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
+        skills:m6SkillIdsForCharacter(snapshot.character).map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
       };
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);
@@ -754,7 +808,12 @@ export class M4RuntimeIntegration{
     if(menuHtml!==this.menuHtml){
       this.menuRoot.innerHTML=menuHtml;
       const grid=this.menuRoot.querySelector('.menu-grid');
-      if(grid)grid.insertAdjacentHTML('beforeend','<button type="button" data-action="class-swordsman">切换剑士</button><button type="button" data-action="class-wizard">切换巫师</button>');
+      if(grid){
+        const promotion=m6PromotionRuleForCharacter(snapshot.character);
+        const promotionLabel=promotion?`晋阶至 ${playableClassById(promotion.toStageId).displayName}（Lv.${promotion.minimumLevel}）`:'已达第十阶段';
+        const disabled=promotion&&this.rewards.progression.level>=(promotion.minimumLevel??1)?'':' disabled';
+        grid.insertAdjacentHTML('beforeend',`<button type="button" data-action="m6-promote"${promotion?disabled:' disabled'}>${promotionLabel}</button><button type="button" data-action="class-swordsman">新建剑士档</button><button type="button" data-action="class-wizard">新建巫师档</button>`);
+      }
       this.menuHtml=menuHtml;
     }
     const diagnostics:DiagnosticsState={
