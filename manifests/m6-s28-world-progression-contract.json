@@ -83,7 +83,14 @@
       ],
       "item_raw_evidence": "VERIFIED-STATIC-ORIGINAL",
       "class_flag_consumer_mapping": "INFERRED",
-      "enforcement_authority": "RECONSTRUCTION_POLICY"
+      "enforcement_authority": "RECONSTRUCTION_POLICY",
+      "progression_evidence_entrypoint": "canonicalProgressionEvidenceFromS25",
+      "progression_values_preserved": [
+        "exp_values",
+        "next_class_raw"
+      ],
+      "retail_exp_formula": "SERVER-BOUNDARY",
+      "retail_promotion_trigger": "SERVER-BOUNDARY"
     }
   },
   "server_boundary": [
