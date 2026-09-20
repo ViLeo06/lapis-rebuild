@@ -1,10 +1,36 @@
-import type {EquipmentSelection, EquipmentSlot, PlayableClassDefinition} from '../content-types.ts';
+import swordsmanRows from '../../../../data/classes/swordsman.json' with { type: 'json' };
+import wizardRows from '../../../../data/classes/wizard.json' with { type: 'json' };
+import type {EquipmentSelection,EquipmentSlot,PlayableClassDefinition} from '../content-types.ts';
 import {skillById} from '../skills/skill-catalog.ts';
 import {isEquipmentCompatible,reconcileEquipmentForFamily} from './equipment-compatibility.ts';
+import {buildPlayableClass} from './class-helpers.ts';
 import {SWORDSMAN} from './swordsman.ts';
 import {WIZARD} from './wizard.ts';
+import {availableSwordsmanSkillIds,SWORDSMAN_STAGE_IDS} from '../../classes/swordsman-ten-stage.ts';
+import {availableWizardSkillIds,WIZARD_STAGE_IDS} from '../../classes/wizard-ten-stage.ts';
 
-const definitions=[SWORDSMAN,WIZARD] as const;
+type AuthoredRow=(typeof swordsmanRows)[number];
+
+function stagedDefinitions():PlayableClassDefinition[]{
+  const swordById=new Map((swordsmanRows as AuthoredRow[]).map(row=>[row.class_id,row]));
+  const wizardById=new Map((wizardRows as AuthoredRow[]).map(row=>[row.class_id,row]));
+  const out:PlayableClassDefinition[]=[SWORDSMAN,WIZARD];
+  for(const id of SWORDSMAN_STAGE_IDS){
+    if(id===100)continue;
+    const row=swordById.get(id);
+    if(!row)throw new Error(`Missing swordsman class row ${id}`);
+    out.push(buildPlayableClass(row,'swordsman',availableSwordsmanSkillIds(id)));
+  }
+  for(const id of WIZARD_STAGE_IDS){
+    if(id===109)continue;
+    const row=wizardById.get(id);
+    if(!row)throw new Error(`Missing wizard class row ${id}`);
+    out.push(buildPlayableClass(row,'wizard',availableWizardSkillIds(id)));
+  }
+  return out;
+}
+
+const definitions=stagedDefinitions();
 
 export const CLASS_CATALOG:Readonly<Record<number,PlayableClassDefinition>>=Object.freeze(
   Object.fromEntries(definitions.map(definition=>[definition.classId,definition])) as Record<number,PlayableClassDefinition>,
