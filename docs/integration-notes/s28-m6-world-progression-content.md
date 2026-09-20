@@ -19,7 +19,7 @@ The implementation deliberately does **not** modify:
 - `Backlog.md`
 - `docs/evidence-ledger.md`
 
-S25/S26/S27 integration notes were not present on their dedicated branches when S28 implementation started, so this branch uses injected contracts and current-main evidence rather than duplicating their future implementations.
+S25/S26/S27 integration notes were not present when S28 implementation started. Before closeout, S25 and S26 became available and were read/reconciled; S27 was still unavailable. S28 therefore now consumes S25 evidence through an explicit adapter and aligns its generic stage contract with S26's stable handoff, while retaining injected interfaces so no parallel implementation is copied.
 
 ## Deliverables
 
@@ -39,6 +39,16 @@ S25/S26/S27 integration notes were not present on their dedicated branches when 
 
 No retail promotion level, promotion quest, attribute-growth formula or server reward is asserted by this layer.
 
+### Canonical evidence adapter
+
+- `web/src/progression/m6-canonical-evidence-adapter.ts`
+  - consumes S25 canonical stage rows without turning `next_class_raw` into a retail promotion rule;
+  - preserves authored EXP / `next_class_raw` as `VERIFIED-STATIC-ORIGINAL` inputs;
+  - converts S25 representative item evidence into S28 equipment candidates only through an explicit reconstruction adapter;
+  - keeps raw `equip_level` and class flags separate from offline enforcement authority.
+
+This adapter is intentionally data-injected instead of importing S25's branch file directly. After S25 is integrated into main, S29 can pass `manifests/m6-dual-class-ten-stage-matrix.json` records through this adapter without creating a second canonical matrix.
+
 ### Inventory / equipment
 
 - `web/src/progression/m6-inventory.ts`
@@ -53,7 +63,7 @@ No retail promotion level, promotion quest, attribute-growth formula or server r
   - promotion-time reconciliation;
   - `legacyTrainingEquipmentRules()` adapter for current M5.1 catalog.
 
-Important boundary: current `data/items/training-catalog.json` proves item records/names/descriptions from the fixed client, but its training role/slot/bonus compatibility layer is not sufficient evidence for retail class/stage/level eligibility. The legacy adapter therefore preserves `UNVERIFIED` / `SERVER-BOUNDARY` labels instead of promoting those fields to original facts.
+Important boundary: current `data/items/training-catalog.json` proves item records/names/descriptions from the fixed client, but its training role/slot/bonus compatibility layer is not sufficient evidence for retail class/stage/level eligibility. S25 additionally proves that `itemtbl.atr` contains equip-position, equip-level and ten class/category flag fields. S28 preserves those raw fields as `VERIFIED-STATIC-ORIGINAL`; the flag→class consumer relation remains `INFERRED`, and final eligibility/enforcement remains `SERVER-BOUNDARY` unless an explicit `RECONSTRUCTION_POLICY` chooses to apply it.
 
 Accessory is supported structurally. S28 does not invent an accessory item or retail accessory restriction where the current stable catalog has none.
 
@@ -166,7 +176,8 @@ This is an offline reconstruction transaction model. It is not a claim about the
 
 - S12 SaveV2 engineering behavior and existing migration contract.
 - Fixed-client item table records already represented by the training catalog where the catalog labels them `VERIFIED`.
-- M6 target class/stage IDs supplied by the project plan are accepted as identities; S28 does not infer retail promotion requirements from numeric adjacency.
+- S25 canonical matrix stage IDs, authored `levelabl.atr` EXP rows and `next_class_raw` values are `VERIFIED-STATIC-ORIGINAL`; interpreting the final row as a promotion trigger remains `INFERRED` and offline enforcement remains policy.
+- S25 `itemtbl.atr` equip-position, equip-level and class/category flag fields are retained as static original evidence; their final consumer/enforcement semantics are not promoted.
 
 ### RECONSTRUCTION_POLICY
 
@@ -217,32 +228,35 @@ The following values must remain replaceable and centralized:
 
 Do not hard-code these policies into UI, `scene.ts` or `battle.ts`.
 
-## S25 handoff
+## S25 handoff — consumed before closeout
 
-When S25 publishes the canonical matrix:
+S28 read S25's final schema-3 canonical matrix (`S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX`) and integration note before closing this branch.
 
-1. convert proven item restrictions into `M6EquipmentRule` entries with their exact provenance;
-2. replace `legacyTrainingEquipmentRules()` where stronger evidence exists;
-3. leave missing stage/level eligibility as `SERVER-BOUNDARY` or an explicit reconstruction policy;
-4. do not infer eligibility from nearby IDs or later-version similarity.
+1. `stageTrackFromS25CanonicalEvidence()` accepts the canonical stage chain while checking `next_class_raw` consistency and preserving transition interpretation as `INFERRED`.
+2. `equipmentRuleFromS25CanonicalItem()` preserves raw equip-position/equip-level/class flags and requires an explicit reconstruction mapping before enforcing them.
+3. `legacyTrainingEquipmentRules()` remains only a compatibility fallback for current M5.1 data; S29 should prefer S25-backed candidates where available.
+4. Final class/stage/level equipment eligibility remains `SERVER-BOUNDARY` unless S29/S26/S27 intentionally installs a reconstruction rule.
+5. No S25 matrix data is copied into a second production authority.
 
-## S26 handoff
+## S26 handoff — stable interface reviewed
 
-S26 can provide a swordsman `M6StageTrack`, class-specific equipment rules and its own progression/promotion policy.
+S28 read S26's integration note before closeout. S26 exports the swordsman ten-stage domain and stable surfaces including `SWORDSMAN_STAGE_IDS`, stage lookup, skill/equipment eligibility, promotion APIs and SaveV2 adapters. S28 does not copy those implementations.
 
-S28 does not require the swordsman policy to use the synthetic test conditions.
+For S29, `SWORDSMAN_STAGE_IDS` maps directly to `M6StageTrack.stageIds`; any S26 promotion requirement remains a `RECONSTRUCTION_POLICY` input when adapted to `M6PromotionRequirement`. S28's synthetic test conditions are not normative for S26.
 
-Stable consumer surfaces:
+Stable S28 consumer surfaces remain:
 
 - `ReconstructionM6GrowthAuthority`
 - `M6StageTrack`
 - `M6PromotionRequirement`
 - `M6EquipmentRule`
 - `M6QuestChainDefinition`
+- `stageTrackFromS25CanonicalEvidence()`
+- `equipmentRuleFromS25CanonicalItem()`
 
 ## S27 handoff
 
-S27 uses the same surfaces for wizard.
+S27's integration note was still unavailable at S28 closeout. S27 should use the same generic S28 surfaces for wizard after its own domain stabilizes.
 
 S28 imposes no magic/MP/readiness rule. Those remain S27/battle-domain responsibilities; the world layer only carries progression, quest, equipment and persistence state.
 
