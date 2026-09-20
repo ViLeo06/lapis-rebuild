@@ -2,4 +2,4 @@ M6 final engineering validation trigger.
 
 Runtime inputs: S25 + S26 + recovered S27 + S28 integrated through S29.
 Soak path: visible player menu -> new profession -> production reward/progression authority -> production promotion authority -> equipment -> SaveV2 load/save.
-Final validation head follows this trigger.
+Final validation head follows this trigger. Private Chromium may retry once for transient protocol/screenshot failures.
