@@ -375,7 +375,7 @@ test.describe('S24 mobile touch contract',()=>{
     if(!touchTarget)throw new Error('No live enemy available for touch targeting');
     await tapEnemy(page,touchTarget.id);
 
-    const skill=page.locator('[data-action="skill"][data-skill-id="1301"]');
+    const skill=page.locator('[data-action="skill"][data-skill-id="1101"]');
     await expect(skill).toBeVisible();
     await expect(skill).toBeEnabled();
     expect((await skill.boundingBox())?.height??0).toBeGreaterThanOrEqual(44);
