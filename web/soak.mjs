@@ -1,4 +1,4 @@
-// A real wall-clock M5 browser soak, not a simulated-time test.
+// A real wall-clock M6 browser soak, not a simulated-time test.
 import {chromium} from 'playwright';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {performance} from 'node:perf_hooks';
@@ -23,10 +23,15 @@ async function clickAction(action){
  },action);
 }
 
-async function switchClass(character){
+async function startProfessionAndPromote(character){
  const action=character==='100'?'class-swordsman':'class-wizard';
+ const promoted=character==='100'?'110':'119';
  await clickAction(action);
  await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,character);
+ await page.evaluate(()=>window.lapisM4.acceptanceGrantLevel(10));
+ await clickAction('m6-promote');
+ await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,promoted);
+ return promoted;
 }
 
 async function equipLoadout(character){
@@ -66,9 +71,9 @@ try{
  started=performance.now();
  let cycle=0;
  while(performance.now()-started<durationMs){
-  const character=cycle%2?'109':'100';
-  await switchClass(character);
-  const gear=await equipLoadout(character);
+  const baseCharacter=cycle%2?'109':'100';
+  const character=await startProfessionAndPromote(baseCharacter);
+  const gear=await equipLoadout(baseCharacter);
   const developerMode=cycle%2===0;
   await setDiagnostics(developerMode);
 
@@ -87,19 +92,22 @@ try{
    save:JSON.parse(window.lapisM4.exportJson()),
    bodyClass:document.body.className,
   }));
-  if(!state.scene.ready||state.scene.inBattleView)throw new Error('Invalid M5 field state');
-  if(state.m4.playableRecovery!==true)throw new Error('M5 playable recovery runtime not active');
+  if(!state.scene.ready||state.scene.inBattleView)throw new Error('Invalid M6 field state');
+  if(state.m4.playableRecovery!==true)throw new Error('M6 playable runtime did not preserve M5.1 recovery');
   if(state.scene.cameraFollow!==true)throw new Error('M5 camera follow not active');
-  if(!state.scene.worldVisuals?.some(row=>row.resourceId===1001&&row.visible))throw new Error('Recovered M5 guide visual missing');
-  if(state.scene.character!==character)throw new Error('M4 class switch did not persist');
+  if(!state.scene.worldVisuals?.some(row=>row.resourceId===1001&&row.visible))throw new Error('Recovered guide visual missing');
+  if(state.scene.character!==character||state.m4.m6.stageId!==Number(character))throw new Error('M6 stage promotion did not persist');
   if(state.scene.inventory.weapon!==Number(gear.weapon)||state.scene.inventory.armor!==Number(gear.armor))throw new Error('M4 equipment did not persist');
-  if(state.save.version!==2||state.save.character!==character)throw new Error('Invalid M4 SaveV2 state');
+  if(state.save.version!==2||state.save.character!==character||state.save.m6?.stage?.stageId!==Number(character))throw new Error('Invalid M6 SaveV2 state');
   if(state.m4.developerMode!==developerMode)throw new Error('M4 diagnostics toggle did not persist');
   if(!Number.isFinite(state.scene.anchor.x)||!Number.isFinite(state.scene.anchor.y)||state.scene.frame<0)throw new Error('Invalid live render state');
   if(errors.length||external.length)throw new Error('Browser error or external request');
   const sample={
    elapsedMs:Math.round(performance.now()-started),
    character,
+   family:state.m4.m6.family,
+   stageId:state.m4.m6.stageId,
+   promotionReceipts:state.m4.m6.promotionReceipts.length,
    mapId:state.scene.mapId,
    frame:state.scene.frame,
    fps:state.scene.fps,
@@ -121,7 +129,7 @@ try{
  if(elapsedMs<durationMs)throw new Error('Wall-clock interval incomplete');
  await writeFile('test-results/soak/report.json',JSON.stringify({
   status:'passed',
-  scope:'30-minute real-time M5 field soak across player HUD, swordsman/wizard class switching, M5 inventory/equipment, SaveV2 save/load, camera follow, recovered B1001 guide visibility and opt-in diagnostics. Full spatial quest/battle completion is covered separately by the M5 private-original playable-recovery acceptance.',
+  scope:'30-minute real-time M6 field soak alternating swordsman/wizard profiles. Each cycle uses the webdriver-only deterministic reward fixture through production reward/progression authority, promotes via the production M6 promotion authority to stage 110/119, exercises legal equipment, M6 SaveV2 save/load, camera follow, recovered B1001 guide visibility and opt-in diagnostics. Full spatial quest/battle/retreat/turn-in remains covered by inherited S24 and final S29 private-original browser acceptance.',
   elapsedMs,
   samples,
   errors,
