@@ -1,2 +1,4 @@
 M6 final engineering validation trigger.
-Runtime inputs: S25 + S26 + S27 + S28 integrated through S29.
+Integrated runtime parent: 28b21cb3961e584e10535ed7ae35bab6f8c8e41b
+Validated preflight: 179/179 unit; 62 passed / 3 skipped browser E2E.
+This commit triggers fixed-hash private-original acceptance and the new M6 wall-clock soak.
