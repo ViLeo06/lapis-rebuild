@@ -30,7 +30,8 @@ def generate(out:Path):
     out.mkdir(parents=True)
     maps={'0':map_payload(out,0,'Synthetic fixture',1536,768,47,47,(38,62,52,255)),'1':map_payload(out,1,'Synthetic city',1024,640,31,39,(49,54,68,255))}
     manifest={'schema':1,'provenance':{'kind':'synthetic','evidence':'VERIFIED'},'characters':{},'map':maps['0'],'maps':maps,'effects':{},'content':synthetic_content(out)}
-    for cid,label,color in [(100,'swordsman',(205,185,110,255)),(109,'wizard',(136,139,196,255))]:
+    characters=[*( (cid,'swordsman',(205,185,110,255)) for cid in range(100,191,10) ),*( (cid,'wizard',(136,139,196,255)) for cid in range(109,200,10) )]
+    for cid,label,color in characters:
         char={'class_id':cid,'label':label,'actions':{}}
         for action in ['00','01','02','03','05']:
             n=11 if cid==109 and action=='05' else 4
