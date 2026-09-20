@@ -16,7 +16,7 @@ from spr import parse_spr,export_spr
 from map_bundle import parse_imf
 from render_map import render
 
-CHARACTERS={100:'swordsman',109:'wizard'}
+CHARACTERS={**{cid:'swordsman' for cid in range(100,191,10)},**{cid:'wizard' for cid in range(109,200,10)}}
 ACTIONS=['00','01','02','03','05']
 
 
