@@ -70,6 +70,20 @@
         "M5.1 SaveV2",
         "S7 v1"
       ]
+    },
+    "canonical_evidence_adapter": {
+      "module": "web/src/progression/m6-canonical-evidence-adapter.ts",
+      "s25_authority": "S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX",
+      "stage_transition_source": "VERIFIED-STATIC-ORIGINAL",
+      "stage_transition_interpretation": "INFERRED",
+      "item_raw_fields": [
+        "equip_position",
+        "equip_level",
+        "class_flags"
+      ],
+      "item_raw_evidence": "VERIFIED-STATIC-ORIGINAL",
+      "class_flag_consumer_mapping": "INFERRED",
+      "enforcement_authority": "RECONSTRUCTION_POLICY"
     }
   },
   "server_boundary": [
@@ -77,12 +91,13 @@
     "retail reward values and reward authority",
     "retail promotion levels and promotion conditions",
     "retail stage/level equipment eligibility",
-    "retail map/NPC/encounter progression bindings"
+    "retail map/NPC/encounter progression bindings",
+    "S25 equip_level/class-flag final enforcement despite raw fields being client-authored"
   ],
   "upstream_handoff": {
-    "S25": "replace legacy/unverified item and eligibility adapters when canonical matrix is available",
-    "S26": "provide swordsman stage track and class-specific progression contracts",
-    "S27": "provide wizard stage track and class-specific progression contracts",
+    "S25": "consumed before closeout: schema-3 canonical matrix -> m6-canonical-evidence-adapter; do not duplicate canonical data",
+    "S26": "integration note reviewed: SWORDSMAN_STAGE_IDS and S26 progression/promotion APIs map into generic S28 contracts; implementation is not copied",
+    "S27": "integration note unavailable at S28 closeout; consume the same generic S28 contracts when S27 stabilizes",
     "S29": "bind contracts into shared runtime, UI, scene, battle and final SaveV2 flow"
   }
 }
