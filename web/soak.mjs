@@ -16,11 +16,9 @@ page.on('crash',()=>errors.push('page crashed'));
 page.on('request',request=>{if(/^https?:/.test(request.url()))external.push(request.url());});
 
 async function clickAction(action){
- await page.evaluate(value=>{
-  const button=document.querySelector(`[data-action="${value}"]`);
-  if(!(button instanceof HTMLButtonElement))throw new Error(`Missing M4 action ${value}`);
-  button.click();
- },action);
+ const button=page.locator(`[data-action="${action}"]:visible`).first();
+ await button.waitFor({state:'visible'});
+ await button.click();
 }
 
 async function startProfessionAndPromote(character){
@@ -32,21 +30,20 @@ async function startProfessionAndPromote(character){
  // renders; clicking a stale hidden/disabled menu button is not a valid
  // player interaction.
  await clickAction('menu');
- await page.waitForFunction(()=>document.body.classList.contains('m4-menu-open'));
+ await page.locator('[data-ui="game-menu"]:visible').waitFor({state:'visible'});
  await clickAction(action);
  await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,character);
- await page.waitForFunction(()=>!document.body.classList.contains('m4-menu-open'));
 
  await page.evaluate(()=>window.lapisM4.acceptanceGrantLevel(10));
  await clickAction('menu');
- await page.waitForFunction(()=>document.body.classList.contains('m4-menu-open'));
+ const promote=page.locator('[data-action="m6-promote"]:visible').first();
+ await promote.waitFor({state:'visible'});
  await page.waitForFunction(()=>{
-  const button=document.querySelector('[data-action="m6-promote"]');
-  return button instanceof HTMLButtonElement&&!button.disabled;
+  const button=document.querySelector('[data-action="m6-promote"]:not([disabled])');
+  return button instanceof HTMLButtonElement&&button.offsetParent!==null;
  });
- await clickAction('m6-promote');
+ await promote.click();
  await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,promoted);
- await page.waitForFunction(()=>!document.body.classList.contains('m4-menu-open'));
  return promoted;
 }
 
