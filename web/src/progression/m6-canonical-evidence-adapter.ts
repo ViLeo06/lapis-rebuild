@@ -34,6 +34,20 @@ export type S25ItemRuleAdapterPolicy={
   authority:'RECONSTRUCTION_POLICY';
 };
 
+export type S25CanonicalProgressionAdapterResult={
+  authority:'S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX';
+  track:M6StageTrack;
+  stages:readonly {
+    id:number;
+    expValues:readonly number[];
+    nextClassRaw:readonly number[];
+    sourceEvidence:'VERIFIED-STATIC-ORIGINAL';
+    transitionInterpretation:'INFERRED';
+  }[];
+  retailExpFormula:'SERVER-BOUNDARY';
+  retailPromotionTrigger:'SERVER-BOUNDARY';
+};
+
 export type S25ItemRuleAdapterResult={
   rule:M6EquipmentRule;
   authority:'RECONSTRUCTION_POLICY';
@@ -72,6 +86,27 @@ export function stageTrackFromS25CanonicalEvidence(
     stageIds:stages.map(stage=>stage.id),
     provenance:'VERIFIED-STATIC-ORIGINAL',
   });
+}
+
+export function canonicalProgressionEvidenceFromS25(
+  id:string,
+  family:ClassFamily,
+  stages:readonly S25CanonicalStageEvidence[],
+):S25CanonicalProgressionAdapterResult{
+  const track=stageTrackFromS25CanonicalEvidence(id,family,stages);
+  return{
+    authority:'S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX',
+    track,
+    stages:stages.map(stage=>({
+      id:stage.id,
+      expValues:[...stage.progression.expValues],
+      nextClassRaw:[...stage.progression.nextClassRaw],
+      sourceEvidence:'VERIFIED-STATIC-ORIGINAL',
+      transitionInterpretation:'INFERRED',
+    })),
+    retailExpFormula:'SERVER-BOUNDARY',
+    retailPromotionTrigger:'SERVER-BOUNDARY',
+  };
 }
 
 export function equipmentRuleFromS25CanonicalItem(
