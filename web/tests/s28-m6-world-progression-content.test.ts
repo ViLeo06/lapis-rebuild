@@ -38,6 +38,10 @@ import {
 } from '../src/world/m6-quest-chain.ts';
 import type {M6QuestChainDefinition} from '../src/world/m6-quest-chain.ts';
 import {evaluateM6WorldGate} from '../src/world/m6-progression-gates.ts';
+import {
+  m6WorldTargetAvailability,
+  validateM6WorldProgressionDefinition,
+} from '../src/world/m6-world-progression.ts';
 
 const swordStages=[100,110,120,130,140,150,160,170,180,190] as const;
 const wizardStages=[109,119,129,139,149,159,169,179,189,199] as const;
@@ -253,6 +257,59 @@ test('M6 quest chain supports battle item and NPC objectives while rejecting unr
   assert.equal(item.state.quests['promotion-proof'].stepIndex,1);
   const npc=applyM6QuestObjectiveEvent(chain,item.state,'promotion-proof',{type:'npc_interacted',npcId:'promotion-clerk'});
   assert.equal(npc.state.quests['promotion-proof'].status,'ready_to_turn_in');
+});
+
+test('M6 multi-map progression composes S18 graph targets with quest-driven availability',()=>{
+  const chain=questChain(3);
+  const initial=createM6QuestChainState(chain,{});
+  const graph={
+    schema:1 as const,
+    id:'s28-three-scene',
+    provenance:'RECONSTRUCTION_POLICY' as const,
+    scenes:[
+      {id:'field-a',mapId:1,kind:'field' as const,displayName:'field-a',provenance:'RECONSTRUCTION_POLICY' as const,spawns:[{id:'start',cell:[1,1] as [number,number],provenance:'RECONSTRUCTION_POLICY' as const}]},
+      {id:'interior',mapId:2,kind:'interior' as const,displayName:'interior',provenance:'RECONSTRUCTION_POLICY' as const,spawns:[{id:'entry',cell:[2,2] as [number,number],provenance:'RECONSTRUCTION_POLICY' as const}]},
+      {id:'field-b',mapId:3,kind:'field' as const,displayName:'field-b',provenance:'RECONSTRUCTION_POLICY' as const,spawns:[{id:'arrival',cell:[3,3] as [number,number],provenance:'RECONSTRUCTION_POLICY' as const}]},
+    ],
+    transitions:[
+      {id:'field-to-interior',fromSceneId:'field-a',toSceneId:'interior',triggerId:'door-a',arrivalSpawnId:'entry',provenance:'RECONSTRUCTION_POLICY' as const},
+      {id:'interior-to-field-b',fromSceneId:'interior',toSceneId:'field-b',triggerId:'door-b',arrivalSpawnId:'arrival',provenance:'RECONSTRUCTION_POLICY' as const},
+    ],
+  };
+  const definition=validateM6WorldProgressionDefinition({
+    id:'s28-world-progression',
+    graph,
+    npcEntityIds:['promotion-clerk'],
+    encounters:[{id:'advanced-training',sceneId:'field-b',battleZoneId:7,provenance:'RECONSTRUCTION_POLICY'}],
+    gates:[
+      {id:'unlock-field-b',target:'scene-transition',targetId:'interior-to-field-b',requiredQuestIds:['promotion-proof'],requiredQuestFlags:['s28.promotion.proof'],minimumLevel:3,allowedStageIds:[110],provenance:'RECONSTRUCTION_POLICY'},
+      {id:'unlock-advanced-training',target:'encounter',targetId:'advanced-training',requiredQuestIds:['promotion-proof'],provenance:'RECONSTRUCTION_POLICY'},
+    ],
+    provenance:'RECONSTRUCTION_POLICY',
+  });
+  const blocked=m6WorldTargetAvailability(definition,'scene-transition','interior-to-field-b',{
+    questChain:initial,questFlags:{},level:1,stageId:100,
+  });
+  assert.equal(blocked.available,false);
+  assert.ok(blocked.reasons.includes('quest:promotion-proof'));
+
+  const completed={
+    ...initial,
+    quests:{
+      ...initial.quests,
+      'training-clear':{status:'complete' as const,stepIndex:0,objectiveProgress:1},
+      'promotion-proof':{status:'complete' as const,stepIndex:1,objectiveProgress:1},
+    },
+  };
+  const open=m6WorldTargetAvailability(definition,'scene-transition','interior-to-field-b',{
+    questChain:completed,questFlags:{'s28.promotion.proof':true},level:3,stageId:110,
+  });
+  assert.equal(open.available,true);
+  assert.deepEqual(open.gateIds,['unlock-field-b']);
+  assert.equal(m6WorldTargetAvailability(definition,'npc-interaction','promotion-clerk',{
+    questChain:completed,questFlags:{'s28.promotion.proof':true},level:3,stageId:110,
+  }).available,true,'ungated registered NPC remains available');
+  assert.throws(()=>validateM6WorldProgressionDefinition({...definition,gates:[...definition.gates,{id:'bad',target:'encounter' as const,targetId:'missing',provenance:'RECONSTRUCTION_POLICY' as const}]}),/unknown encounter/);
 });
 
 test('same S28 growth authority drives swordsman and wizard representative promotion chains',()=>{
