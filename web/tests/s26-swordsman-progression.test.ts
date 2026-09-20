@@ -136,10 +136,7 @@ test('promotion is centralized reconstruction policy and legally advances 100 th
 });
 
 test('representative skill availability is stage-driven policy while authored entry references stay separate', () => {
-  assert.deepEqual(availableSwordsmanSkillIds(100), [1101]);
-  assert.deepEqual(availableSwordsmanSkillIds(110), [1101,1201]);
-  assert.deepEqual(availableSwordsmanSkillIds(120), [1101,1201,1301]);
-  assert.deepEqual(availableSwordsmanSkillIds(190), [1101,1201,1301]);
+  for(const stageId of WIZARD_FREE_SWORDSMAN_STAGES) assert.deepEqual(availableSwordsmanSkillIds(stageId), [1101,1201,1301]);
   assert.equal(swordsmanSkillAvailable(100, 1201), false);
   assert.equal(swordsmanSkillAvailable(110, 1201), true);
   assert.equal(swordsmanSkillAvailable(120, 1301), true);
@@ -218,6 +215,6 @@ test('M5.1 base swordsman contract remains intact while S26 adds a stricter stag
   assert.equal(legacy.displayName, '见习剑士');
   assert.deepEqual(legacy.availableSkillIds, [1101,1201,1301]);
   assert.equal(skillAvailableForClass(100, 1201), true);
-  assert.deepEqual(availableSwordsmanSkillIds(100), [1101]);
+  assert.deepEqual(availableSwordsmanSkillIds(100), [1101,1201,1301]);
   assert.throws(() => swordsmanStageById(109));
 });
