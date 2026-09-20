@@ -38,8 +38,8 @@ test('S13 world quest enters explicit battle and exposes S11 skills through S8 H
   await expect.poll(async()=>(await snap(page)).inBattleView).toBe(true);
   await expect(page.locator('[data-ui="battle-hud"]')).toBeVisible();
   await expect(page.locator('[data-skill-id="1101"]')).toBeVisible();
-  await expect(page.locator('[data-skill-id="1201"]')).toBeVisible();
-  await expect(page.locator('[data-skill-id="1301"]')).toBeVisible();
+  await expect(page.locator('[data-skill-id="1201"]')).toHaveCount(0);
+  await expect(page.locator('[data-skill-id="1301"]')).toHaveCount(0);
   const battle=await snap(page);
   expect(battle.battleZoneId).toBe(0);
   expect(battle.battleEntryProvenance).toBe('RECONSTRUCTION_POLICY');
@@ -64,8 +64,8 @@ test('S13 class switch swaps authored vitals and skill roster while keeping reco
   await chooseDialogue(page,'accept-quest');
   await page.keyboard.press('e');
   await expect(page.locator('[data-skill-id="19101"]')).toBeVisible();
-  await expect(page.locator('[data-skill-id="19201"]')).toBeVisible();
-  await expect(page.locator('[data-skill-id="19301"]')).toBeVisible();
+  await expect(page.locator('[data-skill-id="19201"]')).toHaveCount(0);
+  await expect(page.locator('[data-skill-id="19301"]')).toHaveCount(0);
   const battle=await snap(page);
   expect(battle.hp).toBe(100);
   expect(battle.mp).toBe(130);
