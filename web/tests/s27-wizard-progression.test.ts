@@ -110,7 +110,7 @@ test('wizard promotion remains centralized reconstruction policy and reaches 199
   assert.equal(RECONSTRUCTION_WIZARD_PROGRESSION_POLICY.id,'m6-wizard-ten-stage-v1');
 });
 
-test('modeled wizard Magic availability is staged while authored 19401/19501 refs remain evidence only',()=>{
+test('modeled M5.1 wizard Magic remains available while authored 19401/19501 refs remain evidence only',()=>{
   for(const stageId of WIZARD_STAGE_IDS)assert.deepEqual(availableWizardSkillIds(stageId),[19101,19201,19301]);
   assert.equal(wizardSkillAvailable(109,19201),true);
   assert.equal(wizardSkillAvailable(119,19201),true);
@@ -166,7 +166,7 @@ test('SaveV2 round-trip preserves wizard stage, progression and equipment',()=>{
   assert.deepEqual(availableWizardSkillIds(restored.stageId),availableWizardSkillIds(state.stageId));
 });
 
-test('M5.1 base wizard remains compatible while S27 adds staged skill availability',()=>{
+test('M5.1 base wizard remains compatible across the M6 stage adapter',()=>{
   const legacy=playableClassById(109);
   assert.equal(legacy.displayName,'见习巫师');
   assert.deepEqual(legacy.availableSkillIds,[19101,19201,19301]);
