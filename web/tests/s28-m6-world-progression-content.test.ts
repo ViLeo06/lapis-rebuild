@@ -17,6 +17,10 @@ import {
 } from '../src/progression/m6-inventory.ts';
 import type {M6InventoryPolicy} from '../src/progression/m6-inventory.ts';
 import {ReconstructionM6GrowthAuthority} from '../src/progression/m6-growth-authority.ts';
+import {
+  equipmentRuleFromS25CanonicalItem,
+  stageTrackFromS25CanonicalEvidence,
+} from '../src/progression/m6-canonical-evidence-adapter.ts';
 import type {M6StageTrack,M6PromotionRequirement} from '../src/progression/m6-stage-promotion.ts';
 import {createM6SaveExtension} from '../src/progression/m6-save-extension.ts';
 import {
@@ -36,8 +40,8 @@ import {evaluateM6WorldGate} from '../src/world/m6-progression-gates.ts';
 
 const swordStages=[100,110,120,130,140,150,160,170,180,190] as const;
 const wizardStages=[109,119,129,139,149,159,169,179,189,199] as const;
-const swordTrack:M6StageTrack={id:'m6-swordsman-ten-stage',family:'swordsman',stageIds:swordStages,provenance:'RECONSTRUCTION_POLICY'};
-const wizardTrack:M6StageTrack={id:'m6-wizard-ten-stage',family:'wizard',stageIds:wizardStages,provenance:'RECONSTRUCTION_POLICY'};
+const swordTrack:M6StageTrack={id:'m6-swordsman-ten-stage',family:'swordsman',stageIds:swordStages,provenance:'VERIFIED-STATIC-ORIGINAL'};
+const wizardTrack:M6StageTrack={id:'m6-wizard-ten-stage',family:'wizard',stageIds:wizardStages,provenance:'VERIFIED-STATIC-ORIGINAL'};
 const allCharacters=[...swordStages,...wizardStages].map(String);
 const saveContext:SaveValidationContext={pack:'pack',characters:allCharacters,mapBounds:{0:{width:100,height:100},1:{width:200,height:200}}};
 
@@ -135,6 +139,60 @@ function authorityFor(
     track,itemId,chain,rule,
   };
 }
+
+test('S28 consumes S25 canonical stage/item evidence without upgrading server enforcement',()=>{
+  const terminalExp=[6300,44033,410090,1276765,3022566,7155515,16939705,40102443,94937067,345806600];
+  const stages=swordStages.map((id,index)=>({
+    id,
+    progression:{expValues:[terminalExp[index]],nextClassRaw:[swordStages[index+1]??id]},
+    transitionHint:{
+      sourceEvidence:'VERIFIED-STATIC-ORIGINAL' as const,
+      interpretationEvidence:'INFERRED' as const,
+      candidateNextStageId:swordStages[index+1]??null,
+    },
+  }));
+  const track=stageTrackFromS25CanonicalEvidence('s25-swordsman-canonical','swordsman',stages);
+  assert.deepEqual(track.stageIds,swordStages);
+  assert.equal(track.provenance,'VERIFIED-STATIC-ORIGINAL');
+
+  const candidate=equipmentRuleFromS25CanonicalItem({
+    itemId:3,
+    equipPosition:3,
+    equipLevel:1,
+    classFlags:[1,0,0,1,0,0,0,0,0,0],
+  },{
+    slotByEquipPosition:{3:'weapon'},
+    slotProvenance:'RECONSTRUCTION_POLICY',
+    classFlagIndexByFamily:{swordsman:0,wizard:9},
+    useClassFlagHypothesis:true,
+    enforceEquipLevel:true,
+    authority:'RECONSTRUCTION_POLICY',
+  });
+  assert.deepEqual(candidate.rule.allowedFamilies,['swordsman']);
+  assert.equal(candidate.rule.minimumLevel,1);
+  assert.equal(candidate.rule.provenance.itemRecord,'VERIFIED-STATIC-ORIGINAL');
+  assert.equal(candidate.rule.provenance.classRestriction,'INFERRED');
+  assert.equal(candidate.rule.provenance.levelRestriction,'VERIFIED-STATIC-ORIGINAL');
+  assert.equal(candidate.rawEvidence.equipLevel.enforcement,'SERVER-BOUNDARY');
+  assert.equal(candidate.authority,'RECONSTRUCTION_POLICY');
+
+  const preservedBoundary=equipmentRuleFromS25CanonicalItem({
+    itemId:12,
+    equipPosition:8,
+    equipLevel:1,
+    classFlags:[0,0,0,0,0,0,1,0,1,1],
+  },{
+    slotByEquipPosition:{8:'weapon'},
+    slotProvenance:'RECONSTRUCTION_POLICY',
+    classFlagIndexByFamily:{swordsman:0,wizard:9},
+    useClassFlagHypothesis:false,
+    enforceEquipLevel:false,
+    authority:'RECONSTRUCTION_POLICY',
+  });
+  assert.equal(preservedBoundary.rule.minimumLevel,undefined);
+  assert.equal(preservedBoundary.rule.provenance.classRestriction,'SERVER-BOUNDARY');
+  assert.equal(preservedBoundary.rule.provenance.levelRestriction,'SERVER-BOUNDARY');
+});
 
 test('M6 inventory policy exposes explicit capacity without pretending it is retail data',()=>{
   const policy:M6InventoryPolicy={
