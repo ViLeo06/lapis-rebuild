@@ -135,8 +135,8 @@ export const WIZARD_EQUIPMENT_PROVENANCE=Object.freeze({
 
 export const WIZARD_SKILL_AVAILABILITY_PROVENANCE=Object.freeze({
   level:'RECONSTRUCTION_POLICY',
-  source:'S27 staged adapter over the existing S11 wizard showcase roster',
-  note:'Only 19101/19201/19301 are currently modeled as playable runtime skills. Authored 19401/19501 references remain evidence, not fabricated gameplay implementations.',
+  source:'M5.1-compatible adapter over the existing S11 wizard showcase roster',
+  note:'The three modeled S11 wizard skills remain available across all M6 stages to preserve the accepted M5.1 player contract. Authored 19401/19501 references remain evidence, not fabricated gameplay implementations.',
 } as const satisfies M6EvidenceRef);
 
 const ACTION_SLOTS=Object.freeze(['00','01','02','03','05'] as const);
@@ -226,12 +226,12 @@ export const RECONSTRUCTION_WIZARD_PROGRESSION_POLICY:ReconstructionWizardProgre
     109:10,119:20,129:30,139:40,149:50,159:60,169:70,179:80,189:90,199:null,
   }),
   representativeSkillUnlockStageBySkillId:Object.freeze({
-    19101:109,19201:119,19301:129,
+    19101:109,19201:109,19301:109,
   }),
   notes:Object.freeze([
     'The retired server promotion levels, promotion quests and derived MATK formula are not recovered.',
     'Ten-level promotion intervals are centralized offline reconstruction policy and can be replaced without changing authored stage rows.',
-    '19401 and 19501 are exact authored Magic references in S25 but are not invented as playable skills until a complete runtime behavior contract is established.',
+    'The M5.1 three-skill wizard contract is preserved at every M6 stage. 19401 and 19501 are exact authored Magic references in S25 but are not invented as playable skills until a complete runtime behavior contract is established.',
     'MagicRes placement/blend/stage composition remains UNVERIFIED.',
   ]),
 });
