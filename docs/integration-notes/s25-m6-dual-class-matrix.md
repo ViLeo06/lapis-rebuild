@@ -65,3 +65,11 @@ S25 does not modify `scene.ts`, `main.ts`, `battle.ts`, `Plan.md`, `Backlog.md`,
 - server-boundary fields remain explicit in the committed manifest.
 
 The generic repository CI is re-triggered from this final generated state; its run is reported in the S25 PR rather than being recursively written back into this note.
+
+
+## Google Drive metadata report
+
+- Folder: `lapis-rebuild-assets/30_parsed/tables/m6-s25-dual-class`
+- Native Google Doc: `S25 M6 Dual-class Matrix - fixed-hash metadata report`
+- Document URL: https://docs.google.com/document/d/1trvJ6stZSZnC1hcjowaaeCd7DWDmfymxsAXF6EChfMM/edit
+- Scope: metadata/provenance only; no original copyrighted game asset payload is embedded.
