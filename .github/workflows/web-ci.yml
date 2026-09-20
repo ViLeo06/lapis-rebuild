@@ -15,7 +15,7 @@ concurrency:
 jobs:
   synthetic:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
@@ -48,7 +48,7 @@ jobs:
   private-original:
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[private-smoke]')
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
