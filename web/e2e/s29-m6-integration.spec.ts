@@ -70,7 +70,7 @@ test('M6 new wizard profile is isolated from swordsman progress and promotes 109
   expect(save.m6.stage.promotionReceipts).toHaveLength(9);
 });
 
-test('M6 staged skills are reflected in the battle HUD after promotion',async({page})=>{
+test('M6 promotion preserves the accepted player skill contract and SaveV2 stage state',async({page})=>{
   await ready(page);
   await page.evaluate(target=>window.lapisM4!.acceptanceGrantLevel!(target),20);
   await clickAction(page,'menu');
