@@ -136,8 +136,8 @@ export const SWORDSMAN_EQUIPMENT_PROVENANCE = Object.freeze({
 
 export const SWORDSMAN_SKILL_AVAILABILITY_PROVENANCE = Object.freeze({
   level: 'RECONSTRUCTION_POLICY',
-  source: 'S26 staged adapter over the existing S11 representative skill roster',
-  note: 'Only the three already-modeled S11 skills are staged for offline progression. This is not a retail skill-unlock-level claim.',
+  source: 'M5.1-compatible adapter over the existing S11 representative skill roster',
+  note: 'The three already-modeled S11 skills remain available across all M6 stages to preserve the accepted M5.1 player contract. Retail unlock predicates remain server-boundary and are not inferred from stage-entry references.',
 } as const satisfies M6EvidenceRef);
 
 const ACTION_SLOTS = Object.freeze(['00', '01', '02', '03', '05'] as const);
@@ -246,13 +246,13 @@ export const RECONSTRUCTION_SWORDSMAN_PROGRESSION_POLICY: ReconstructionSwordsma
     }),
     representativeSkillUnlockStageBySkillId: Object.freeze({
       1101: 100,
-      1201: 110,
-      1301: 120,
+      1201: 100,
+      1301: 100,
     }),
     notes: Object.freeze([
       'The retired server promotion levels and promotion predicates are not recovered.',
       'Ten-level promotion intervals are a centralized offline reconstruction policy and may be replaced without changing authored stage rows.',
-      'Representative skill staging uses only S11 skills already backed by authored Magictbl rows; authored entry references 1401/1501 remain preserved but are not promoted to playable skills without their full data contract.',
+      'The M5.1 three-skill player contract is preserved at every M6 stage. Authored stage-entry references 1401/1501 remain evidence only and do not establish retail unlock predicates or playable behavior.',
     ]),
   });
 
