@@ -135,9 +135,9 @@ test('promotion is centralized reconstruction policy and legally advances 100 th
   assert.equal(RECONSTRUCTION_SWORDSMAN_PROGRESSION_POLICY.id, 'm6-swordsman-ten-stage-v1');
 });
 
-test('representative skill availability is stage-driven policy while authored entry references stay separate', () => {
+test('representative M5.1 skills remain available while authored later-stage entry references stay separate', () => {
   for(const stageId of SWORDSMAN_STAGE_IDS) assert.deepEqual(availableSwordsmanSkillIds(stageId), [1101,1201,1301]);
-  assert.equal(swordsmanSkillAvailable(100, 1201), false);
+  assert.equal(swordsmanSkillAvailable(100, 1201), true);
   assert.equal(swordsmanSkillAvailable(110, 1201), true);
   assert.equal(swordsmanSkillAvailable(120, 1301), true);
   assert.equal(swordsmanSkillAvailable(130, 1401), false);
@@ -210,7 +210,7 @@ test('SaveV2 round-trip preserves stage, progression, equipment and derived skil
   );
 });
 
-test('M5.1 base swordsman contract remains intact while S26 adds a stricter staged adapter', () => {
+test('M5.1 base swordsman contract remains intact across the M6 stage adapter', () => {
   const legacy = playableClassById(100);
   assert.equal(legacy.displayName, '见习剑士');
   assert.deepEqual(legacy.availableSkillIds, [1101,1201,1301]);
