@@ -26,7 +26,7 @@ test('S29 contract locks the two ten-stage families in canonical order',()=>{
   }
 });
 
-test('S29 waits for all four upstream integration notes before shared-runtime integration',()=>{
+test('S29 records all four upstream handoffs before final acceptance',()=>{
   assert.equal(contract.owner,'S29');
   assert.deepEqual(contract.upstream_handoffs.map(row=>row.session),['S25','S26','S27','S28']);
   assert.ok(contract.upstream_handoffs.every(row=>row.required));
@@ -37,12 +37,13 @@ test('S29 waits for all four upstream integration notes before shared-runtime in
   assert.ok(contract.shared_runtime_owned_by_s29.includes('web/src/m4-runtime-integration.ts'));
 });
 
-test('S29 preflight records the known M5.1 integration pressure points',()=>{
-  assert.deepEqual(contract.current_baseline_constraints.playable_class_catalog_ids,[100,109]);
-  assert.deepEqual(contract.current_baseline_constraints.runtime_save_character_ids,['100','109']);
-  assert.equal(contract.current_baseline_constraints.progression_scope,'single-global-state');
-  assert.equal(contract.current_baseline_constraints.save_shape,'single-character-plus-single-progression');
-  assert.deepEqual(contract.current_baseline_constraints.equipment_slots,['weapon','armor']);
+test('S29 integrated contract records the resolved M6 runtime shape',()=>{
+  const expected=[100,110,120,130,140,150,160,170,180,190,109,119,129,139,149,159,169,179,189,199];
+  assert.deepEqual(contract.current_baseline_constraints.playable_class_catalog_ids,expected);
+  assert.deepEqual(contract.current_baseline_constraints.runtime_save_character_ids,expected.map(String));
+  assert.equal(contract.current_baseline_constraints.progression_scope,'single-active-profession-per-save');
+  assert.equal(contract.current_baseline_constraints.save_shape,'SaveV2-plus-M6-extension-stage-quest-equipment');
+  assert.deepEqual(contract.current_baseline_constraints.equipment_slots,['weapon','armor','accessory-domain-placeholder']);
 });
 
 test('M6 stage proof must use production progression authority rather than direct mutation',()=>{
