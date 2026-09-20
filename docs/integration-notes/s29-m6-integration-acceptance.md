@@ -1,228 +1,184 @@
 # S29 — M6 Integration / Acceptance
 
 Date: 2026-09-20  
-Branch: codex/s29-m6-integration-acceptance  
-M6 baseline: main@4aea5b81fa4cca00c9a80b3ff2389eb391c09b17  
+Branch: `codex/s29-m6-integration-acceptance`  
+M6 baseline: `main@4aea5b81fa4cca00c9a80b3ff2389eb391c09b17`  
 Plan: v3.4
 
-## Role
+## Current status
 
-S29 is the M6 coordination and final acceptance line. During the parallel phase it owns preflight, contract review, acceptance design, shared-file conflict audit, and the eventual shared-runtime integration. It does not replace S25-S28 or invent their missing domain data.
+**INTEGRATED / FINAL VALIDATION IN PROGRESS.**
 
-The canonical machine-readable coordination contract is:
+S29 started as a preflight-only branch. After review, the actual upstream state was:
 
-- manifests/m6-integration-acceptance-contract.json
-- web/tests/s29-m6-integration-contract.test.ts
+- S25 complete
+- S26 complete
+- S27 branch still identical to the M6 baseline: no implementation
+- S28 complete
+- S29 contained only preflight/acceptance material
 
-## Preflight state
+S29 therefore took over the missing work instead of treating the five sessions as already complete.
 
-At S29 start, all five M6 branches existed and S29 was identical to the unified baseline. S25-S28 were also still identical to the baseline, so there were no stable handoff commits or integration notes to consume yet.
+## Integration order
 
-This is the expected parallel-start condition. S29 therefore does not modify main.ts, scene.ts, battle.ts, or m4-runtime-integration.ts during this preflight commit.
+The completed upstream PRs were retargeted to S29 rather than merged directly into `main`:
 
-## Accepted M5.1 baseline that M6 must preserve
+1. PR #40 / S25 — canonical dual-class evidence matrix
+2. PR #39 / S26 — swordsman ten-stage domain
+3. PR #41 / S28 — world/progression/quest/equipment/save authority
+4. S27 — implemented directly on S29 because the original S27 branch had no delta
 
-The inherited player gate is S24:
+`main` remains unchanged while M6 validation is open.
 
-- final runtime head: 97bd5063749a15e114ce85119015f9dcb8b7afc0
-- final run: 35442734082
-- E2E: 58 passed / 4 skipped / 0 failed
-- long-soak run: 35433856641
-- private standalone HTML SHA-256: 0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7
-- user playtest: accepted on 2026-09-20
+## S27 recovery completed on S29
 
-M6 may extend this runtime, but must keep the M5.1 input and player-experience regressions explicitly gated.
+S29 added:
 
-## Current integration pressure points
+- `web/src/classes/wizard-ten-stage.ts`
+- `web/src/classes/wizard-save.ts`
+- `web/tests/s27-wizard-progression.test.ts`
+- `docs/integration-notes/s27-m6-wizard-progression.md`
 
-These are not M6 bugs yet. They are concrete baseline constraints that S25-S28 handoffs and S29 glue must resolve.
+The wizard track is:
 
-### 1. Playable class catalog is still base-stage only
+`109 -> 119 -> 129 -> 139 -> 149 -> 159 -> 169 -> 179 -> 189 -> 199`
 
-web/src/content/classes/class-catalog.ts currently exposes only the S11 base definitions:
+Evidence boundaries remain explicit:
 
-- swordsman 100
-- wizard 109
+- authored class rows / HP / MP / hit / magic-hit / stage-entry Magic refs: **VERIFIED-STATIC-ORIGINAL**
+- recovered action semantics: **RECOVERED_SECONDARY** where applicable
+- promotion levels and staged playable unlocks: **RECONSTRUCTION_POLICY**
+- retired server promotion predicates / derived MATK / full late-stage spell behavior: **SERVER-BOUNDARY / UNVERIFIED**
 
-m4-runtime-integration.ts also hard-gates several paths to 100/109, including class switching, render/profile handling, and save validation context.
+The authored references `19401` and `19501` are preserved as evidence but are not fabricated into playable effects.
 
-M6 integration must replace this base-stage assumption with stage-aware domain interfaces from S26/S27. S29 must not duplicate their stage tables in runtime glue.
+## Production runtime integration
 
-### 2. Progression is a single shared state
+S29 removed the M5.1 assumption that the production player runtime only knows class IDs `100` and `109`.
 
-The current M4/M5 reward container has one progression object. Switching between 100 and 109 does not create independent class/stage progression state.
+The production class catalog now exposes all twenty canonical stage IDs:
 
-That is insufficient to prove a dual-class ten-stage system. S26/S27/S28 must define a stable stage/progression persistence contract; S29 will integrate that contract after the upstream PRs stabilize.
+Swordsman:
 
-### 3. SaveV2 has no explicit M6 stage model
+`100,110,120,130,140,150,160,170,180,190`
 
-Current SaveV2 persists one character and one progression record plus inventory, quest flags and reward receipts. It has no explicit ten-stage domain and its runtime validation context only allows characters 100 and 109.
+Wizard:
 
-M6 requirements:
+`109,119,129,139,149,159,169,179,189,199`
 
-- existing M5.1 SaveV2 must still load;
-- stage/progression state must survive save/reload;
-- inventory/equipment/quest/receipts must remain consistent;
-- future or unknown schema must fail closed or use an explicit migration;
-- S29 will not decide whether the schema version remains 2 or is bumped until S28 supplies the migration design.
+Runtime integration now includes:
 
-### 4. Equipment model has only weapon and armor slots
+- stage-aware playable class definitions
+- stage-aware representative skill availability
+- promotion through the production M6 promotion authority
+- equipment validation through the S28 M6 equipment authority
+- M6 SaveV2 extension and M5.1 SaveV2 migration
+- twenty-stage character validation context
+- stage state in runtime diagnostics/snapshot
+- original-derived visual family switching after promotion
 
-Both content-types.ts and progression/inventory.ts currently model only:
+## Save model decision
 
-- weapon
-- armor
+M6 uses **one active profession track per save**.
 
-M6 research includes accessory eligibility. S28 must either add an explicit accessory slot or document why the M6 playable contract intentionally excludes it. S29 will not silently encode accessory behavior in UI/runtime glue.
+Player-facing profession switching from M5.1 is now treated as:
 
-### 5. Skills and combat are base-definition driven
+> start a new swordsman save / start a new wizard save
 
-Skill availability currently resolves through playableClassById() and two base class definitions. The battle reconstruction profile also receives the current character id directly.
+It resets that active save's growth state rather than sharing one progression object across professions.
 
-S26/S27 must hand off stage-aware legal skills/magic, authored MP/stat data, and any stage-aware readiness adapter. S29 will connect those results to battle.ts only after the domain contract is stable.
+This avoids cross-profession stage/progression leakage and satisfies the S29 acceptance specification's explicit persistence boundary without introducing an unproven multi-character account model.
 
-### 6. World/progression content is still a single training slice
+## Asset pipeline integration
 
-The current ReconstructionWorldAuthority and M5 playable world prove one training quest path. They are not a multi-stage promotion or quest-chain authority.
+The private and synthetic asset pack builders now include all twenty profession visual families.
 
-S28 owns that expansion. S29 owns only the final glue and acceptance.
+Private-original generation still begins from the fixed-hash 2.2 installer:
 
-## Shared-file conflict audit
+`c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88`
 
-The following paths remain S29-owned during parallel work:
+The pack includes the ten swordsman and ten wizard B-family resources needed for runtime promotion. Original bulk assets remain outside Git.
 
-- web/src/main.ts
-- web/src/scene.ts
-- web/src/battle.ts
-- web/src/m4-runtime-integration.ts
-- Plan.md
-- Backlog.md
-- docs/evidence-ledger.md
+## Acceptance tests added
 
-Upstream sessions should hand off domain APIs and integration notes instead of editing these paths.
+S29 adds:
 
-S29 will re-run this audit immediately before integrating each upstream PR. If an upstream branch changes an S29-owned path, the integration will stop at review and extract the domain change rather than blindly merging the shared-runtime edit.
+- `web/tests/s29-m6-integration.test.ts`
+- `web/e2e/s29-m6-integration.spec.ts`
 
-## Upstream handoff contract
+They verify:
 
-### S25
+- exactly twenty production class definitions
+- swordsman `100 -> 190`
+- wizard `109 -> 199`
+- no direct stage mutation as acceptance proof
+- early promotion rejection
+- promotion through production authority
+- staged representative skills
+- SaveV2 M6 stage round-trip
+- profession isolation when starting a new profession save
 
-Required before final integration:
+A webdriver-only acceleration hook grants deterministic EXP **through the production reward/progression authority**. It is absent from normal player sessions and does not set stage IDs directly.
 
-- one authoritative 20-stage matrix;
-- provenance per field;
-- stable stage identity and visual bindings;
-- explicit server-boundary/reconstruction gaps;
-- S26/S27/S28 handoff paths.
+## M6 wall-clock soak
 
-S29 consumes S25 as evidence/data authority, not gameplay policy.
+`web/soak.mjs` is upgraded from the old M5 field soak.
 
-### S26
+Each M6 cycle now:
 
-Required:
+1. starts a swordsman or wizard profession save;
+2. routes deterministic test EXP through production reward/progression authority;
+3. promotes through the production M6 promotion authority to 110 or 119;
+4. equips legal profession gear;
+5. Save/Load round-trips the M6 extension;
+6. exercises camera follow and recovered guide visibility;
+7. toggles diagnostics;
+8. alternates profession family on the next cycle.
 
-- swordsman 100..190 stage domain;
-- stage-aware authored stats;
-- stage-aware legal equipment;
-- stage-aware representative skills and MP cost;
-- progression/promotion interface;
-- Save persistence contract;
-- S29 glue list.
+The required duration remains a real 30-minute wall-clock interval.
 
-### S27
+## M5.1 regression gates retained
 
-Required:
-
-- wizard 109..199 stage domain;
-- stage-aware HP/MP and magic-oriented stats;
-- magic availability and MP/readiness consumption;
-- legal equipment;
-- progression/promotion interface;
-- Save persistence contract;
-- S29 glue list.
-
-### S28
-
-Required:
-
-- shared progression and promotion authority;
-- inventory/equipment authority;
-- quest-chain authority;
-- receipt/idempotency rules;
-- SaveV2-compatible migration;
-- representative synthetic growth chain for both class families.
-
-## Acceptance proof rules
-
-The final ten-stage proof may use deterministic fixtures or accelerated reconstruction thresholds, but they must enter through production progression/reward/promotion APIs.
-
-The following do not count as proof:
-
-- direct memory mutation of stage;
-- test-only setter that skips progression authority;
-- raw save editing to jump stages.
-
-This allows fast automated acceptance without requiring literal manual grinding through ten stages while still proving the real domain path.
-
-## M5.1 regressions that remain hard gates
+Final browser acceptance continues to execute the inherited player gates, including:
 
 - NPC pointer interaction
-- keyboard E interaction
-- mobile touch interaction
-- delayed camera centering with edge clamp
-- fullscreen and zoom
+- keyboard E
+- mobile touch
+- delayed camera centering / world-edge clamp
+- fullscreen / zoom
 - field -> interior transition
-- recovered monster visibility
+- monster visibility
 - battle
 - confirmed retreat
-- quest turn-in
-- Developer diagnostics hidden by default
+- explicit quest turn-in
+- diagnostics hidden by default
 - standalone offline behavior
-
-## Final M6 gate
-
-S29 may announce engineering integration only after:
-
-1. S25-S28 stable handoffs are reviewed.
-2. Shared runtime consumes their interfaces without duplicating policy.
-3. Swordsman 100 -> 190 and wizard 109 -> 199 are proven through normal progression authority.
-4. Skills/magic, MP/readiness, equipment, promotion, quest/reward and Save migration pass.
-5. M5.1 regression gates pass on desktop and mobile.
-6. Fixed-hash 2.2 private-original validation passes.
-7. Standalone single HTML passes offline.
-8. A new M6 wall-clock soak passes after the final major integration.
-9. A final private standalone HTML is generated for user playtest.
-10. The user explicitly accepts that build.
-
-Until step 10, M6 remains open.
-
-## Drive / private-original boundary
-
-Private asset root checked during preflight:
-
-lapis-rebuild-assets/
-
-Existing relevant preview roots include:
-
-- lapis-rebuild-assets/40_previews/S20-original-ui-reference-pack-20260919/
-- lapis-rebuild-assets/40_previews/S21-original-hud-shell-20260919/
-- lapis-rebuild-assets/40_previews/S22-npc-pointer-interaction-20260919/
-- lapis-rebuild-assets/40_previews/S24-m5-1-acceptance-20260919/
-
-No new original-derived S29 artifact is generated during preflight. Final M6 private reports/standalone output will be written under the same private asset root and referenced here after validation.
 
 ## Evidence boundary
 
-This preflight creates engineering coordination metadata only.
+A functioning M6 growth system is engineering evidence, not proof that the retired retail server formulas were recovered.
 
-It does not upgrade any reconstruction rule to original retail truth. In particular:
+Still reconstruction/server-boundary unless separately proven:
 
-- promotion level/condition remains unproven until evidence or explicit policy says otherwise;
-- EXP curve remains reconstruction unless stronger evidence arrives;
-- exact retail combat formula remains server-boundary/reconstruction;
-- quest rewards/eligibility remain reconstruction unless proven;
-- accessory/stage eligibility must come from S25/S28 evidence or policy and must remain provenance-tagged.
+- exact retail EXP curve
+- promotion levels and promotion quest predicates
+- full equipment eligibility enforcement
+- exact damage / defence / critical formulas
+- quest rewards and server eligibility
+- late-stage Magic behavior not covered by a complete content contract
+- exact MagicRes placement/blend semantics
 
-## Next action
+## Final validation gate
 
-Wait for stable S25-S28 commits/integration notes while keeping this branch available for coordination updates. Once a handoff lands, S29 will review the PR delta against the contract, integrate in minimum-conflict order, then extend the acceptance harness from contract tests into runtime/E2E gates.
+The remaining automated gate is one exact final S29 head with:
+
+1. synthetic parser/typecheck/unit/build
+2. Chromium + standalone offline
+3. fixed-hash 2.2 private-original pack
+4. real-resource browser acceptance
+5. new 30-minute M6 wall-clock soak
+6. final private standalone HTML artifact
+
+After those are green, S29 will record the exact commit/run/artifact/HTML bytes/SHA-256 and provide that exact HTML for the user's hands-on playtest.
+
+Per the project gate, `main` is not merged until the user accepts that exact final M6 build.
