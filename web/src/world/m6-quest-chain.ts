@@ -285,7 +285,7 @@ export function validateM6QuestChainStateForDefinition(
     if(['locked','available'].includes(progress.status)&&(progress.stepIndex!==0||progress.objectiveProgress!==0))throw new Error('Invalid inactive M6 quest progress');
     const required=requiredProgress(quest.steps[progress.stepIndex].objective);
     if(progress.objectiveProgress>required)throw new Error('M6 quest objective progress overflow');
-    if(progress.status==='ready_to_turn_in'&&(progress.stepIndex!==quest.steps.length-1||progress.objectiveProgress<required))throw new Error('Invalid M6 ready-to-turn-in progress');
+    if((progress.status==='ready_to_turn_in'||progress.status==='complete')&&(progress.stepIndex!==quest.steps.length-1||progress.objectiveProgress<required))throw new Error('Invalid M6 terminal quest progress');
   }
   return state;
 }
