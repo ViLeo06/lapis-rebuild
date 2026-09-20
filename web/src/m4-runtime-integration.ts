@@ -12,7 +12,7 @@ import {createInventory,knownItemIds} from './progression/inventory.ts';
 import type {InventoryState} from './progression/inventory.ts';
 import {equipItem as equipProgression,reconcileEquipmentForCharacter} from './progression/equipment.ts';
 import type {EquipmentCompatibilityResolver} from './progression/equipment.ts';
-import {initialProgression} from './progression/progression.ts';
+import {initialProgression,totalExpForLevel} from './progression/progression.ts';
 import {applyBattleReward,applyQuestReward} from './progression/rewards.ts';
 import type {RewardState} from './progression/rewards.ts';
 import {CURRENT_SAVE_VERSION,SAVE_KIND} from './progression/save-schema.ts';
@@ -336,6 +336,21 @@ export class M4RuntimeIntegration{
     this.applyWorldState(this.m5World?.content.start??START_STATE);
     this.menuOpen=false;
     this.setNotice(id==='100'?'已开始新的剑士职业档':'已开始新的巫师职业档');
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceGrantLevel(targetLevel:number):void{
+    if(!navigator.webdriver)throw new Error('M6 acceptance reward fixture is automation-only');
+    if(!Number.isInteger(targetLevel)||targetLevel<1||targetLevel>99)throw new Error('Invalid M6 acceptance target level');
+    const targetExp=totalExpForLevel(targetLevel);
+    const amount=Math.max(0,targetExp-this.rewards.progression.exp);
+    if(amount===0)return;
+    const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
+    const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
+    this.rewards=applied.state;
+    this.scene.gold=this.rewards.gold;
+    this.applyClassProfile(false);
+    this.setNotice(`M6 acceptance fixture：通过生产 reward/progression authority 到达 Lv.${this.rewards.progression.level}`);
     this.render(this.scene.snapshot());
   }
 
