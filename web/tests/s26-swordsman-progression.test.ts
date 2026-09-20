@@ -136,7 +136,7 @@ test('promotion is centralized reconstruction policy and legally advances 100 th
 });
 
 test('representative skill availability is stage-driven policy while authored entry references stay separate', () => {
-  for(const stageId of WIZARD_FREE_SWORDSMAN_STAGES) assert.deepEqual(availableSwordsmanSkillIds(stageId), [1101,1201,1301]);
+  for(const stageId of SWORDSMAN_STAGE_IDS) assert.deepEqual(availableSwordsmanSkillIds(stageId), [1101,1201,1301]);
   assert.equal(swordsmanSkillAvailable(100, 1201), false);
   assert.equal(swordsmanSkillAvailable(110, 1201), true);
   assert.equal(swordsmanSkillAvailable(120, 1301), true);
