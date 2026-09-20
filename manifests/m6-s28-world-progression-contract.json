@@ -91,6 +91,18 @@
       ],
       "retail_exp_formula": "SERVER-BOUNDARY",
       "retail_promotion_trigger": "SERVER-BOUNDARY"
+    },
+    "world_progression": {
+      "module": "web/src/world/m6-world-progression.ts",
+      "graph_authority": "web/src/world/world-graph.ts",
+      "registries": [
+        "scene transitions",
+        "NPC entity IDs",
+        "encounter carriers"
+      ],
+      "gate_target_validation": true,
+      "availability_entrypoint": "m6WorldTargetAvailability",
+      "binding_provenance": "RECONSTRUCTION_POLICY"
     }
   },
   "server_boundary": [
