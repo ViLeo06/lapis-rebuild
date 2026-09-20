@@ -56,8 +56,8 @@ export function stageTrackFromS25CanonicalEvidence(
   for(let index=0;index<stages.length;index+=1){
     const stage=stages[index];
     if(!integerIn(stage.id,0,999999))throw new Error('Invalid S25 canonical stage id');
-    if(!Array.isArray(stage.progression.expValues)||stage.progression.expValues.length<1||stage.progression.expValues.some(value=>!integerIn(value,0,Number.MAX_SAFE_INTEGER)))throw new Error('Invalid S25 authored EXP rows');
-    if(!Array.isArray(stage.progression.nextClassRaw)||stage.progression.nextClassRaw.length!==stage.progression.expValues.length||stage.progression.nextClassRaw.some(value=>!integerIn(value,0,999999)))throw new Error('Invalid S25 next-class rows');
+    if(!Array.isArray(stage.progression.expValues)||stage.progression.expValues.length<1||stage.progression.expValues.some((value:unknown)=>!integerIn(value,0,Number.MAX_SAFE_INTEGER)))throw new Error('Invalid S25 authored EXP rows');
+    if(!Array.isArray(stage.progression.nextClassRaw)||stage.progression.nextClassRaw.length!==stage.progression.expValues.length||stage.progression.nextClassRaw.some((value:unknown)=>!integerIn(value,0,999999)))throw new Error('Invalid S25 next-class rows');
     if(stage.transitionHint.sourceEvidence!=='VERIFIED-STATIC-ORIGINAL'||stage.transitionHint.interpretationEvidence!=='INFERRED')throw new Error('Invalid S25 transition provenance');
     const expected=index<stages.length-1?stages[index+1].id:null;
     if(stage.transitionHint.candidateNextStageId!==expected)throw new Error('S25 canonical stage chain drift');
