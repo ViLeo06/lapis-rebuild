@@ -26,11 +26,27 @@ async function clickAction(action){
 async function startProfessionAndPromote(character){
  const action=character==='100'?'class-swordsman':'class-wizard';
  const promoted=character==='100'?'110':'119';
+
+ // Exercise the same menu path a player uses. The promotion button is
+ // intentionally derived from the current progression level when the menu
+ // renders; clicking a stale hidden/disabled menu button is not a valid
+ // player interaction.
+ await clickAction('menu');
+ await page.waitForFunction(()=>document.body.classList.contains('m4-menu-open'));
  await clickAction(action);
  await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,character);
+ await page.waitForFunction(()=>!document.body.classList.contains('m4-menu-open'));
+
  await page.evaluate(()=>window.lapisM4.acceptanceGrantLevel(10));
+ await clickAction('menu');
+ await page.waitForFunction(()=>document.body.classList.contains('m4-menu-open'));
+ await page.waitForFunction(()=>{
+  const button=document.querySelector('[data-action="m6-promote"]');
+  return button instanceof HTMLButtonElement&&!button.disabled;
+ });
  await clickAction('m6-promote');
  await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,promoted);
+ await page.waitForFunction(()=>!document.body.classList.contains('m4-menu-open'));
  return promoted;
 }
 
