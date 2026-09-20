@@ -445,4 +445,15 @@ test('M6 save extension fails closed on unknown fields and future extension sche
   assert.throws(()=>migrateSave({...migrated,m6:{...migrated.m6,unexpected:true}},saveContext),/Unknown M6 save extension field/);
   assert.throws(()=>migrateSave({...migrated,m6:{...migrated.m6,schema:2}},saveContext),/Unsupported M6 save extension/);
   assert.throws(()=>migrateSave({...migrated,m6:{...migrated.m6,stage:{...migrated.m6.stage,stageId:110}}},saveContext),/stage does not match character/);
+  const forgedComplete={
+    ...migrated,
+    m6:{
+      ...migrated.m6,
+      questChain:{
+        ...migrated.m6.questChain,
+        quests:{...migrated.m6.questChain.quests,'training-clear':{status:'complete' as const,stepIndex:0,objectiveProgress:0}},
+      },
+    },
+  };
+  assert.throws(()=>migrateSaveToM6(forgedComplete,saveContext,content),/Invalid M6 terminal quest progress/);
 });
