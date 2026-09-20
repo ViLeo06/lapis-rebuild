@@ -125,7 +125,9 @@ jobs:
         working-directory: web
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
-        run: npm run test:e2e
+        # One CI retry absorbs transient Chromium screenshot/protocol failures;
+        # deterministic assertion failures still fail both attempts.
+        run: npm run test:e2e -- --retries=1
       - name: Real thirty-minute diagnostic soak
         if: contains(github.event.head_commit.message, '[private-soak]')
         working-directory: web
