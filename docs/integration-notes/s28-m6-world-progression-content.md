@@ -90,8 +90,13 @@ S23 explicit dialogue choice remains the intended UI front end. S28 does not rei
     - scene transitions;
     - NPC interaction;
     - encounter carriers.
+- `web/src/world/m6-world-progression.ts`
+  - composes the existing S18 `WorldGraph` with registered NPC IDs, explicit encounter carriers and progression gates;
+  - validates every gate target against a real graph edge/NPC/encounter ID;
+  - supports multi-scene field/interior/field content without inferring any retail binding;
+  - provides one availability query for S29 before transition/NPC/encounter activation.
 
-This is intentionally a gate contract only. It does not fabricate retail map exits, NPC coordinates or map-to-battle bindings. S18 remains the spatial transition controller and S29 owns final runtime glue.
+This remains a content/gate contract only. It does not fabricate retail map exits, NPC coordinates or map-to-battle bindings. S18 remains the spatial transition controller and S29 owns final runtime glue.
 
 ### SaveV2 extension / migration
 
