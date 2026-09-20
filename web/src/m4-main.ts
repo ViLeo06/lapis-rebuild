@@ -12,6 +12,7 @@ declare global{
       load:()=>Promise<void>;
       exportJson:()=>string;
       restore:(raw:unknown)=>void;
+      acceptanceGrantLevel?:(targetLevel:number)=>void;
     };
   }
 }
@@ -43,6 +44,7 @@ window.addEventListener('lapis-ready',()=>{
     load:()=>runtime.load(),
     exportJson:()=>runtime.exportJson(),
     restore:(raw:unknown)=>runtime.restore(raw),
+    ...(navigator.webdriver?{acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel)}:{}),
   };
 });
 
