@@ -18,6 +18,7 @@ import {
 import type {M6InventoryPolicy} from '../src/progression/m6-inventory.ts';
 import {ReconstructionM6GrowthAuthority} from '../src/progression/m6-growth-authority.ts';
 import {
+  canonicalProgressionEvidenceFromS25,
   equipmentRuleFromS25CanonicalItem,
   stageTrackFromS25CanonicalEvidence,
 } from '../src/progression/m6-canonical-evidence-adapter.ts';
@@ -154,6 +155,12 @@ test('S28 consumes S25 canonical stage/item evidence without upgrading server en
   const track=stageTrackFromS25CanonicalEvidence('s25-swordsman-canonical','swordsman',stages);
   assert.deepEqual(track.stageIds,swordStages);
   assert.equal(track.provenance,'VERIFIED-STATIC-ORIGINAL');
+  const preserved=canonicalProgressionEvidenceFromS25('s25-swordsman-canonical','swordsman',stages);
+  assert.equal(preserved.authority,'S25_SINGLE_CANONICAL_DUAL_CLASS_MATRIX');
+  assert.equal(preserved.stages.at(-1)?.expValues.at(-1),345806600);
+  assert.equal(preserved.stages[0].nextClassRaw.at(-1),110);
+  assert.equal(preserved.retailExpFormula,'SERVER-BOUNDARY');
+  assert.equal(preserved.retailPromotionTrigger,'SERVER-BOUNDARY');
 
   const candidate=equipmentRuleFromS25CanonicalItem({
     itemId:3,
