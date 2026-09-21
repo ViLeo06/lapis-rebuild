@@ -12,7 +12,7 @@ test('S33 defines exactly 15 fixed-level battles on the approved M7 cadence',()=
   assert.ok(M7_TRAINING_BATTLES.every(row=>row.trainingBindingEvidence==='RECONSTRUCTION_POLICY'));
 });
 
-test('S33 training contract binds all 15 battles to explicit S30 candidate monster ids',()=>{
+test('S33 monster-role contract covers M7 tactical needs without inventing S30 monster ids',()=>{
   const roles=new Set(M7_TRAINING_BATTLES.flatMap(row=>row.monsterContract.map(monster=>monster.role)));
   for(const role of ['melee','ranged','tank','fast','magic','dot','healer','control','elite','boss'])assert.ok(roles.has(role),role);
   assert.ok(M7_TRAINING_BATTLES.some(row=>row.monsterContract.some(monster=>monster.role==='healer')));
