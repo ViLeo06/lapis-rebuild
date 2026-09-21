@@ -540,6 +540,7 @@
 .touch-hint{display:none;color:#b9aa85;font:8px/1 ui-monospace,monospace;white-space:nowrap}
 
 @media(max-width:560px){
+  .developer-diagnostics{top:58px;max-height:calc(100vh - 64px)}
   .top-command-strip{
     height:52px;
     padding:4px 5px;
