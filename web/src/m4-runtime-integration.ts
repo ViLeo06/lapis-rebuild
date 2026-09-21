@@ -1,3 +1,4 @@
+import './ui/m7-training.css';
 import type {LabScene} from './scene.ts';
 import type {Skill} from './battle.ts';
 import {actionReady,consumeAction} from './battle.ts';
@@ -20,7 +21,7 @@ import type {JsonValue,SaveV2,SaveValidationContext} from './progression/save-sc
 import {applyM6Promotion} from './progression/m6-stage-promotion.ts';
 import type {M6StageProgressionState} from './progression/m6-stage-promotion.ts';
 import {createM6SaveExtension} from './progression/m6-save-extension.ts';
-import {equipM6Item} from './progression/m6-equipment.ts';
+import {equipM6Item,evaluateM6EquipmentEligibility} from './progression/m6-equipment.ts';
 import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration.ts';
 import type {M6SaveV2} from './progression/m6-save-migration.ts';
 import {
@@ -48,6 +49,11 @@ import {createM5PlayableWorld} from './world/m5-playable-world.ts';
 import type {M5PlayableWorld} from './world/m5-playable-world.ts';
 import {SceneTransitionController} from './world/scene-transition.ts';
 import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
+import {applyInfiniteTrainingRecovery,InfiniteTrainingRecoveryPolicy} from './training/m7-recovery.ts';
+import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleById,trainingEnemyRank} from './training/m7-training-camp.ts';
+import {buildM7DeveloperCharacterPreset,implementedFirstSevenSkillIds} from './training/m7-developer-preset.ts';
+import type {M7Profession} from './training/m7-level-axis.ts';
+import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
 const QUEST_STAGES:readonly QuestStage[]=['not_started','accepted','objective','ready_to_turn_in','complete'];
@@ -117,6 +123,12 @@ export class M4RuntimeIntegration{
   private activeDialogue:NpcDialogueSession|null=null;
   private battleExitConfirm=false;
   private suppressEncounterUntilLeave=false;
+  private selectedTrainingBattleId=1;
+  private activeTrainingBattleId:number|null=null;
+  private trainingLaunchPending=false;
+  private developerPresetActive=false;
+  private developerUnlockAllSkills=false;
+  private developerSkillPoints=0;
   private hudHtml='';
   private menuHtml='';
   private debugHtml='';
@@ -191,6 +203,7 @@ export class M4RuntimeIntegration{
       lastAudio:this.lastAudio,
       playableRecovery:!!this.m5World,
       m6:{stageId:this.m6Stage.stageId,family:this.m6Stage.family,promotionReceipts:[...this.m6Stage.promotionReceipts],nextStageId:m6PromotionRuleForCharacter(this.scene.character)?.toStageId??null,canPromote:(m6PromotionRuleForCharacter(this.scene.character)?.minimumLevel??Infinity)<=this.rewards.progression.level},
+      m7Training:{selectedBattleId:this.selectedTrainingBattleId,activeBattleId:this.activeTrainingBattleId,recoveryPolicyId:InfiniteTrainingRecoveryPolicy.id,developerPresetActive:this.developerPresetActive,unlockAllImplementedSkills:this.developerMode&&this.developerUnlockAllSkills,developerSkillPoints:this.developerSkillPoints,skillLevelOverride:this.developerMode&&this.developerUnlockAllSkills?6:null},
       worldPlan:this.m5World?{doorCell:this.m5World.doorCell,interiorEntry:this.m5World.interiorEntry,interiorExit:this.m5World.interiorExit,encounterCell:this.m5World.encounterCell}:null,
     };
   }
