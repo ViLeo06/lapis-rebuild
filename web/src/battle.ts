@@ -28,6 +28,9 @@ export type Enemy = {
   x: number;
   y: number;
   role: 'melee'|'ranged';
+  visualResourceId?:number;
+  movementRangeCells?:number;
+  attackRangeCells?:number;
   blind: number;
   poison: number;
   action: number;
@@ -47,12 +50,29 @@ export type BattleEvent={
   provenance:RuntimeProvenance;
 };
 
+export type ReconstructionEnemySetup=Readonly<{
+  id:string;
+  level:number;
+  rank:EnemyRank;
+  role:'melee'|'ranged';
+  maxHp:number;
+  maxMp:number;
+  attack:number;
+  defense:number;
+  magicAttack:number;
+  magicDefense:number;
+  movementRangeCells:number;
+  attackRangeCells:number;
+  visualResourceId?:number;
+}>;
+
 export type ReconstructionBattleSetup={
   playerClassId:string|number;
   level:number;
   equipment?:EquipmentCombatBonuses;
   enemyLevel?:number;
   enemyRank?:EnemyRank;
+  enemies?:readonly ReconstructionEnemySetup[];
 };
 
 export type BattleState = {
@@ -126,19 +146,43 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
     const player=balance.playerStats(setup.playerClassId,setup.level,setup.equipment);
     const enemyLevel=setup.enemyLevel??setup.level;
     const rank=setup.enemyRank??'normal';
-    const melee=balance.enemyStats({id:'dummy-melee',level:enemyLevel,rank,role:'melee'});
-    const ranged=balance.enemyStats({id:'dummy-ranged',level:enemyLevel,rank,role:'ranged'});
     s.combatPlayerStats=player;
     s.hp=player.maxHp;s.maxHp=player.maxHp;s.mp=player.maxMp;s.maxMp=player.maxMp;
     s.damagePolicyId=balance.id;s.damagePolicyProvenance=balance.provenance;
-    s.enemies=[
-      {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-      {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-    ];
+    if(setup.enemies?.length){
+      s.enemies=setup.enemies.map((row,index)=>{
+        const template=balance.enemyStats({id:row.id,level:row.level,rank:row.rank,role:row.role});
+        const combatStats:CombatantStats=Object.freeze({
+          ...template,
+          id:row.id,
+          level:row.level,
+          rank:row.rank,
+          role:row.role,
+          maxHp:row.maxHp,
+          maxMp:row.maxMp,
+          attack:row.attack,
+          defense:row.defense,
+          magicAttack:row.magicAttack,
+          magicDefense:row.magicDefense,
+        });
+        return {
+          id:row.id,hp:row.maxHp,maxHp:row.maxHp,x:x+65+index*72,y:y-(index%2)*30,role:row.role,
+          visualResourceId:row.visualResourceId,movementRangeCells:row.movementRangeCells,attackRangeCells:row.attackRangeCells,
+          blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats,poisonTickDamage:0,poisonTicks:0,poisonClock:0,
+        };
+      });
+    }else{
+      const melee=balance.enemyStats({id:'dummy-melee',level:enemyLevel,rank,role:'melee'});
+      const ranged=balance.enemyStats({id:'dummy-ranged',level:enemyLevel,rank,role:'ranged'});
+      s.enemies=[
+        {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,x:x+65,y,role:'melee',visualResourceId:4524,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+        {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      ];
+    }
   }else{
     s.enemies=[
-      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',visualResourceId:4524,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
     ];
   }
   return s;
