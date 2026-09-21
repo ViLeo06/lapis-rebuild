@@ -17,8 +17,13 @@ from map_bundle import parse_mmf,parse_imf
 from render_map import render
 from spr import parse_spr,export_spr
 INSTALLER_SHA='c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88'
-WEB_MAPS={0:'对练场',1:'布日古斯_外城',7:'布日古斯_本城_大厅'}
-WEB_VISUALS={1001:'training-guide-reconstruction',4524:'training-melee-reconstruction',4544:'training-ranged-reconstruction'}
+WEB_MAPS={
+    0:'对练场',1:'布日古斯_外城',3:'布日古斯城内部',7:'布日古斯_本城_大厅',
+    9:'废矿',11:'扎魔拉要塞路口',13:'扎魔拉溪谷',15:'扎魔拉要塞',
+    21:'阿斯特来亚防御战',23:'决战',31:'泊罗斯帝国军本营',41:'泊罗斯帝国军本营',
+    51:'沙哈格拉神殿',61:'布日古斯港',71:'死亡之岛',81:'西西里奥岛',91:'达莱易湖',
+}
+WEB_VISUALS={1001:'training-guide-reconstruction',4524:'green-sword-humanoid-reconstruction',4525:'blue-polearm-humanoid-reconstruction',4526:'green-armored-humanoid-reconstruction',4544:'cyan-spectral-humanoid-reconstruction'}
 VISUAL_ACTIONS=('00','01','02','03')
 WEB_EFFECTS=(1,2,3,35,36,37,38)
 def digest(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -98,7 +103,7 @@ def generate(client:Path,out:Path):
         tmp=Path(tmp_name);stage=tmp/'pack'
         subprocess.run([sys.executable,str(ROOT/'tools/prepare_prototype.py'),'--char-dir',str(client/'Char'),'--sgres-dir',str(client/'SGRes'),'--out',str(stage)],check=True,capture_output=True,text=True)
         manifest=json.loads((stage/'prototype.json').read_text())
-        manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets/content only. M6 character families B100..B190/B109..B199 plus map/NPC/monster resources are original client bytes; promotion, quest, encounter and reward bindings remain RECONSTRUCTION_POLICY.'}
+        manifest['provenance']={'kind':'private-original','evidence':'VERIFIED','installer_sha256':INSTALLER_SHA,'scope':'Decoded assets/content only. M6 character families, M7 reviewed monster visuals, and selected field/story battle maps are original fixed-client bytes; promotion, quest, encounter, training-roster and battle-scene bindings remain RECONSTRUCTION_POLICY.'}
         manifest['map']['render'].pop('output',None)
         maps={str(mid):map_payload(client/'SGRes',stage,mid,name) for mid,name in WEB_MAPS.items()}
         manifest['map']=maps['0'];manifest['maps']=maps
