@@ -1,4 +1,3 @@
-import './ui/m7-training.css';
 import type {LabScene} from './scene.ts';
 import type {Skill} from './battle.ts';
 import {actionReady,consumeAction} from './battle.ts';
