@@ -15,6 +15,7 @@ declare global{
       restore:(raw:unknown)=>void;
       acceptanceGrantLevel?:(targetLevel:number)=>void;
       acceptanceSetEnemyHp?:(targetId:string,hp:number)=>void;
+      acceptancePrimeEnemyAction?:(targetId:string)=>void;
     };
   }
 }
@@ -49,6 +50,7 @@ window.addEventListener('lapis-ready',()=>{
     ...(navigator.webdriver?{
       acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel),
       acceptanceSetEnemyHp:(targetId:string,hp:number)=>runtime.acceptanceSetEnemyHp(targetId,hp),
+      acceptancePrimeEnemyAction:(targetId:string)=>runtime.acceptancePrimeEnemyAction(targetId),
     }:{}),
   };
 });
