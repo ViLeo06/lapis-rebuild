@@ -400,8 +400,15 @@ export class M4RuntimeIntegration{
     if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
     if(!Number.isFinite(hp)||hp<=0||hp>=enemy.maxHp)throw new Error('Invalid acceptance enemy HP');
     enemy.hp=hp;
-    enemy.action=this.scene.state.actionMax;
     this.render(this.scene.snapshot());
+  }
+
+  acceptancePrimeEnemyAction(targetId:string):void{
+    if(!navigator.webdriver)throw new Error('M7 acceptance enemy action fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('M7 acceptance enemy action fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    enemy.action=this.scene.state.actionMax;
   }
 
   acceptanceGrantLevel(targetLevel:number):void{
@@ -1037,7 +1044,7 @@ export class M4RuntimeIntegration{
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
-        skills:this.runtimeSkillCommands().map((command,index)=>({id:command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:String(index+1),disabled:snapshot.mp<command.mpCost})),
+        skills:this.runtimeSkillCommands().map((command,index)=>({id:command.authoredSkillId??command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:String(index+1),disabled:snapshot.mp<command.mpCost})),
       };
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);
