@@ -33,7 +33,11 @@ jobs:
           npm run build
           npx playwright install --with-deps chromium
       - name: Build standalone synthetic preview
-        run: python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/offline.html"
+        shell: bash
+        run: |
+          mkdir -p web/test-results
+          python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/offline.html" | tee web/test-results/m7-standalone-synthetic.json
+          cp "$RUNNER_TEMP/offline.html" web/test-results/lapis-m7-synthetic.html
       - name: Chromium integration and offline tests
         working-directory: web
         env:
