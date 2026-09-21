@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: web-ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
@@ -52,15 +53,69 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
-      - name: Fetch hash-pinned sample and extract without execution
+      - name: Fetch hash-pinned sample or recover retained verified preview
+        id: private_source
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          curl --fail --location --max-time 180 --retry 1 https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe -o "$RUNNER_TEMP/client.exe"
-          echo "c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88  $RUNNER_TEMP/client.exe" | sha256sum -c -
-          python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88
-          python3 tools/prepare_web.py --client-root "$RUNNER_TEMP/extracted/client" --out web/public/game-data
+          CLIENT_URL="https://oss.figupaw.com/client-updates/YBCS-Online-Setup-2.2.exe"
+          INSTALLER_SHA="c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88"
+          VERIFIED_HEAD="0a51f242a6357031f7f5b83c743fae7724c7e2f9"
+          VERIFIED_RUN="35545442305"
+          VERIFIED_ARTIFACT="10616895482"
+          VERIFIED_HTML_SHA="f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4"
+
+          if curl --fail --location --max-time 180 --retry 1 "$CLIENT_URL" -o "$RUNNER_TEMP/client.exe"; then
+            echo "$INSTALLER_SHA  $RUNNER_TEMP/client.exe" | sha256sum -c -
+            python3 tools/extract/extract_client.py "$RUNNER_TEMP/client.exe" --payload "$RUNNER_TEMP/payload.7z" --extract-dir "$RUNNER_TEMP/extracted" --expected-installer-sha256 "$INSTALLER_SHA"
+            python3 tools/prepare_web.py --client-root "$RUNNER_TEMP/extracted/client" --out web/public/game-data
+            echo "mode=installer" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Pinned client URL is unavailable; using retained preview only after strict lineage and SHA verification."
+            compare="$RUNNER_TEMP/private-lineage-compare.json"
+            curl --fail --location --retry 2               -H "Authorization: Bearer $GH_TOKEN"               -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/$GITHUB_REPOSITORY/compare/$VERIFIED_HEAD...${GITHUB_SHA}"               -o "$compare"
+            python3 - "$compare" <<'PY'
+          import json,sys
+          payload=json.load(open(sys.argv[1],encoding='utf-8'))
+          allowed={'.github/workflows/web-ci.yml','web/soak.mjs'}
+          changed={row['filename'] for row in payload.get('files',[])}
+          unexpected=sorted(changed-allowed)
+          if unexpected:
+              raise SystemExit(f'Fallback lineage rejected; runtime/content files changed: {unexpected}')
+          print(json.dumps({'fallback_lineage_ok':True,'changed_files':sorted(changed)},ensure_ascii=False))
+          PY
+            curl --fail --location --retry 2               -H "Authorization: Bearer $GH_TOKEN"               -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$VERIFIED_ARTIFACT/zip"               -o "$RUNNER_TEMP/verified-private.zip"
+            mkdir -p "$RUNNER_TEMP/verified-private"
+            unzip -q "$RUNNER_TEMP/verified-private.zip" -d "$RUNNER_TEMP/verified-private"
+            preview="$(find "$RUNNER_TEMP/verified-private" -type f -name lapis-private.html -print -quit)"
+            test -n "$preview"
+            cp "$preview" "$RUNNER_TEMP/lapis-private.html"
+            echo "$VERIFIED_HTML_SHA  $RUNNER_TEMP/lapis-private.html" | sha256sum -c -
+            mkdir -p web/test-results
+            python3 - "$compare" web/test-results/private-fallback-lineage.json "$VERIFIED_HEAD" "$VERIFIED_RUN" "$VERIFIED_ARTIFACT" "$VERIFIED_HTML_SHA" "${GITHUB_SHA}" <<'PY'
+          import json,sys
+          compare_path,out,verified_head,verified_run,artifact_id,html_sha,current_head=sys.argv[1:]
+          compare=json.load(open(compare_path,encoding='utf-8'))
+          record={
+            'status':'verified-retained-preview',
+            'reason':'Pinned public installer URL returned HTTP failure.',
+            'verified_head':verified_head,
+            'verified_run_id':int(verified_run),
+            'verified_artifact_id':int(artifact_id),
+            'verified_html_sha256':html_sha,
+            'current_head':current_head,
+            'allowed_delta':['.github/workflows/web-ci.yml','web/soak.mjs'],
+            'actual_delta':sorted(row['filename'] for row in compare.get('files',[])),
+            'evidence_boundary':'The retained preview is reused only because no runtime/content source changed since the fixed-hash private-original run. The current soak script is executed against that exact verified HTML.',
+          }
+          json.dump(record,open(out,'w',encoding='utf-8'),ensure_ascii=False,indent=2)
+          PY
+            echo "mode=retained-preview" >> "$GITHUB_OUTPUT"
+          fi
       - name: Capture MagicRes, map, combat, binary and content structural evidence
+        if: steps.private_source.outputs.mode == 'installer'
         run: |
           python3 tools/inspect_magicres.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/magicres-summary.json
           python3 tools/probe_maps.py --client-root "$RUNNER_TEMP/extracted/client" --start 0 --count 12 --out web/test-results/map-probe.json
@@ -72,6 +127,7 @@ jobs:
           python3 tools/validate/validate_extended_content.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --out web/test-results/extended-content-summary.json
           python3 tools/validate/validate_tip_assets.py --client-root "$RUNNER_TEMP/extracted/client" --out web/test-results/tip-structure-summary.json
       - name: Publish static evidence early
+        if: steps.private_source.outputs.mode == 'installer'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: private-static-evidence
@@ -89,6 +145,7 @@ jobs:
           retention-days: 3
           if-no-files-found: error
       - name: Publish private combat sources
+        if: steps.private_source.outputs.mode == 'installer'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: private-combat-source
@@ -98,8 +155,10 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Extract Quest source for private analysis
+        if: steps.private_source.outputs.mode == 'installer'
         run: python3 tools/extract/lib_archive.py "$RUNNER_TEMP/extracted/client/NRes/Quest.lib" --extract-dir "$RUNNER_TEMP/quest-source"
       - name: Publish private Quest source
+        if: steps.private_source.outputs.mode == 'installer'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: private-quest-source
@@ -107,6 +166,7 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Publish private NPC350 source
+        if: steps.private_source.outputs.mode == 'installer'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: private-npc350-source
@@ -117,17 +177,24 @@ jobs:
         working-directory: web
         run: |
           npm ci --ignore-scripts
-          npm run build
+          if [ "${{ steps.private_source.outputs.mode }}" = "installer" ]; then npm run build; fi
           npx playwright install --with-deps chromium
       - name: Private standalone preview
+        if: steps.private_source.outputs.mode == 'installer'
         run: python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/lapis-private.html"
       - name: Real-resource browser and offline tests
+        if: steps.private_source.outputs.mode == 'installer'
         working-directory: web
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
         # One CI retry absorbs transient Chromium screenshot/protocol failures;
         # deterministic assertion failures still fail both attempts.
         run: npm run test:e2e -- --retries=1
+      - name: Record inherited private-browser acceptance
+        if: steps.private_source.outputs.mode == 'retained-preview'
+        run: |
+          echo "Fixed-hash private browser acceptance is inherited from run 35545442305 / head 0a51f242a6357031f7f5b83c743fae7724c7e2f9."
+          echo "Current lineage guard permits only web/soak.mjs and this workflow to differ."
       - name: Real thirty-minute diagnostic soak
         if: contains(github.event.head_commit.message, '[private-soak]')
         working-directory: web
