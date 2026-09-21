@@ -16,16 +16,18 @@ test('S33 monster-role contract covers M7 tactical needs without inventing S30 m
   const roles=new Set(M7_TRAINING_BATTLES.flatMap(row=>row.monsterContract.map(monster=>monster.role)));
   for(const role of ['melee','ranged','tank','fast','magic','dot','healer','control','elite','boss'])assert.ok(roles.has(role),role);
   assert.ok(M7_TRAINING_BATTLES.some(row=>row.monsterContract.some(monster=>monster.role==='healer')));
-  const signatures=M7_TRAINING_BATTLES.map(row=>row.monsterContract.map(monster=>monster.role+'x'+monster.count).join('|'));
+  const signatures=M7_TRAINING_BATTLES.map(row=>row.candidateMonsterIds.join('|'));
   assert.equal(new Set(signatures).size,15);
+  assert.deepEqual(M7_TRAINING_BATTLES[7]!.candidateMonsterIds,['m7-green-armored-renewer-l26']);
+  assert.deepEqual(M7_TRAINING_BATTLES[14]!.candidateMonsterIds,['m7-spectral-overseer-boss-l65','m7-cyan-spectral-elite-l60']);
 });
 
 test('S33 reconstruction battle setup keeps enemy level fixed when player level changes',()=>{
   const preset=M7_TRAINING_BATTLES[14]!;
   const low=reconstructionSetupForTrainingBattle(preset,'160',20);
   const atLevel=reconstructionSetupForTrainingBattle(preset,'160',65);
-  assert.equal(low.enemyLevel,70);
-  assert.equal(atLevel.enemyLevel,70);
+  assert.equal(low.enemyLevel,65);
+  assert.equal(atLevel.enemyLevel,65);
   assert.equal(low.level,20);
   assert.equal(atLevel.level,65);
 });
