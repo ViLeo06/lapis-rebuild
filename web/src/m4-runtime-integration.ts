@@ -25,7 +25,7 @@ import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration
 import type {M6SaveV2} from './progression/m6-save-migration.ts';
 import {
   M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
-  m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
+  m6SkillAvailableForCharacter,m6StageTrackForCharacter,
 } from './m6-runtime-content.ts';
 import {ReconstructionWorldAuthority} from './world/world-authority.ts';
 import type {WorldRuntimeState} from './world/world-authority.ts';
@@ -50,7 +50,7 @@ import {SceneTransitionController} from './world/scene-transition.ts';
 import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
 import {applyInfiniteTrainingRecovery,InfiniteTrainingRecoveryPolicy} from './training/m7-recovery.ts';
 import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleById,trainingEnemyRank} from './training/m7-training-camp.ts';
-import {buildM7DeveloperCharacterPreset,implementedFirstSevenSkillIds} from './training/m7-developer-preset.ts';
+import {availableImplementedM7SkillIds,buildM7DeveloperCharacterPreset,implementedFirstSevenSkillIds} from './training/m7-developer-preset.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
 import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
 
@@ -465,7 +465,7 @@ export class M4RuntimeIntegration{
   private runtimeSkillIds(characterId:string|number):readonly number[]{
     const profession=playableClassById(characterId).family as M7Profession;
     if(this.developerMode&&this.developerUnlockAllSkills)return implementedFirstSevenSkillIds(profession);
-    return m6SkillIdsForCharacter(characterId);
+    return availableImplementedM7SkillIds(profession,this.rewards.progression.level);
   }
 
   private skillAllowedForRuntime(characterId:string|number,skillId:number):boolean{
