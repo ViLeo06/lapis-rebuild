@@ -21,6 +21,16 @@ test('developer preset resolves both profession stage ids across seven stages',(
   assert.deepEqual(levels.map(level=>resolveM7StageId('wizard',level)),wizard);
 });
 
+
+test('normal compatibility skill provider respects M7 stage unlocks before S31/S32 integration',()=>{
+  assert.deepEqual(buildM7DeveloperCharacterPreset('swordsman',1,false).legalSkillIds,[1101]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('swordsman',6,false).legalSkillIds,[1101,1201]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('swordsman',16,false).legalSkillIds,[1101,1201,1301]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('wizard',1,false).legalSkillIds,[19101]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('wizard',6,false).legalSkillIds,[19101,19201]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('wizard',16,false).legalSkillIds,[19101,19201,19301]);
+});
+
 test('developer all-skills override is explicit Lv6 debug state and runtime-only',()=>{
   const preset=buildM7DeveloperCharacterPreset('wizard',6,true);
   assert.equal(preset.stage,2);
