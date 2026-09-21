@@ -1,6 +1,6 @@
 # Backlog
 
-> 2026-09-20 | Web-first | Plan v3.4 | M5.1 user gate passed | active: M6 S25-S29
+> 2026-09-21 | Web-first | Plan v3.5 | M6 user gate passed | active: next milestone planning
 
 ## 已完成基线
 
@@ -142,34 +142,45 @@
 - [x] 最终 artifact `10583854810`；single HTML 11,214,215 bytes；SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。
 - [x] 2026-09-20 用户亲自试玩通过，批准收口并进入 M6。
 
-## M6 S25–S29 — 进行中
+## M6 S25–S29 — 已收口
 
 ### S25 Dual-class Matrix / Data Archaeology
-- [ ] 建立剑士 B100–B190、巫师 B109–B199 共 20 阶段的统一矩阵。
-- [ ] 对每阶段固定视觉 family、authored stats、技能、装备、成长/转职相关证据与来源等级。
-- [ ] 把 server-boundary 缺口单独列为 reconstruction policy，不因数字相同做无证据绑定。
+- [x] 建立剑士 B100–B190、巫师 B109–B199 共 20 阶段统一矩阵。
+- [x] 固定视觉 family、authored stats、技能/魔法、装备与阶段证据边界。
+- [x] server-boundary 与 reconstruction policy 单独标注，不把弱证据升级为原版事实。
 
 ### S26 Swordsman Ten-stage Progression
-- [ ] 剑士十阶段可持续成长与阶段切换。
-- [ ] 每阶段合法装备、代表技能、主要属性与表现绑定。
-- [ ] 单元测试 + 浏览器真实输入回归。
+- [x] 剑士 `100→190` 十阶段 progression domain。
+- [x] 阶段视觉、属性、装备、三技能 M5.1 兼容、promotion 与 SaveV2。
+- [x] 单元/浏览器回归通过。
 
 ### S27 Wizard Ten-stage Progression
-- [ ] 巫师十阶段可持续成长与阶段切换。
-- [ ] MP/魔法/合法装备/代表技能完整接入。
-- [ ] 单元测试 + 浏览器真实输入回归。
+- [x] 原 S27 分支无实现；由 S29 接管并补齐。
+- [x] 巫师 `109→199` 十阶段、MP/魔法、装备、三技能 M5.1 兼容、promotion 与 SaveV2。
+- [x] authored `19401/19501` 继续作为证据保留，不虚构未实现效果。
 
 ### S28 World / Quest / Equipment Expansion
-- [ ] 等级成长、背包/装备、转职/任务链、地图/场景与奖励闭环扩展。
-- [ ] 明确 authored data 与 reconstruction formula/reward/condition 分层。
-- [ ] SaveV2 向 M6 数据结构扩展并准备迁移策略。
+- [x] M6 progression / quest-chain / equipment / save migration authority 接入。
+- [x] authored data 与 reconstruction reward/condition/formula 分层。
+- [x] 玩家装备路径经 M6 equipment authority 验证。
 
 ### S29 M6 Integration / Acceptance
-- [ ] S25–S28 integration notes 收口后统一接入共享 runtime。
-- [ ] 剑士/巫师从初始到第十阶段的代表成长路径 E2E。
-- [ ] 桌面 + 手机真实输入验收；Developer diagnostics 默认关闭。
-- [ ] fixed-hash private-original、standalone offline、SaveV2 migration 与 wall-clock soak。
-- [ ] 关键视觉/玩法人工 spot-check 后再关闭 M6 gate。
+- [x] S25/S26/S28 汇入 S29；S27 在 S29 补齐并统一生产 runtime。
+- [x] 生产 class catalog 包含 20 个职业阶段；剑士 `100→190`、巫师 `109→199`。
+- [x] M6 SaveV2 extension + M5.1 SaveV2 migration。
+- [x] private real-resource browser acceptance：`61 passed / 4 skipped / 0 failed`。
+- [x] final M6 validation run `35562393435` success。
+- [x] 新 30 分钟 M6 wall-clock soak：`1,800,634 ms`，0 page error，0 external request。
+- [x] 最终 private HTML：22,968,621 bytes；SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。
+- [x] 2026-09-21 用户亲自试玩确认无问题；M6 human gate 通过。
+
+## 下一里程碑 — 方案讨论中
+
+- [ ] 怪物内容扩充与等级/难度梯度：方案待确认。
+- [ ] 剑士/巫师各阶段实际技能补齐：方案待确认。
+- [ ] 训练营多 battle scene / 怪物组合选择：方案待确认。
+- [ ] HP/MP 恢复动作与无限调试道具：方案待确认。
+- [ ] 正式编号、任务拆分、文件所有权与验收标准：待用户确认方案后再立项。
 
 ## 边界
 
