@@ -33,27 +33,27 @@ Source: `web/src/training/m7-training-camp.ts`.
 
 The scene rows below are backed by `manifests/story-battle-scenes.json` and therefore the scene identity itself is `VERIFIED-STATIC-ORIGINAL`. Binding a scene or monster role to a reconstruction training battle is `RECONSTRUCTION_POLICY`.
 
-| # | Recommended | Fixed enemy | Stage | Target zone | Monster-role contract | Band |
-|---:|---:|---:|---:|---:|---|---|
-| 1 | 2 | 2 | 1 | 1 | melee×1 | Normal |
-| 2 | 5 | 5 | 1 | 3 | melee×1 / fast×1 | Normal |
-| 3 | 6 | 6 | 2 | 9 | melee×1 / ranged×1 | Normal |
-| 4 | 10 | 10 | 2 | 11 | fast×1 / ranged×1 | Normal |
-| 5 | 15 | 15 | 2 | 13 | tank×1 / ranged×1 | Hard |
-| 6 | 16 | 16 | 3 | 15 | tank×1 / melee×1 | Normal |
-| 7 | 25 | 25 | 3 | 21 | dot×1 / ranged×1 | Hard |
-| 8 | 26 | 26 | 4 | 23 | healer×1 / tank×1 | Hard |
-| 9 | 35 | 35 | 4 | 31 | control×1 / fast×1 | Hard |
-| 10 | 36 | 36 | 5 | 41 | magic×1 / tank×1 | Hard |
-| 11 | 45 | 45 | 5 | 51 | dot×1 / magic×1 / ranged×1 | Hard |
-| 12 | 46 | 46 | 6 | 61 | healer×1 / control×1 / tank×1 | Hard |
-| 13 | 55 | 57 | 6 | 71 | elite×1 / magic×1 | Elite |
-| 14 | 56 | 58 | 7 | 81 | elite×1 / healer×1 / ranged×1 | Elite |
-| 15 | 65 | 70 | 7 | 91 | boss×1 / elite×1 / control×1 | Boss |
+| # | Recommended | Fallback enemy | Stage | Target zone | Monster-role contract | S30 candidate IDs | Band |
+|---:|---:|---:|---:|---:|---|---|---|
+| 1 | 2 | 2 | 1 | 1 | melee×1 | `m7-green-sword-trainee-l2` | Normal |
+| 2 | 5 | 5 | 1 | 3 | fast×1 | `m7-blue-polearm-skirmisher-l5` | Normal |
+| 3 | 6 | 6 | 2 | 9 | tank×1 | `m7-green-armored-guard-l6` | Normal |
+| 4 | 10 | 10 | 2 | 11 | ranged×1 / tank×1 | `m7-cyan-spectral-ranged-l10`, `m7-green-armored-guard-l6` | Normal |
+| 5 | 15 | 15 | 2 | 13 | dot×1 / ranged×1 | `m7-blue-polearm-venom-l15`, `m7-cyan-spectral-ranged-l10` | Hard |
+| 6 | 16 | 16 | 3 | 15 | magic×1 | `m7-cyan-spectral-hexer-l16` | Normal |
+| 7 | 25 | 25 | 3 | 21 | melee×1 / control×1 | `m7-green-sword-duelist-l22`, `m7-green-armored-controller-l25` | Hard |
+| 8 | 26 | 26 | 4 | 23 | healer×1 | `m7-green-armored-renewer-l26` | Hard |
+| 9 | 35 | 35 | 4 | 31 | control×1 / fast×1 | `m7-cyan-spectral-binder-l32`, `m7-blue-polearm-raider-l35` | Hard |
+| 10 | 36 | 36 | 5 | 41 | tank×1 | `m7-green-armored-bulwark-l36` | Hard |
+| 11 | 45 | 45 | 5 | 51 | dot×1 / melee×1 | `m7-cyan-spectral-venom-caster-l42`, `m7-green-sword-berserker-l45` | Hard |
+| 12 | 46 | 46 | 6 | 61 | magic×1 / control×1 | `m7-cyan-spectral-support-l46` | Hard |
+| 13 | 55 | 55 | 6 | 71 | elite×1 / magic×1 | `m7-green-armored-elite-l55`, `m7-cyan-spectral-support-l46` | Elite |
+| 14 | 56 | 56 | 7 | 81 | fast×1 | `m7-blue-polearm-vanguard-l56` | Elite |
+| 15 | 65 | 65 | 7 | 91 | boss×1 / elite×1 | `m7-spectral-overseer-boss-l65`, `m7-cyan-spectral-elite-l60` | Boss |
 
-The preset stores **roles**, not S30 monster IDs. This is deliberate: S30 was not yet available at S33 preflight, so S33 does not invent cross-worker monster identities. S34 should map these role contracts to S30 `MonsterArchetypeCatalog` IDs.
+S30 became available after the initial S33 preflight. S33 now consumes the exact candidate monster IDs from `docs/integration-notes/s30-handoff-s33-training-camp.md`; it still does **not** copy or rebuild S30 monster stats.
 
-`reconstructionSetupForTrainingBattle()` always uses `preset.fixedEnemyLevel`; player level only affects player stats and the UI difficulty hint. There is no S33 player-level enemy scaling.
+`reconstructionSetupForTrainingBattle()` uses `preset.fixedEnemyLevel` only as the current shared-core two-dummy fallback. Player level never changes it. After S34 injects the S30 roster, each S30 row's own fixed level/stats/AI/abilities are authoritative and must not be rescaled to this fallback scalar.
 
 ### Difficulty hint
 
@@ -150,23 +150,42 @@ Recommended S34 patch:
 - consume S30 monster catalog and difficulty matrix
 - extend the reconstruction battle setup with an injected enemy roster
 - have scene visuals bind roster monster IDs to S30 visual-family/resource bindings
-- map S33 role contracts to concrete S30 monster IDs
+- consume each preset's `candidateMonsterIds` against `M7_MONSTER_ARCHETYPE_CATALOG`
+- preserve each S30 row's fixed stats/level/AI/abilities; do not rebuild them from player level or S33 fallback level
+- use S33 role contracts as training-purpose metadata, not as a replacement stat authority
 - do not rewrite S33's 15-level/scene/purpose table
 
 Until that hook is merged, S33 runtime starts all 15 presets with the existing two-dummy shared-core roster. S33 does **not** claim monster-roster acceptance is complete.
 
 ### 3. S31/S32 skill-level runtime
 
-S33's Developer all-skills UI intentionally consumes the runtime skill provider. At preflight S31 was unavailable and S32 had only appeared as an upstream branch.
+Both upstream branches are now present and were re-checked after S33 preflight.
 
-S34 should, after integrating S31/S32:
+S31 public integration contracts include:
 
-- make first-seven-stage runtime providers expose all implemented skills
-- connect `skillLevelOverride: 6` to the S31/S32 data-driven skill-level state
+- `availableM7SwordsmanSkillKeys(level)`
+- `createM7SwordsmanSkillProgression(level)`
+- `createDeveloperM7SwordsmanSkillProgression()`
+- `planM7SwordsmanSkillUse(...)`
+
+S32 currently exposes:
+
+- `M7_WIZARD_SKILL_KEYS`
+- `m7WizardAllowedSkillKeys(level)`
+- `createM7WizardSkillBook(level)`
+- `developerM7WizardSkillBook(level)`
+- `m7WizardSkillLevel(...)`
+- status/runtime helpers in `wizard-seven-stage-runtime.ts`
+
+S34 should:
+
+- replace the current compatibility skill provider with these M7 providers after integrating S31/S32
+- connect S33's `skillLevelOverride: 6` to the real developer skill books/progression rather than treating it as coefficient metadata
 - preserve normal stage/skill-point legality outside debug
-- keep debug override out of ordinary SaveV2
+- keep developer books/overrides out of ordinary SaveV2
+- retain S33's profession/level preset and UI; do not duplicate a second Developer Preset flow
 
-S33 does not claim that its metadata field alone changes skill coefficients.
+S33 does not claim that its metadata field alone changes skill coefficients before those upstream runtime adapters are integrated.
 
 ### 4. Old M6 promotion buttons
 
@@ -181,7 +200,8 @@ For M7 final integration, S34 must ensure the **first seven stages** use the app
   - seven-stage coverage
   - multiple verified scene targets
   - role diversity including healer/elite/boss
-  - distinct battle compositions
+  - exact S30 candidate monster IDs for all 15 battles
+  - distinct candidate-roster compositions
   - fixed enemy level independent of player level
   - 15 Start actions rendered
 - `web/tests/s33-training-recovery.test.ts`
