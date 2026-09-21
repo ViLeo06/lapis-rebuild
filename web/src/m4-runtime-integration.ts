@@ -259,11 +259,12 @@ export class M4RuntimeIntegration{
       this.battleExitConfirm=false;
       const trainingBattleId=this.trainingLaunchPending?this.selectedTrainingBattleId:null;
       this.prepareReconstructionBattle(trainingBattleId);
-      const trainingEntry=trainingBattleId===null?undefined:Object.freeze({
-        battleZoneId:trainingBattleById(trainingBattleId).battleZoneId,
+      const requestedTrainingZone=trainingBattleId===null?null:trainingBattleById(trainingBattleId).battleZoneId;
+      const trainingEntry=requestedTrainingZone!==null&&this.scene.pack.maps[String(requestedTrainingZone)]?Object.freeze({
+        battleZoneId:requestedTrainingZone,
         provenance:'RECONSTRUCTION_POLICY' as const,
         authority:'offline-reconstruction' as const,
-      });
+      }):undefined;
       originalEnter(entryOverride??trainingEntry);
       this.trainingLaunchPending=false;
       if(!this.scene.inBattleView){
@@ -535,7 +536,7 @@ export class M4RuntimeIntegration{
       }
       const integrated=integratedTrainingBattleById(preset.id);
       const actualZone=this.scene.state.battleZoneId;
-      const sceneNote=actualZone===preset.battleZoneId?'场景绑定已匹配':'场景绑定失败：expected '+preset.battleZoneId+', got '+String(actualZone);
+      const sceneNote=actualZone===preset.battleZoneId?'场景绑定已匹配':(!this.scene.pack.maps[String(preset.battleZoneId)]?'synthetic 缺 Zone '+preset.battleZoneId+'，已显式 fallback 至 '+String(actualZone):'场景绑定失败：expected '+preset.battleZoneId+', got '+String(actualZone));
       const levels=integrated.enemies.map(enemy=>enemy.fixedLevel).join('/');
       this.setNotice('Training Battle #'+preset.id+'：Fixed Enemy Lv.'+levels+' / '+sceneNote);
       this.render(this.scene.snapshot());
