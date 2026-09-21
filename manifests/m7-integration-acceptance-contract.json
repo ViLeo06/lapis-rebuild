@@ -1,0 +1,84 @@
+{
+  "schema": "m7-integration-acceptance-contract-v1",
+  "owner": "S34",
+  "baseline": "1d592d0e2194567c5d7d863e6a48250407dabeb3",
+  "scope": "M7 Combat Content Expansion / Lv1-65 first seven stages",
+  "stage_axis": {
+    "ranges": [
+      {"stage": 1, "min_level": 1, "max_level": 5},
+      {"stage": 2, "min_level": 6, "max_level": 15},
+      {"stage": 3, "min_level": 16, "max_level": 25},
+      {"stage": 4, "min_level": 26, "max_level": 35},
+      {"stage": 5, "min_level": 36, "max_level": 45},
+      {"stage": 6, "min_level": 46, "max_level": 55},
+      {"stage": 7, "min_level": 56, "max_level": 65}
+    ],
+    "promotion_levels": [6, 16, 26, 36, 46, 56],
+    "swordsman_stage_ids": [100, 110, 120, 130, 140, 150, 160],
+    "wizard_stage_ids": [109, 119, 129, 139, 149, 159, 169]
+  },
+  "skills": {
+    "swordsman": [1101, 1201, 1301, 1401, 1501, "battle-command", "stun-attack"],
+    "wizard": [19101, 19201, 19301, 19401, 19501, "blind", "cursed-sword"],
+    "levels_per_skill": 6
+  },
+  "training": {
+    "battle_count": 15,
+    "recommended_levels": [2, 5, 6, 10, 15, 16, 25, 26, 35, 36, 45, 46, 55, 56, 65],
+    "enemy_scaling": "forbidden",
+    "difficulty_label_only": true,
+    "required_archetypes": ["melee", "ranged", "tank", "fast", "magic", "dot", "healer", "elite", "boss"]
+  },
+  "recovery": {
+    "policy_id": "M7InfiniteTrainingRecoveryPolicy",
+    "provenance": "RECONSTRUCTION_POLICY",
+    "hp_amount": 200,
+    "mp_amount": 200,
+    "readiness_cost_candidate": 10,
+    "infinite": true,
+    "full_resource_use_is_noop": true
+  },
+  "save_v2": {
+    "must_preserve": ["profession", "level", "stage", "skill-unlocks", "skill-levels", "equipment", "hp-mp", "progression-flags"],
+    "debug_state_must_not_pollute_normal_profile": true
+  },
+  "upstream_handoffs": [
+    {"session": "S30", "branch": "codex/s30-m7-monster-difficulty-matrix", "status": "pending"},
+    {"session": "S31", "branch": "codex/s31-m7-swordsman-skills", "status": "pending"},
+    {"session": "S32", "branch": "codex/s32-m7-wizard-skills", "status": "pending"},
+    {"session": "S33", "branch": "codex/s33-m7-training-recovery-debug", "status": "pending"}
+  ],
+  "shared_runtime_owned_by_s34": ["web/src/main.ts", "web/src/scene.ts", "web/src/battle.ts"],
+  "inherited_regression_gates": [
+    "npc-pointer",
+    "keyboard-e",
+    "mobile-touch",
+    "camera-delayed-centering",
+    "retreat-confirmation",
+    "developer-diagnostics-default-hidden",
+    "standalone-offline",
+    "save-load"
+  ],
+  "evidence_levels": [
+    "VERIFIED",
+    "VERIFIED-STATIC-ORIGINAL",
+    "VERIFIED-HISTORICAL",
+    "RECOVERED_SECONDARY",
+    "INFERRED",
+    "SERVER-BOUNDARY",
+    "RECONSTRUCTION_POLICY",
+    "UNVERIFIED"
+  ],
+  "server_boundaries": [
+    "exact-retail-damage-formula",
+    "exact-server-enemy-ai",
+    "exact-enemy-stat-growth",
+    "field-to-encounter-authority"
+  ],
+  "final_gate": {
+    "standalone_html_required": true,
+    "sha256_required": true,
+    "exact_source_commit_required": true,
+    "user_playtest_required_before_merge": true
+  }
+}
