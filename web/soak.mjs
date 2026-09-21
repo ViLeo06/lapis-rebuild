@@ -21,6 +21,20 @@ async function clickAction(action){
  await button.click();
 }
 
+async function openMenu(){
+ const menu=page.locator('[data-ui="game-menu"]:visible').first();
+ if(await menu.count())return;
+ await clickAction('menu');
+ await page.locator('[data-ui="game-menu"]:visible').first().waitFor({state:'visible'});
+}
+
+async function closeMenu(){
+ const menu=page.locator('[data-ui="game-menu"]:visible').first();
+ if(!(await menu.count()))return;
+ await clickAction('menu-close');
+ await page.waitForFunction(()=>!document.querySelector('[data-ui="game-menu"]:not([hidden])'));
+}
+
 async function startProfessionAndPromote(character){
  const action=character==='100'?'class-swordsman':'class-wizard';
  const promoted=character==='100'?'110':'119';
@@ -29,13 +43,12 @@ async function startProfessionAndPromote(character){
  // intentionally derived from the current progression level when the menu
  // renders; clicking a stale hidden/disabled menu button is not a valid
  // player interaction.
- await clickAction('menu');
- await page.locator('[data-ui="game-menu"]:visible').waitFor({state:'visible'});
+ await openMenu();
  await clickAction(action);
  await page.waitForFunction(id=>window.lapisDiagnostics?.snapshot().character===id,character);
 
  await page.evaluate(()=>window.lapisM4.acceptanceGrantLevel(10));
- await clickAction('menu');
+ await openMenu();
  const promote=page.locator('[data-action="m6-promote"]:visible').first();
  await promote.waitFor({state:'visible'});
  await page.waitForFunction(()=>{
@@ -49,6 +62,7 @@ async function startProfessionAndPromote(character){
 
 async function equipLoadout(character){
  const gear=character==='100'?{weapon:'3',armor:'25'}:{weapon:'12',armor:'31'};
+ await openMenu();
  await clickAction('inventory');
  await page.waitForFunction(()=>document.body.classList.contains('m4-inventory-open'));
  await page.waitForFunction(({weapon,armor})=>{
@@ -61,10 +75,12 @@ async function equipLoadout(character){
  await page.selectOption('#equip-armor',gear.armor);
  await clickAction('inventory');
  await page.waitForFunction(()=>!document.body.classList.contains('m4-inventory-open'));
+ await closeMenu();
  return gear;
 }
 
 async function setDiagnostics(enabled){
+ await openMenu();
  await page.evaluate(value=>{
   const toggle=document.querySelector('[data-action="dev-toggle"]');
   if(!(toggle instanceof HTMLInputElement))throw new Error('Missing developer diagnostics toggle');
@@ -72,6 +88,7 @@ async function setDiagnostics(enabled){
   toggle.dispatchEvent(new Event('change',{bubbles:true}));
  },enabled);
  await page.waitForFunction(value=>document.body.classList.contains('m4-dev-enabled')===value,enabled);
+ await closeMenu();
 }
 
 let started=0;
