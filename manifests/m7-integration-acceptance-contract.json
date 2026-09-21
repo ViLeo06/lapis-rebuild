@@ -69,23 +69,41 @@
     ]
   },
   "skills": {
-    "swordsman": [
+    "swordsman_runtime_keys": [
+      "1101",
+      "1201",
+      "1301",
+      "1401",
+      "1501",
+      "battle-command",
+      "stun-strike"
+    ],
+    "swordsman_authored_ids": [
       1101,
       1201,
       1301,
       1401,
       1501,
-      "battle-command",
-      "stun-attack"
+      null,
+      null
     ],
-    "wizard": [
+    "wizard_runtime_keys": [
+      "dark-veil",
+      "poison-mist",
+      "nature-force",
+      "ashes",
+      "curse-eye",
+      "blindness",
+      "cursed-sword"
+    ],
+    "wizard_authored_ids": [
       19101,
       19201,
       19301,
       19401,
       19501,
-      "blind",
-      "cursed-sword"
+      null,
+      null
     ],
     "levels_per_skill": 6
   },
