@@ -21,7 +21,7 @@ type Contract={
   skills:{swordsman:Array<number|string>;wizard:Array<number|string>;levels_per_skill:number};
   training:{battle_count:number;recommended_levels:number[];enemy_scaling:string;required_archetypes:string[]};
   recovery:{policy_id:string;provenance:string;hp_amount:number;mp_amount:number;readiness_cost_candidate:number;infinite:boolean};
-  upstream_handoffs:Array<{session:string;branch:string;status:string}>;
+  upstream_handoffs:Array<{session:string;branch:string;status:string;pr:number|null;source_sha:string|null}>;
   evidence_levels:string[];
   final_gate:{standalone_html_required:boolean;sha256_required:boolean;exact_source_commit_required:boolean;user_playtest_required_before_merge:boolean};
 };
