@@ -875,7 +875,7 @@ export class M4RuntimeIntegration{
       x:this.scene.anchor.x,y:this.scene.anchor.y,gold:this.rewards.gold,inventory:this.rewards.inventory,
       quest:{questId:this.world.quest.questId,stage:this.world.quest.stage} as JsonValue,
       questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],m6,
-      m7:createM7SaveExtension(this.scene.character,this.m7Level(),this.m7Skills),savedAt:new Date().toISOString(),
+      m7:createM7SaveExtension(this.scene.character,this.m7Level(),this.m7Skills,{hp:this.scene.state.hp,mp:this.scene.state.mp}),savedAt:new Date().toISOString(),
     };
   }
 
@@ -910,6 +910,10 @@ export class M4RuntimeIntegration{
     this.scene.anchor={x:save.x,y:save.y};
     this.scene.route=[];
     this.applyClassProfile(false);
+    if(save.m7.vitals){
+      this.scene.state.hp=Math.min(this.scene.state.maxHp,save.m7.vitals.hp);
+      this.scene.state.mp=Math.min(this.scene.state.maxMp,save.m7.vitals.mp);
+    }
     this.syncSceneInventory();
     if(this.m5World){this.scene.setPlayerCameraFollow(true);this.scene.focusPlayer();const cell=nearestAnchor(save.x,save.y);this.spatial?.start({mapId:save.mapId,cell});}
     else this.scene.fit();
