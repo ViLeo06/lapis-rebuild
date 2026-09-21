@@ -292,8 +292,12 @@ export class LabScene extends Phaser.Scene {
   }
 
   private ensureEnemyVisualActors(){
-    const bindings:[string,string][]=[['dummy-melee','4524'],['dummy-ranged','4544']];
-    for(const [id,resource] of bindings){
+    const bindings=new Map<string,number>([['dummy-melee',4524],['dummy-ranged',4544]]);
+    for(const enemy of this.state.enemies){
+      if(enemy.visualResourceId!==undefined)bindings.set(enemy.id,enemy.visualResourceId);
+    }
+    for(const [id,resourceId] of bindings){
+      const resource=String(resourceId);
       if(this.enemyVisualActors.has(id)||!this.pack.animations[resource])continue;
       const actor=new VisualActor(this,this.pack,resource,0,0,0);actor.image.setDepth(12);actor.setVisible(false);
       this.enemyVisualActors.set(id,actor);
@@ -306,7 +310,10 @@ export class LabScene extends Phaser.Scene {
       row.actor.setVisible(visible);row.label.setVisible(visible);
     }
     for(const row of this.worldMarkers.values())row.label.setVisible(!this.inBattleView&&row.spec.mapId===this.mapId);
-    for(const actor of this.enemyVisualActors.values())actor.setVisible(this.inBattleView);
+    for(const actor of this.enemyVisualActors.values())actor.setVisible(false);
+    if(this.inBattleView){
+      for(const enemy of this.state.enemies)this.enemyVisualActors.get(enemy.id)?.setVisible(enemy.hp>0);
+    }
   }
 
   setMap(id:number){
@@ -426,11 +433,11 @@ export class LabScene extends Phaser.Scene {
     this.notice(`${result.message} / RECONSTRUCTION_POLICY`);
   }
 
-  enterBattle(){
+  enterBattle(entryOverride?:BattleEntry){
     if(this.inBattleView)return;
     if(this.route.length){this.notice('请等角色停稳后进入战斗');return;}
     const intent=createTrainingInteraction(this.mapId);
-    const entry=OFFLINE_TRAINING_ENCOUNTER_AUTHORITY.resolve(intent,{trainingBattleZoneId:P.battleMapId});
+    const entry=entryOverride??OFFLINE_TRAINING_ENCOUNTER_AUTHORITY.resolve(intent,{trainingBattleZoneId:P.battleMapId});
     if(!entry){this.notice('当前交互没有产生战斗入口');return;}
     this.lastInteraction=intent;
     this.applyBattleEntry(entry);
@@ -452,9 +459,10 @@ export class LabScene extends Phaser.Scene {
     const pos=referenceCellToScreen(layout.player);this.anchor={x:pos[0],y:pos[1]};
     this.route=[];
     this.state=beginBattle(this.anchor.x,this.anchor.y,entry,this.reconstructionBattleSetup);
-    layout.enemies.forEach((cell,i)=>{const xy=referenceCellToScreen(cell);this.state.enemies[i].x=xy[0];this.state.enemies[i].y=xy[1];});
+    layout.enemies.forEach((cell,i)=>{const enemy=this.state.enemies[i];if(!enemy)return;const xy=referenceCellToScreen(cell);enemy.x=xy[0];enemy.y=xy[1];});
+    this.ensureEnemyVisualActors();
     this.fit();
-    this.selectedEnemy='dummy-melee';
+    this.selectedEnemy=this.state.enemies.find(enemy=>enemy.hp>0)?.id??'dummy-melee';
     this.setAction('00');
     this.effectSprite?.setVisible(false);
     this.effectPlaying=false;
@@ -585,7 +593,7 @@ export class LabScene extends Phaser.Scene {
       cooldown:this.state.cooldown,action:this.state.action,actionMax:this.state.actionMax,actionReady:this.canAct(),moveLimit:this.battleMoveLimit(),
       phase:this.state.phase,hp:Math.ceil(this.state.hp),mp:this.state.mp,gold:this.gold,
       battleZoneId:this.state.battleZoneId,battleEntryProvenance:this.state.battleEntryProvenance,damagePolicy:{id:this.state.damagePolicyId,provenance:this.state.damagePolicyProvenance},
-      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),visualResourceId:enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null,aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
+      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
       worldVisuals:[...this.worldVisualActors.values()].map(row=>({id:row.spec.id,mapId:row.spec.mapId,resourceId:row.spec.resourceId,visible:row.actor.image.visible,cell:row.spec.cell})),
       worldPointerTargets:this.worldPointerTargets().map(target=>({id:target.id,kind:target.kind,visible:target.visible,bounds:{...target.bounds},depth:target.depth})),
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,duration:this.effectDuration,timingPolicy:'RETAIL_COMMON' as const,playing:this.effectPlaying}:null,
