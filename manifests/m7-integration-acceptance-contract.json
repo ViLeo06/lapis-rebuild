@@ -175,7 +175,7 @@
       "branch": "codex/s33-m7-training-recovery-debug",
       "status": "integrated",
       "pr": 44,
-      "source_sha": "185f52abeeecd7687d1a6c00989955dd8530f9ab"
+      "source_sha": "26ffefbcb8a764a062994293034dd2fb7752216b"
     }
   ],
   "shared_runtime_owned_by_s34": [
