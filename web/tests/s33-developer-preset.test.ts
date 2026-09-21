@@ -27,7 +27,10 @@ test('developer all-skills override is explicit Lv6 debug state and runtime-only
   assert.equal(preset.stageId,119);
   assert.equal(preset.skillLevelOverride,6);
   assert.equal(preset.skillPoints,5);
-  assert.ok(preset.effectiveSkillIds.length>=preset.legalSkillIds.length);
+  assert.equal(preset.effectiveSkillIds.length,7);
+  assert.deepEqual(preset.legalSkillIds,[19101,19201]);
+  assert.ok(preset.effectiveSkillIds.includes('wizard:blindness'));
+  assert.ok(preset.effectiveSkillIds.includes('wizard:cursed-sword'));
   assert.equal(M7DeveloperPresetPolicy.persistence.includes('runtime-only'),true);
 });
 
@@ -37,4 +40,13 @@ test('developer preset UI exposes level input, profession selection and quick bo
   assert.match(html,/data-dev-level-input/);
   assert.match(html,/data-dev-unlock-all/);
   assert.equal((html.match(/data-action="dev-preset-quick"/g)??[]).length,8);
+});
+
+
+test('developer preset normal legality follows all seven M7 stage unlocks',()=>{
+  assert.deepEqual(buildM7DeveloperCharacterPreset('swordsman',1,false).legalSkillIds,[1101]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('swordsman',6,false).legalSkillIds,[1101,1201]);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('swordsman',56,false).legalSkillIds,[1101,1201,1301,1401,1501,'swordsman:battle-command','swordsman:stun-strike']);
+  assert.deepEqual(buildM7DeveloperCharacterPreset('wizard',26,false).legalSkillIds,[19101,19201,19301,19401]);
+  assert.equal(buildM7DeveloperCharacterPreset('wizard',56,false).legalSkillIds.length,7);
 });
