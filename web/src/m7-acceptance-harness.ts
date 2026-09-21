@@ -63,7 +63,7 @@ export type M7AcceptanceResult=Readonly<{
   errors:readonly string[];
 }>;
 
-const REQUIRED_ARCHETYPES=Object.freeze(['melee','ranged','tank','fast','magic','dot','healer','elite','boss'] as const);
+const REQUIRED_ARCHETYPES=Object.freeze(['melee','high-offense','high-defense','ranged','tank','fast','magic','dot','control','healer','regenerator','elite','boss'] as const);
 const EXPECTED_UNLOCK_LEVELS=Object.freeze([1,6,16,26,36,46,56] as const);
 
 function validEvidence(value:string):value is M7EvidenceLevel{
