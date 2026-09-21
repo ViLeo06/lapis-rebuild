@@ -96,6 +96,12 @@ jobs:
               '.github/workflows/s17-monster-visual-recovery.yml',
               'web/soak.mjs',
               'web/m6-validation-trigger.txt',
+              'Plan.md',
+              'Backlog.md',
+              'AGENTS.md',
+              'docs/evidence-ledger.md',
+              'docs/integration-notes/s29-m6-integration-acceptance.md',
+              'docs/validation/m6-final-20260921.md',
           }
           changed={row['filename'] for row in payload.get('files',[])}
           unexpected=sorted(changed-allowed)
