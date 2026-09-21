@@ -80,7 +80,7 @@ export function resolvePlayerDifficultyHint(playerLevel:number,recommendedLevel:
   if(!Number.isInteger(playerLevel)||playerLevel<1||playerLevel>99)throw new Error('Invalid player level');
   if(!Number.isInteger(recommendedLevel)||recommendedLevel<1||recommendedLevel>99)throw new Error('Invalid recommended level');
   const delta=playerLevel-recommendedLevel;
-  if(delta>=6)return 'Easy';
+  if(delta>=7)return 'Easy';
   if(delta>=-2)return 'Normal';
   if(delta>=-7)return 'Hard';
   return 'Very Hard';
