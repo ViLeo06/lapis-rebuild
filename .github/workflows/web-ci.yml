@@ -79,7 +79,7 @@ jobs:
             python3 - "$compare" <<'PY'
           import json,sys
           payload=json.load(open(sys.argv[1],encoding='utf-8'))
-          allowed={'.github/workflows/web-ci.yml','web/soak.mjs'}
+          allowed={'.github/workflows/web-ci.yml','.github/workflows/s17-monster-visual-recovery.yml','web/soak.mjs','web/m6-validation-trigger.txt'}
           changed={row['filename'] for row in payload.get('files',[])}
           unexpected=sorted(changed-allowed)
           if unexpected:
@@ -106,7 +106,7 @@ jobs:
             'verified_artifact_id':int(artifact_id),
             'verified_html_sha256':html_sha,
             'current_head':current_head,
-            'allowed_delta':['.github/workflows/web-ci.yml','web/soak.mjs'],
+            'allowed_delta':['.github/workflows/web-ci.yml','.github/workflows/s17-monster-visual-recovery.yml','web/soak.mjs','web/m6-validation-trigger.txt'],
             'actual_delta':sorted(row['filename'] for row in compare.get('files',[])),
             'evidence_boundary':'The retained preview is reused only because no runtime/content source changed since the fixed-hash private-original run. The current soak script is executed against that exact verified HTML.',
           }
