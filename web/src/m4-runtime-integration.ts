@@ -4,7 +4,6 @@ import {actionReady,consumeAction} from './battle.ts';
 import {battleProfileForClass,magicReadinessCost} from './battle-profile.ts';
 import {nearestAnchor,referenceCellToScreen} from './coordinates.ts';
 import {playableClassById,isEquipmentCompatibleWithClass} from './content/classes/class-catalog.ts';
-import {skillById} from './content/skills/skill-catalog.ts';
 import rawSkills from '../../data/skills/mvp.json' with {type:'json'};
 import {BattlePresentation} from './presentation/battle-presentation.ts';
 import type {BattlePresentationBatch} from './presentation/battle-presentation.ts';
@@ -21,8 +20,9 @@ import {applyM6Promotion} from './progression/m6-stage-promotion.ts';
 import type {M6StageProgressionState} from './progression/m6-stage-promotion.ts';
 import {createM6SaveExtension} from './progression/m6-save-extension.ts';
 import {equipM6Item,evaluateM6EquipmentEligibility} from './progression/m6-equipment.ts';
-import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration.ts';
-import type {M6SaveV2} from './progression/m6-save-migration.ts';
+import {migrateSaveToM7,serializeM7SaveV2} from './progression/m7-save-migration.ts';
+import type {M7SaveV2} from './progression/m7-save-migration.ts';
+import {createM7SaveExtension} from './progression/m7-save-extension.ts';
 import {
   M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6QuestChainForLegacyStage,
   m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
@@ -51,7 +51,10 @@ import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-com
 import {applyInfiniteTrainingRecovery,InfiniteTrainingRecoveryPolicy} from './training/m7-recovery.ts';
 import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleById} from './training/m7-training-camp.ts';
 import {integratedTrainingBattleById,reconstructionEnemiesForTrainingBattle} from './training/m7-integrated-training-catalog.ts';
-import {buildM7DeveloperCharacterPreset,implementedFirstSevenSkillIds} from './training/m7-developer-preset.ts';
+import {buildM7DeveloperCharacterPreset} from './training/m7-developer-preset.ts';
+import {createM7IntegratedSkillState,m7RuntimeSkillCommands,reconcileM7IntegratedSkillState} from './training/m7-skill-progression.ts';
+import type {M7IntegratedSkillState,M7RuntimeSkillCommand} from './training/m7-skill-progression.ts';
+import {useM7Skill} from './combat/m7-battle-skills.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
 import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
 import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
@@ -92,10 +95,10 @@ export function questHud(stage:QuestStage):Pick<FieldHudState,'questTitle'|'ques
   return{questTitle:'训练委托',questDetail:detail[stage]};
 }
 
-function runtimeSkill(skillId:number):Skill{
-  const row=rawSkills.find(entry=>entry.skill_id===skillId);
-  if(!row)throw new Error(`Missing runtime skill ${skillId}`);
-  return row as Skill;
+function visualSkillForCommand(command:M7RuntimeSkillCommand):Skill|null{
+  if(command.authoredSkillId===null)return null;
+  const row=rawSkills.find(entry=>entry.skill_id===command.authoredSkillId);
+  return row?row as Skill:null;
 }
 
 function cloneRewardState(state:RewardState):RewardState{
@@ -117,6 +120,7 @@ export class M4RuntimeIntegration{
   world:WorldRuntimeState;
   rewards:RewardState;
   m6Stage:M6StageProgressionState;
+  m7Skills:M7IntegratedSkillState;
   pendingEncounter:EncounterRequest|null=null;
   menuOpen=false;
   developerMode=false;
@@ -156,6 +160,7 @@ export class M4RuntimeIntegration{
     this.world=this.worldAuthority.initial(m5?.content.start??START_STATE);
     this.rewards=createM4RewardState(scene.gold);
     this.m6Stage=createM6StageState(scene.character);
+    this.m7Skills=createM7IntegratedSkillState(scene.character,1);
   }
 
   install():void{
@@ -322,7 +327,7 @@ export class M4RuntimeIntegration{
       else if(action==='zoom-reset'){this.scene.resetZoom();this.scene.focusPlayer();this.setNotice('视角已恢复 1:1 并居中角色');}
       else if(action==='interact')this.beginNpcInteraction(undefined,'pointer');
       else if(action==='attack')this.scene.attack(null);
-      else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
+      else if(action==='skill')this.useSkill(target.dataset.skillId??'');
       else if(action==='recovery-hp')this.trainingRecovery('hp');
       else if(action==='recovery-mp')this.trainingRecovery('mp');
       else if(action==='rest')this.rest();
@@ -357,8 +362,8 @@ export class M4RuntimeIntegration{
       if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
       if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.beginNpcInteraction(undefined,'keyboard');return;}
       if(this.scene.inBattleView&&/^[1-7]$/.test(event.key)){
-        const skills=this.runtimeSkillIds(this.scene.character);
-        const skillId=skills[Number(event.key)-1];if(skillId)this.useSkill(skillId);
+        const skills=this.runtimeSkillCommands();
+        const command=skills[Number(event.key)-1];if(command)this.useSkill(command.id);
       }
       if(this.scene.inBattleView&&(event.key==='h'||event.key==='H')){event.preventDefault();this.trainingRecovery('hp');return;}
       if(this.scene.inBattleView&&(event.key==='m'||event.key==='M')){event.preventDefault();this.trainingRecovery('mp');return;}
@@ -378,6 +383,7 @@ export class M4RuntimeIntegration{
     this.rewards=createM4RewardState(0);
     this.world=this.worldAuthority.initial(this.m5World?.content.start??START_STATE);
     this.m6Stage=createM6StageState(id);
+    this.m7Skills=createM7IntegratedSkillState(id,1);
     this.scene.setCharacter(id);
     this.m6Stage=createM6StageState(id);
     this.syncSceneInventory();
@@ -394,8 +400,10 @@ export class M4RuntimeIntegration{
     const amount=Math.max(0,targetExp-this.rewards.progression.exp);
     if(amount===0)return;
     const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
+    const oldLevel=this.rewards.progression.level;
     const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
     this.rewards=applied.state;
+    this.reconcileM7Skills(oldLevel);
     this.scene.gold=this.rewards.gold;
     this.applyClassProfile(false);
     this.setNotice(`M6 acceptance fixture：通过生产 reward/progression authority 到达 Lv.${this.rewards.progression.level}`);
@@ -441,6 +449,7 @@ export class M4RuntimeIntegration{
     try{
       const preset=buildM7DeveloperCharacterPreset(profession,level,unlockAll);
       this.rewards={...this.rewards,progression:{...this.rewards.progression,level:preset.level,exp:totalExpForLevel(preset.level)}};
+      this.m7Skills=createM7IntegratedSkillState(String(preset.stageId),Math.min(65,preset.level));
       this.developerPresetActive=true;
       this.developerUnlockAllSkills=preset.unlockAllImplementedSkills;
       this.developerSkillPoints=preset.skillPoints;
@@ -470,30 +479,53 @@ export class M4RuntimeIntegration{
     this.syncSceneInventory();
   }
 
-  private runtimeSkillIds(characterId:string|number):readonly number[]{
-    const profession=playableClassById(characterId).family as M7Profession;
-    if(this.developerMode&&this.developerUnlockAllSkills)return implementedFirstSevenSkillIds(profession);
-    return m6SkillIdsForCharacter(characterId);
+  private m7Level():number{return Math.min(65,Math.max(1,this.rewards.progression.level));}
+
+  private reconcileM7Skills(oldLevel:number):void{
+    const previous=Math.min(65,Math.max(1,oldLevel));
+    const next=this.m7Level();
+    const family=playableClassById(this.scene.character).family;
+    if(this.m7Skills.family!==family||next<previous){
+      this.m7Skills=createM7IntegratedSkillState(this.scene.character,next);
+      return;
+    }
+    if(next>previous)this.m7Skills=reconcileM7IntegratedSkillState(this.m7Skills,this.scene.character,previous,next);
   }
 
-  private skillAllowedForRuntime(characterId:string|number,skillId:number):boolean{
-    return this.runtimeSkillIds(characterId).includes(skillId);
+  private runtimeSkillCommands():readonly M7RuntimeSkillCommand[]{
+    return m7RuntimeSkillCommands(
+      this.m7Skills,
+      this.scene.character,
+      this.m7Level(),
+      this.developerMode&&this.developerUnlockAllSkills,
+    );
   }
 
-  private useSkill(skillId:number):void{
+  private skillAllowedForRuntime(_characterId:string|number,skillId:number):boolean{
+    return this.runtimeSkillCommands().some(command=>command.authoredSkillId===skillId);
+  }
+
+  private useSkill(commandId:string|number):void{
     try{
-      const definition=skillById(skillId);
-      if(!this.skillAllowedForRuntime(this.scene.character,skillId))throw new Error('当前职业不能使用该技能');
-      if(this.scene.state.mp<definition.mpCost)throw new Error('MP 不足');
-      const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
-      if(definition.targetType!=='self'&&!target)throw new Error('请选择存活目标');
-      if(target&&definition.targetType!=='self'){
-        const player=nearestAnchor(this.scene.anchor.x,this.scene.anchor.y);
-        const enemy=nearestAnchor(target.x,target.y);
-        const range=Math.max(Math.abs(player[0]-enemy[0]),Math.abs(player[1]-enemy[1]));
-        if(range>definition.range)throw new Error(`目标超出技能射程（${definition.range} 格）`);
+      const command=this.runtimeSkillCommands().find(row=>row.id===String(commandId)||row.authoredSkillId===Number(commandId));
+      if(!command)throw new Error('当前职业/阶段不能使用该技能');
+      const result=useM7Skill(this.scene.state,this.scene.selectedEnemy,this.scene.anchor.x,this.scene.anchor.y,command);
+      this.setNotice(result.message);
+      if(!result.ok){this.render(this.scene.snapshot());return;}
+      const visual=visualSkillForCommand(command);
+      const magicResourceId=visual?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
+      this.scene.presentM7SkillAction(result.affectedEnemyIds,magicResourceId,command.target==='self');
+      const animation=this.scene.animation();
+      this.present(this.presentation.attack({rawTiming:animation.raw_timing,frameCount:animation.frames_per_direction}));
+      if(visual){
+        const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
+        const resources=(visual.magic_pattern?.magic_resources??[]).flatMap(resource=>{
+          const effect=this.scene.pack.effects[String(resource.magic_resource_id)];
+          return effect?[{resourceId:resource.magic_resource_id,rawTiming:effect.raw_timing,frameCount:effect.frame_count,role:resource.role,rawStartTick:resource.start_tick}]:[];
+        });
+        if(resources.length)this.present(this.presentation.magicEffect({resources,context:{caster:{...this.scene.anchor},target:target?{x:target.x,y:target.y}:null}}));
       }
-      this.scene.attack(runtimeSkill(skillId));
+      this.render(this.scene.snapshot());
     }catch(error){this.setNotice(String(error));}
   }
 
@@ -710,21 +742,25 @@ export class M4RuntimeIntegration{
       const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
         enemies.map(enemy=>({level:enemy.level,rank:enemy.rank})),
       );
+      const oldLevel=this.rewards.progression.level;
       const applied=applyBattleReward(this.rewards,'m7-training-battle-'+preset.id,'battle:m7-training:'+preset.id+':win',{gold:reward.gold,exp:reward.exp});
-      this.rewards=applied.state;this.scene.gold=this.rewards.gold;
+      this.rewards=applied.state;this.reconcileM7Skills(oldLevel);this.scene.gold=this.rewards.gold;
       this.setNotice('Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
       return;
     }
     if(this.m5World){
       const level=Math.max(1,this.rewards.progression.level);
       const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter([{level,rank:'normal'},{level,rank:'normal'}]);
+      const oldLevel=this.rewards.progression.level;
       const applied=applyBattleReward(this.rewards,'m5-training-house','battle:m5-training-house:win',{gold:reward.gold,exp:reward.exp});
-      this.rewards=applied.state;this.scene.gold=this.rewards.gold;
+      this.rewards=applied.state;this.reconcileM7Skills(oldLevel);this.scene.gold=this.rewards.gold;
       this.setNotice(`战斗胜利：金币 +${reward.gold}，EXP +${reward.exp}，当前 Lv.${this.rewards.progression.level} / RECONSTRUCTION_POLICY`);
       return;
     }
+    const oldLevel=this.rewards.progression.level;
     const applied=applyBattleReward(this.rewards,'s9-training-battle','battle:s9-training-run:win',{gold:10,exp:100});
     this.rewards=applied.state;
+    this.reconcileM7Skills(oldLevel);
     this.scene.gold=this.rewards.gold;
     if(applied.events.some(event=>event.type==='level_up'))this.setNotice(`战斗胜利：金币 +10，EXP +100，当前 Lv.${this.rewards.progression.level}`);
   }
@@ -732,8 +768,10 @@ export class M4RuntimeIntegration{
   private applyQuestSettlement():void{
     const questId=this.worldAuthority.content.questId;
     const reward=this.m5World?{gold:7,exp:230,questFlags:['m5.training.complete']}:{gold:5,exp:200,questFlags:['m4.training.complete']};
+    const oldLevel=this.rewards.progression.level;
     const applied=applyQuestReward(this.rewards,questId,`quest:${questId}:turn-in`,reward);
     this.rewards=applied.state;
+    this.reconcileM7Skills(oldLevel);
     this.scene.gold=this.rewards.gold;
     this.setNotice(`任务完成：金币 +${reward.gold}，EXP +${reward.exp}，当前 Lv.${this.rewards.progression.level} / RECONSTRUCTION_POLICY`);
   }
@@ -822,7 +860,7 @@ export class M4RuntimeIntegration{
     return{pack:this.scene.pack.digest,characters:M6_CHARACTER_IDS,mapBounds};
   }
 
-  makeSave():SaveV2{
+  makeSave():M7SaveV2{
     if(this.scene.inBattleView)throw new Error('战斗中不能存档');
     if(this.scene.route.length)throw new Error('请等待移动结束后再存档');
     if(this.developerPresetActive||this.developerUnlockAllSkills)throw new Error('Developer Preset / Debug Skill Override 不写入普通 SaveV2；请新建职业档或重新读取普通存档后再保存');
@@ -835,7 +873,8 @@ export class M4RuntimeIntegration{
       kind:SAVE_KIND,version:CURRENT_SAVE_VERSION,pack:this.scene.pack.digest,character:this.scene.character,mapId:this.scene.mapId,
       x:this.scene.anchor.x,y:this.scene.anchor.y,gold:this.rewards.gold,inventory:this.rewards.inventory,
       quest:{questId:this.world.quest.questId,stage:this.world.quest.stage} as JsonValue,
-      questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],m6,savedAt:new Date().toISOString(),
+      questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],m6,
+      m7:createM7SaveExtension(this.scene.character,this.m7Level(),this.m7Skills),savedAt:new Date().toISOString(),
     };
   }
 
@@ -849,7 +888,7 @@ export class M4RuntimeIntegration{
     catch(error){this.setNotice(`读档失败：${String(error)}`);}
   }
 
-  exportJson():string{return serializeM6SaveV2(this.makeSave() as M6SaveV2,this.saveContext(),M6_SAVE_CONTENT);}
+  exportJson():string{return serializeM7SaveV2(this.makeSave(),this.saveContext(),M6_SAVE_CONTENT);}
 
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
@@ -859,12 +898,13 @@ export class M4RuntimeIntegration{
     this.developerPresetActive=false;
     this.developerUnlockAllSkills=false;
     this.developerSkillPoints=0;
-    const save=migrateSaveToM6(raw,this.saveContext(),M6_SAVE_CONTENT);
+    const save=migrateSaveToM7(raw,this.saveContext(),M6_SAVE_CONTENT);
     const quest=parseM4Quest(save.quest,this.worldAuthority.content.questId);
     this.rewards={gold:save.gold,inventory:save.inventory,progression:save.progression,questFlags:save.questFlags,rewardReceipts:save.rewardReceipts};
     this.world={world:{mapId:save.mapId,...(()=>{const cell=nearestAnchor(save.x,save.y);return{x:cell[0],y:cell[1]};})()},quest};
     this.scene.setCharacter(save.character);
     this.m6Stage=save.m6.stage;
+    this.m7Skills=save.m7.skills;
     this.scene.setMap(save.mapId);
     this.scene.anchor={x:save.x,y:save.y};
     this.scene.route=[];
@@ -981,7 +1021,7 @@ export class M4RuntimeIntegration{
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
-        skills:this.runtimeSkillIds(snapshot.character).map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
+        skills:this.runtimeSkillCommands().map((command,index)=>({id:command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:String(index+1),disabled:snapshot.mp<command.mpCost})),
       };
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);
