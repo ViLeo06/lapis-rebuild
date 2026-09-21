@@ -212,3 +212,23 @@ test.describe('S34 mobile seven-skill touch contract',()=>{
     await expect.poll(async()=>(await scene(page)).inBattleView).toBe(false);
   });
 });
+
+
+test('S34 private-original pack uses distinct fixed-client story battle zones',async({page})=>{
+  await ready(page);
+  const r=await runtime(page);
+  test.skip(!r.playableRecovery,'Private fixed-hash Web pack is required for original story battle scene validation.');
+
+  await startTraining(page,1);
+  const first=await scene(page);
+  expect(first.battleZoneId).toBe(1);
+  expect(first.mapId).toBe(1);
+  await retreat(page);
+
+  await startTraining(page,15);
+  const last=await scene(page);
+  expect(last.battleZoneId).toBe(91);
+  expect(last.mapId).toBe(91);
+  expect(last.mapName).not.toBe(first.mapName);
+  expect(last.enemies.map(row=>row.visualResourceId)).toEqual([4544,4544]);
+});
