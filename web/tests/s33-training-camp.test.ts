@@ -35,6 +35,8 @@ test('S33 reconstruction battle setup keeps enemy level fixed when player level 
 test('difficulty hint is dynamic presentation only',()=>{
   const preset=M7_TRAINING_BATTLES[8]!;
   assert.equal(resolvePlayerDifficultyHint(50,preset.recommendedLevel),'Easy');
+  assert.equal(resolvePlayerDifficultyHint(42,preset.recommendedLevel),'Easy');
+  assert.equal(resolvePlayerDifficultyHint(41,preset.recommendedLevel),'Normal');
   assert.equal(resolvePlayerDifficultyHint(35,preset.recommendedLevel),'Normal');
   assert.equal(resolvePlayerDifficultyHint(30,preset.recommendedLevel),'Hard');
   assert.equal(resolvePlayerDifficultyHint(20,preset.recommendedLevel),'Very Hard');
