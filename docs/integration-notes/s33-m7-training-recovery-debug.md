@@ -59,7 +59,7 @@ S30 became available after the initial S33 preflight. S33 now consumes the exact
 
 `resolvePlayerDifficultyHint()` is presentation-only:
 
-- player ≥ recommended + 6 → Easy
+- player ≥ recommended + 7 → Easy
 - player within -2..+5 → Normal
 - player -3..-7 → Hard
 - player ≤ recommended - 8 → Very Hard
