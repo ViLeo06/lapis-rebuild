@@ -49,9 +49,9 @@ const raw:readonly Omit<M7TrainingBattlePreset,'stage'|'sceneTitle'|'sceneEviden
   {id:10,recommendedLevel:36,fixedEnemyLevel:36,battleZoneId:41,monsterContract:monsters(['tank',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-bulwark-l36']),difficultyBand:'Hard',purpose:'Stage 5 入门：高防持续目标'},
   {id:11,recommendedLevel:45,fixedEnemyLevel:45,battleZoneId:51,monsterContract:monsters(['dot',1],['melee',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-venom-caster-l42','m7-green-sword-berserker-l45']),difficultyBand:'Hard',purpose:'Stage 5 毕业：DOT 与爆发管理'},
   {id:12,recommendedLevel:46,fixedEnemyLevel:46,battleZoneId:61,monsterContract:monsters(['magic',1],['control',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-support-l46']),difficultyBand:'Hard',purpose:'Stage 6 入门：魔法与控制支援目标'},
-  {id:13,recommendedLevel:55,fixedEnemyLevel:57,battleZoneId:71,monsterContract:monsters(['elite',1],['magic',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-elite-l55','m7-cyan-spectral-support-l46']),difficultyBand:'Elite',purpose:'Stage 6 毕业：精英坦克与支援'},
-  {id:14,recommendedLevel:56,fixedEnemyLevel:58,battleZoneId:81,monsterContract:monsters(['fast',1]),candidateMonsterIds:Object.freeze(['m7-blue-polearm-vanguard-l56']),difficultyBand:'Elite',purpose:'Stage 7 标准战：快速近战压力'},
-  {id:15,recommendedLevel:65,fixedEnemyLevel:70,battleZoneId:91,monsterContract:monsters(['boss',1],['elite',1]),candidateMonsterIds:Object.freeze(['m7-spectral-overseer-boss-l65','m7-cyan-spectral-elite-l60']),difficultyBand:'Boss',purpose:'Stage 7 Boss：Buff/Debuff、恢复与综合战术'},
+  {id:13,recommendedLevel:55,fixedEnemyLevel:55,battleZoneId:71,monsterContract:monsters(['elite',1],['magic',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-elite-l55','m7-cyan-spectral-support-l46']),difficultyBand:'Elite',purpose:'Stage 6 毕业：精英坦克与支援'},
+  {id:14,recommendedLevel:56,fixedEnemyLevel:56,battleZoneId:81,monsterContract:monsters(['fast',1]),candidateMonsterIds:Object.freeze(['m7-blue-polearm-vanguard-l56']),difficultyBand:'Elite',purpose:'Stage 7 标准战：快速近战压力'},
+  {id:15,recommendedLevel:65,fixedEnemyLevel:65,battleZoneId:91,monsterContract:monsters(['boss',1],['elite',1]),candidateMonsterIds:Object.freeze(['m7-spectral-overseer-boss-l65','m7-cyan-spectral-elite-l60']),difficultyBand:'Boss',purpose:'Stage 7 Boss：Buff/Debuff、恢复与综合战术'},
 ];
 
 export const M7_TRAINING_BATTLES:readonly M7TrainingBattlePreset[]=Object.freeze(raw.map(row=>{
