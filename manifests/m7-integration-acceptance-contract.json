@@ -166,9 +166,9 @@
     {
       "session": "S32",
       "branch": "codex/s32-m7-wizard-skills",
-      "status": "pending",
-      "pr": null,
-      "source_sha": null
+      "status": "integrated",
+      "pr": 46,
+      "source_sha": "aec7d519c56443aca71e67440d7ed1971e07c906"
     },
     {
       "session": "S33",
