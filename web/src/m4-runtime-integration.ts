@@ -49,7 +49,8 @@ import type {M5PlayableWorld} from './world/m5-playable-world.ts';
 import {SceneTransitionController} from './world/scene-transition.ts';
 import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
 import {applyInfiniteTrainingRecovery,InfiniteTrainingRecoveryPolicy} from './training/m7-recovery.ts';
-import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleById,trainingEnemyRank} from './training/m7-training-camp.ts';
+import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleById} from './training/m7-training-camp.ts';
+import {integratedTrainingBattleById,reconstructionEnemiesForTrainingBattle} from './training/m7-integrated-training-catalog.ts';
 import {buildM7DeveloperCharacterPreset,implementedFirstSevenSkillIds} from './training/m7-developer-preset.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
 import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
@@ -252,12 +253,17 @@ export class M4RuntimeIntegration{
     };
 
     const originalEnter=this.scene.enterBattle.bind(this.scene);
-    this.scene.enterBattle=()=>{
+    this.scene.enterBattle=(entryOverride)=>{
       this.activeDialogue=null;
       this.battleExitConfirm=false;
       const trainingBattleId=this.trainingLaunchPending?this.selectedTrainingBattleId:null;
       this.prepareReconstructionBattle(trainingBattleId);
-      originalEnter();
+      const trainingEntry=trainingBattleId===null?undefined:Object.freeze({
+        battleZoneId:trainingBattleById(trainingBattleId).battleZoneId,
+        provenance:'RECONSTRUCTION_POLICY' as const,
+        authority:'offline-reconstruction' as const,
+      });
+      originalEnter(entryOverride??trainingEntry);
       this.trainingLaunchPending=false;
       if(!this.scene.inBattleView){
         if(trainingBattleId!==null)this.activeTrainingBattleId=null;
@@ -526,9 +532,11 @@ export class M4RuntimeIntegration{
         this.render(this.scene.snapshot());
         return;
       }
+      const integrated=integratedTrainingBattleById(preset.id);
       const actualZone=this.scene.state.battleZoneId;
-      const sceneNote=actualZone===preset.battleZoneId?'场景绑定已匹配':'目标 Zone '+preset.battleZoneId+'，当前 shared core 仍为 Zone '+String(actualZone)+'；交由 S34 接 scene hook';
-      this.setNotice('Training Battle #'+preset.id+'：Enemy Lv.'+preset.fixedEnemyLevel+' 固定 / '+sceneNote);
+      const sceneNote=actualZone===preset.battleZoneId?'场景绑定已匹配':'场景绑定失败：expected '+preset.battleZoneId+', got '+String(actualZone);
+      const levels=integrated.enemies.map(enemy=>enemy.fixedLevel).join('/');
+      this.setNotice('Training Battle #'+preset.id+'：Fixed Enemy Lv.'+levels+' / '+sceneNote);
       this.render(this.scene.snapshot());
     }catch(error){this.trainingLaunchPending=false;this.setNotice(String(error));}
   }
@@ -696,14 +704,13 @@ export class M4RuntimeIntegration{
   private applyBattleSettlement():void{
     if(this.activeTrainingBattleId!==null){
       const preset=trainingBattleById(this.activeTrainingBattleId);
-      const rank=trainingEnemyRank(preset);
-      const enemyCount=preset.monsterContract.reduce((total,row)=>total+row.count,0);
+      const enemies=reconstructionEnemiesForTrainingBattle(preset.id);
       const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
-        Array.from({length:enemyCount},()=>({level:preset.fixedEnemyLevel,rank})),
+        enemies.map(enemy=>({level:enemy.level,rank:enemy.rank})),
       );
       const applied=applyBattleReward(this.rewards,'m7-training-battle-'+preset.id,'battle:m7-training:'+preset.id+':win',{gold:reward.gold,exp:reward.exp});
       this.rewards=applied.state;this.scene.gold=this.rewards.gold;
-      this.setNotice('Training Battle #'+preset.id+' 胜利：固定 Enemy Lv.'+preset.fixedEnemyLevel+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
+      this.setNotice('Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
       return;
     }
     if(this.m5World){
@@ -742,7 +749,10 @@ export class M4RuntimeIntegration{
     const level=Math.max(1,this.rewards.progression.level);
     if(trainingBattleId!==null){
       const preset=trainingBattleById(trainingBattleId);
-      this.scene.setReconstructionBattleSetup(reconstructionSetupForTrainingBattle(preset,this.scene.character,level,this.combatEquipment()));
+      this.scene.setReconstructionBattleSetup({
+        ...reconstructionSetupForTrainingBattle(preset,this.scene.character,level,this.combatEquipment()),
+        enemies:reconstructionEnemiesForTrainingBattle(trainingBattleId),
+      });
       return;
     }
     if(!this.m5World){this.scene.setReconstructionBattleSetup(undefined);return;}
