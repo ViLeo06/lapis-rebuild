@@ -1,0 +1,22 @@
+.m7-menu-panel{width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto}
+.m7-training-camp,.m7-developer-preset{border-top:1px solid #4a493b;padding:8px 0 2px}
+.m7-training-camp>header,.m7-developer-preset>header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:0 3px 7px}
+.m7-training-camp>header small,.m7-training-camp>header b,.m7-developer-preset>header b{display:block}
+.m7-training-camp>header small{margin-top:2px;color:#9b9b87;font-size:8px}
+.m7-training-camp>header span,.m7-developer-preset>header span{color:#807b69;font:7px/1.2 ui-monospace,monospace}
+.m7-training-list{display:grid;grid-template-columns:1fr 1fr;gap:5px;max-height:min(52vh,520px);overflow:auto;padding:1px}
+.m7-training-battle{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:6px;align-items:stretch;border:1px solid #514c3c;background:#101713b8;padding:6px}
+.m7-training-battle.selected{border-color:#9c8051}
+.m7-training-battle-copy{min-width:0}
+.m7-training-battle-copy>b,.m7-training-battle-copy>span,.m7-training-battle-copy>small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m7-training-battle-copy>b{font-size:10px}.m7-training-battle-copy>span{color:#c2b58f;font-size:8px}.m7-training-battle-copy>small{color:#898b7d;font-size:7px}
+.m7-training-battle-copy>p{margin:3px 0 0;color:#aaa590;font-size:8px;line-height:1.2}
+.m7-training-battle>button,.m7-developer-preset button,.m7-developer-preset select,.m7-developer-preset input{border:1px solid #77684a;border-radius:0;background:#282d25;color:#e7e0ca}
+.m7-training-battle>button{min-height:44px;cursor:pointer}
+.m7-developer-form{display:grid;grid-template-columns:1fr 110px minmax(220px,1fr) 120px;gap:6px;align-items:end;padding:0 3px}
+.m7-developer-form label{display:grid;gap:3px;font-size:8px;color:#aaa590}.m7-developer-form select,.m7-developer-form input[type=number]{min-height:36px;padding:4px 6px}
+.m7-debug-skills{display:flex!important;align-items:center;gap:5px!important;min-height:36px}.m7-debug-skills input{width:18px;height:18px}
+.m7-developer-form>button{min-height:40px;cursor:pointer}
+.m7-developer-quick{display:flex;gap:4px;overflow:auto;padding:6px 3px 2px}.m7-developer-quick button{flex:0 0 58px;min-height:36px;cursor:pointer}
+.m7-recovery-command{border-color:#6f805e}.m7-recovery-command small{color:#b4c3a2}
+@media(max-width:700px){.m7-menu-panel{width:calc(100vw - 10px);max-height:calc(100vh - 10px)}.m7-training-list{grid-template-columns:1fr;max-height:46vh}.m7-developer-form{grid-template-columns:1fr 94px}.m7-debug-skills{grid-column:1/-1}.m7-developer-form>button{min-height:44px}.m7-training-battle>button{min-width:64px}.m7-developer-quick button{min-height:44px}.m7-recovery-command{min-height:44px}}
