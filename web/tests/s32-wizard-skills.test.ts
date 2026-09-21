@@ -16,7 +16,7 @@ import {
   validateM7WizardSkillBook,
 } from '../src/content/skills/wizard-seven-stage.ts';
 import {
-  applyM7Healing,
+  applyM7WizardHealing,
   applyM7NatureForceStaffHit,
   applyM7WizardSkillStatus,
   consumeM7CursedSwordPhysicalWindow,
@@ -158,9 +158,9 @@ test('nature force is a timed staff enchant and drains only available MP into av
 
 test('ashes blocks HP recovery from any caller but leaves recovery available after expiry',()=>{
   let status=applyM7WizardSkillStatus(createM7WizardStatusState(),'ashes',1);
-  assert.deepEqual(applyM7Healing(status,40,100,30),{hp:40,applied:0,blocked:true});
+  assert.deepEqual(applyM7WizardHealing(status,40,100,30),{hp:40,applied:0,blocked:true});
   status=tickM7WizardStatus(status,20000).state;
-  assert.deepEqual(applyM7Healing(status,40,100,30),{hp:70,applied:30,blocked:false});
+  assert.deepEqual(applyM7WizardHealing(status,40,100,30),{hp:70,applied:30,blocked:false});
 });
 
 test('curse eye duration scales from five to fifteen seconds',()=>{
