@@ -794,17 +794,58 @@ const RAW_MONSTERS:readonly MonsterRowInput[]=[
     ]
   },
   {
-    "monsterId": "m7-cyan-spectral-elite-l56",
+    "monsterId": "m7-blue-polearm-vanguard-l56",
+    "displayName": "Blue Polearm Vanguard",
+    "descriptiveName": "blue-polearm-stage7-vanguard",
+    "visualId": "monster-visual-002",
+    "visualFamily": "B4525",
+    "level": 56,
+    "maxHp": 540,
+    "maxMp": 0,
+    "attack": 98,
+    "defense": 42,
+    "magicAttack": 20,
+    "magicDefense": 44,
+    "movementRange": 5,
+    "attackRange": 2,
+    "aiArchetype": "stage7-vanguard",
+    "abilities": [
+      {
+        "abilityId": "basic-strike",
+        "kind": "physical-strike",
+        "powerMultiplier": 1,
+        "note": "Baseline physical action for offline training.",
+        "evidenceStatus": "RECONSTRUCTION_POLICY"
+      },
+      {
+        "abilityId": "vanguard-double",
+        "kind": "rapid-strike",
+        "powerMultiplier": 0.74,
+        "cooldownSeconds": 8,
+        "note": "Stage 7 standard pressure without elite multipliers.",
+        "evidenceStatus": "RECONSTRUCTION_POLICY"
+      }
+    ],
+    "recoveryCapability": null,
+    "difficultyTier": "normal",
+    "trainingBand": "T7",
+    "traits": [
+      "melee",
+      "fast"
+    ]
+  },
+  {
+    "monsterId": "m7-cyan-spectral-elite-l60",
     "displayName": "Cyan Spectral Elite",
     "descriptiveName": "cyan-spectral-elite-caster",
     "visualId": "monster-visual-004",
     "visualFamily": "B4544",
-    "level": 56,
-    "maxHp": 790,
+    "level": 60,
+    "maxHp": 840,
     "maxMp": 260,
     "attack": 34,
     "defense": 48,
-    "magicAttack": 118,
+    "magicAttack": 125,
     "magicDefense": 82,
     "movementRange": 4,
     "attackRange": 5,
@@ -1026,10 +1067,12 @@ export const M7_MONSTER_DIFFICULTY_MATRIX:readonly MonsterDifficultyMatrixRow[]=
     "minLevel": 56,
     "maxLevel": 65,
     "purpose": "Stage 7 control, elite and boss checks",
-    "normalMonsterIds": [],
+    "normalMonsterIds": [
+      "m7-blue-polearm-vanguard-l56"
+    ],
     "hardMonsterIds": [],
     "eliteBossMonsterIds": [
-      "m7-cyan-spectral-elite-l56",
+      "m7-cyan-spectral-elite-l60",
       "m7-spectral-overseer-boss-l65"
     ]
   }
@@ -1189,10 +1232,10 @@ export const S33_TRAINING_MILESTONE_CANDIDATES:readonly S33TrainingMilestoneCand
     "recommendedLevel": 56,
     "trainingBand": "T7",
     "candidateMonsterIds": [
-      "m7-cyan-spectral-elite-l56"
+      "m7-blue-polearm-vanguard-l56"
     ],
-    "recommendedDifficulty": "Elite/Boss",
-    "trainingPurpose": "Stage 7 standard elite magic/DOT/control fight",
+    "recommendedDifficulty": "Normal",
+    "trainingPurpose": "Stage 7 standard fight: fast melee pressure",
     "evidenceStatus": "RECONSTRUCTION_POLICY"
   },
   {
@@ -1201,7 +1244,7 @@ export const S33_TRAINING_MILESTONE_CANDIDATES:readonly S33TrainingMilestoneCand
     "trainingBand": "T7",
     "candidateMonsterIds": [
       "m7-spectral-overseer-boss-l65",
-      "m7-cyan-spectral-elite-l56"
+      "m7-cyan-spectral-elite-l60"
     ],
     "recommendedDifficulty": "Elite/Boss",
     "trainingPurpose": "Stage 7 boss/composite systems test",

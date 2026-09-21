@@ -93,10 +93,12 @@
       "minLevel": 56,
       "maxLevel": 65,
       "purpose": "Stage 7 control, elite and boss checks",
-      "normalMonsterIds": [],
+      "normalMonsterIds": [
+        "m7-blue-polearm-vanguard-l56"
+      ],
       "hardMonsterIds": [],
       "eliteBossMonsterIds": [
-        "m7-cyan-spectral-elite-l56",
+        "m7-cyan-spectral-elite-l60",
         "m7-spectral-overseer-boss-l65"
       ]
     }
@@ -256,10 +258,10 @@
       "recommendedLevel": 56,
       "trainingBand": "T7",
       "candidateMonsterIds": [
-        "m7-cyan-spectral-elite-l56"
+        "m7-blue-polearm-vanguard-l56"
       ],
-      "recommendedDifficulty": "Elite/Boss",
-      "trainingPurpose": "Stage 7 standard elite magic/DOT/control fight",
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 7 standard fight: fast melee pressure",
       "evidenceStatus": "RECONSTRUCTION_POLICY"
     },
     {
@@ -268,7 +270,7 @@
       "trainingBand": "T7",
       "candidateMonsterIds": [
         "m7-spectral-overseer-boss-l65",
-        "m7-cyan-spectral-elite-l56"
+        "m7-cyan-spectral-elite-l60"
       ],
       "recommendedDifficulty": "Elite/Boss",
       "trainingPurpose": "Stage 7 boss/composite systems test",

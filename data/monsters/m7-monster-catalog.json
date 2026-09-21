@@ -73,7 +73,7 @@
       "purpose": "Stage 7 control, elite and boss checks"
     }
   ],
-  "monsterCount": 18,
+  "monsterCount": 19,
   "archetypes": [
     {
       "monsterId": "m7-green-sword-trainee-l2",
@@ -960,17 +960,71 @@
       }
     },
     {
-      "monsterId": "m7-cyan-spectral-elite-l56",
+      "monsterId": "m7-blue-polearm-vanguard-l56",
+      "displayName": "Blue Polearm Vanguard",
+      "descriptiveName": "blue-polearm-stage7-vanguard",
+      "visualId": "monster-visual-002",
+      "visualFamily": "B4525",
+      "level": 56,
+      "maxHp": 540,
+      "maxMp": 0,
+      "attack": 98,
+      "defense": 42,
+      "magicAttack": 20,
+      "magicDefense": 44,
+      "movementRange": 5,
+      "attackRange": 2,
+      "aiArchetype": "stage7-vanguard",
+      "abilities": [
+        {
+          "abilityId": "basic-strike",
+          "kind": "physical-strike",
+          "powerMultiplier": 1,
+          "note": "Baseline physical action for offline training.",
+          "evidenceStatus": "RECONSTRUCTION_POLICY"
+        },
+        {
+          "abilityId": "vanguard-double",
+          "kind": "rapid-strike",
+          "powerMultiplier": 0.74,
+          "cooldownSeconds": 8,
+          "note": "Stage 7 standard pressure without elite multipliers.",
+          "evidenceStatus": "RECONSTRUCTION_POLICY"
+        }
+      ],
+      "recoveryCapability": null,
+      "difficultyTier": "normal",
+      "trainingBand": "T7",
+      "traits": [
+        "melee",
+        "fast"
+      ],
+      "fixedLevel": true,
+      "evidenceStatus": "RECONSTRUCTION_POLICY",
+      "evidence": {
+        "visualResource": "VERIFIED-STATIC-ORIGINAL",
+        "visualBinding": "RECONSTRUCTION_POLICY",
+        "descriptiveIdentity": "RECONSTRUCTION_POLICY",
+        "combatNumbers": "RECONSTRUCTION_POLICY",
+        "aiBehavior": "RECONSTRUCTION_POLICY",
+        "abilities": "RECONSTRUCTION_POLICY",
+        "retailEnemyStats": "SERVER-BOUNDARY",
+        "retailEnemyAi": "SERVER-BOUNDARY",
+        "fieldEncounterBinding": "SERVER-BOUNDARY"
+      }
+    },
+    {
+      "monsterId": "m7-cyan-spectral-elite-l60",
       "displayName": "Cyan Spectral Elite",
       "descriptiveName": "cyan-spectral-elite-caster",
       "visualId": "monster-visual-004",
       "visualFamily": "B4544",
-      "level": 56,
-      "maxHp": 790,
+      "level": 60,
+      "maxHp": 840,
       "maxMp": 260,
       "attack": 34,
       "defense": 48,
-      "magicAttack": 118,
+      "magicAttack": 125,
       "magicDefense": 82,
       "movementRange": 4,
       "attackRange": 5,
