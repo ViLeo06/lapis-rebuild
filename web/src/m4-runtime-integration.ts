@@ -256,9 +256,15 @@ export class M4RuntimeIntegration{
     this.scene.enterBattle=()=>{
       this.activeDialogue=null;
       this.battleExitConfirm=false;
-      this.prepareReconstructionBattle();
+      const trainingBattleId=this.trainingLaunchPending?this.selectedTrainingBattleId:null;
+      this.prepareReconstructionBattle(trainingBattleId);
       originalEnter();
-      if(!this.scene.inBattleView)return;
+      this.trainingLaunchPending=false;
+      if(!this.scene.inBattleView){
+        if(trainingBattleId!==null)this.activeTrainingBattleId=null;
+        return;
+      }
+      this.activeTrainingBattleId=trainingBattleId;
       this.applyClassProfile(true);
       this.lastSnapshot=null;
       const batch=this.presentation.battleStart({zoneId:this.scene.state.battleZoneId??this.worldAuthority.content.battleZoneId});
@@ -267,7 +273,7 @@ export class M4RuntimeIntegration{
 
     const originalAttack=this.scene.attack.bind(this.scene);
     this.scene.attack=(skill:Skill|null)=>{
-      if(skill&&!m6SkillAvailableForCharacter(this.scene.character,skill.skill_id)){
+      if(skill&&!this.skillAllowedForRuntime(this.scene.character,skill.skill_id)){
         this.setNotice('当前职业不能使用该技能');return;
       }
       const before=this.scene.snapshot();
@@ -310,6 +316,8 @@ export class M4RuntimeIntegration{
       else if(action==='interact')this.beginNpcInteraction(undefined,'pointer');
       else if(action==='attack')this.scene.attack(null);
       else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
+      else if(action==='recovery-hp')this.trainingRecovery('hp');
+      else if(action==='recovery-mp')this.trainingRecovery('mp');
       else if(action==='rest')this.rest();
       else if(action==='battle-exit-request')this.requestBattleExit();
       else if(action==='battle-exit-cancel')this.cancelBattleExit();
@@ -317,6 +325,9 @@ export class M4RuntimeIntegration{
       else if(action==='return')this.returnFromBattle();
       else if(action==='class-swordsman')this.changeClass('100');
       else if(action==='class-wizard')this.changeClass('109');
+      else if(action==='training-start')this.startTrainingBattle(Number(target.dataset.trainingBattleId));
+      else if(action==='dev-preset-apply')this.applyDeveloperPreset();
+      else if(action==='dev-preset-quick')this.applyDeveloperPreset(Number(target.dataset.devLevel));
       else if(action==='m6-promote')this.promoteM6Stage();
     });
     document.addEventListener('change',event=>{
@@ -338,10 +349,12 @@ export class M4RuntimeIntegration{
       if(event.key==='-'){event.preventDefault();this.scene.zoomOut();return;}
       if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
       if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.beginNpcInteraction(undefined,'keyboard');return;}
-      if(this.scene.inBattleView&&['1','2','3'].includes(event.key)){
-        const skills=m6SkillIdsForCharacter(this.scene.character);
+      if(this.scene.inBattleView&&/^[1-7]$/.test(event.key)){
+        const skills=this.runtimeSkillIds(this.scene.character);
         const skillId=skills[Number(event.key)-1];if(skillId)this.useSkill(skillId);
       }
+      if(this.scene.inBattleView&&(event.key==='h'||event.key==='H')){event.preventDefault();this.trainingRecovery('hp');return;}
+      if(this.scene.inBattleView&&(event.key==='m'||event.key==='M')){event.preventDefault();this.trainingRecovery('mp');return;}
       if(this.scene.inBattleView&&(event.key==='r'||event.key==='R'))this.rest();
     });
   }
@@ -350,6 +363,11 @@ export class M4RuntimeIntegration{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再开始新职业档');return;}
     this.activeDialogue=null;
     this.pendingEncounter=null;
+    this.activeTrainingBattleId=null;
+    this.trainingLaunchPending=false;
+    this.developerPresetActive=false;
+    this.developerUnlockAllSkills=false;
+    this.developerSkillPoints=0;
     this.rewards=createM4RewardState(0);
     this.world=this.worldAuthority.initial(this.m5World?.content.start??START_STATE);
     this.m6Stage=createM6StageState(id);
@@ -404,10 +422,20 @@ export class M4RuntimeIntegration{
     this.render(this.scene.snapshot());
   }
 
+  private runtimeSkillIds(characterId:string|number):readonly number[]{
+    const profession=playableClassById(characterId).family as M7Profession;
+    if(this.developerMode&&this.developerUnlockAllSkills)return implementedFirstSevenSkillIds(profession);
+    return m6SkillIdsForCharacter(characterId);
+  }
+
+  private skillAllowedForRuntime(characterId:string|number,skillId:number):boolean{
+    return this.runtimeSkillIds(characterId).includes(skillId);
+  }
+
   private useSkill(skillId:number):void{
     try{
       const definition=skillById(skillId);
-      if(!m6SkillAvailableForCharacter(this.scene.character,skillId))throw new Error('当前职业不能使用该技能');
+      if(!this.skillAllowedForRuntime(this.scene.character,skillId))throw new Error('当前职业不能使用该技能');
       if(this.scene.state.mp<definition.mpCost)throw new Error('MP 不足');
       const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
       if(definition.targetType!=='self'&&!target)throw new Error('请选择存活目标');
