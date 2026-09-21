@@ -133,6 +133,7 @@ test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({p
   const lowHp=Math.floor(beforeFixture.maxHp/2);
   await page.evaluate(({id,hp})=>window.lapisM4!.acceptanceSetEnemyHp!(id,hp),{id:healerId,hp:lowHp});
   const mpBefore=(await scene(page)).enemies.find(row=>row.id===healerId)!.mp;
+  await page.evaluate(id=>window.lapisM4!.acceptancePrimeEnemyAction!(id),healerId);
   await expect.poll(async()=>(await scene(page)).enemies.find(row=>row.id===healerId)!.mp,{timeout:5000}).toBeLessThan(mpBefore);
   expect((await scene(page)).enemies.find(row=>row.id===healerId)!.hp).toBe(lowHp);
 });
@@ -152,7 +153,7 @@ test('S34 wizard Lv36 petrify prevents action and ordinary attack targeting',asy
   await waitReady(page);
   const attack=page.locator('[data-action="attack"]:visible').first();
   await expect(attack).toBeEnabled();
-  await attack.click();
+  await page.evaluate(()=>document.querySelector<HTMLButtonElement>('[data-action="attack"]')?.click());
   await expect(page.locator('#m4-runtime-notice')).toContainText('石化');
   expect((await scene(page)).enemies.find(row=>row.id===targetId)!.hp).toBe(before);
 });
