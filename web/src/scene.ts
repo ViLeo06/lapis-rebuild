@@ -522,6 +522,24 @@ export class LabScene extends Phaser.Scene {
     }
   }
 
+  presentM7SkillAction(targetIds:readonly string[],magicResourceId?:number,selfTarget=false){
+    if(!this.inBattleView)return;
+    const targets=targetIds
+      .map(id=>this.state.enemies.find(enemy=>enemy.id===id&&enemy.hp>0))
+      .filter((enemy):enemy is NonNullable<typeof enemy>=>!!enemy);
+    const primary=targets[0];
+    if(primary&&!selfTarget)this.direction=directionFor(primary.x-this.anchor.x,primary.y-this.anchor.y);
+    this.setTransientAction('02');
+    this.route=[];
+    this.effectUntil=P.effectDurationMs;
+    for(const target of targets)this.enemyVisualActors.get(target.id)?.playTransient('03');
+    if(magicResourceId!==undefined&&this.pack.effects[String(magicResourceId)]){
+      this.setEffect(magicResourceId);
+      this.effectOrigin=selfTarget||!primary?{...this.anchor}:{x:primary.x,y:primary.y};
+      this.playEffect();
+    }
+  }
+
   equipItem(id:number|null,slot:'weapon'|'armor'){
     try{
       if(this.inBattleView)throw new Error('Cannot change equipment in combat');
