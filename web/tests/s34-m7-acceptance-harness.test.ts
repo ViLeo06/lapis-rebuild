@@ -8,7 +8,7 @@ import type {
   M7TrainingAcceptanceProbe,
 } from '../src/m7-acceptance-harness.ts';
 
-const roles=['melee','ranged','tank','fast','magic','dot','healer','elite','boss','control','brute','caster','skirmisher','regenerator'];
+const roles=['melee','high-offense','high-defense','ranged','tank','fast','magic','dot','control','healer','regenerator','elite','boss','skirmisher'];
 const levels=[2,6,16,26,36,46,56,5,15,25,35,45,55,65];
 const monsters:M7MonsterAcceptanceProbe[]=Object.freeze(roles.map((role,index)=>Object.freeze({
   monsterId:`fixture-${index+1}`,
@@ -18,7 +18,7 @@ const monsters:M7MonsterAcceptanceProbe[]=Object.freeze(roles.map((role,index)=>
   visualFamily:`B${4500+index}`,
   visualEvidence:'VERIFIED-STATIC-ORIGINAL' as const,
   balanceEvidence:'RECONSTRUCTION_POLICY' as const,
-  ...(role==='healer'?{canRecoverHp:true}:{}),
+  ...(role==='healer'||role==='regenerator'?{canRecoverHp:true}:{}),
 })));
 
 function skillRows(profession:'swordsman'|'wizard'):M7SkillAcceptanceProbe[]{
@@ -66,13 +66,14 @@ test('S34 harness rejects auto-scaled monsters and missing healer coverage',()=>
   const brokenMonsters=fixture.monsters.map((row,index)=>Object.freeze({
     ...row,
     fixedStats:index===0?false:row.fixedStats,
-    archetypes:row.archetypes.filter(tag=>tag!=='healer'),
+    archetypes:row.archetypes.filter(tag=>tag!=='healer'&&tag!=='regenerator'),
     canRecoverHp:false,
   }));
   const result=validateM7AcceptanceInput({...fixture,monsters:brokenMonsters});
   assert.equal(result.ok,false);
   assert.ok(result.errors.some(error=>error.startsWith('monster-scaling:')));
   assert.ok(result.errors.includes('monster-archetype: missing healer'));
+  assert.ok(result.errors.includes('monster-archetype: missing regenerator'));
   assert.ok(result.errors.includes('monster-healer: no HP recovery target'));
 });
 
