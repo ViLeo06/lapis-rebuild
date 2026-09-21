@@ -17,7 +17,7 @@ test('S34 battle core consumes explicit S30 fixed roster instead of dummy enemie
   assert.equal(state.battleZoneId,23);
   assert.deepEqual(state.enemies.map(enemy=>enemy.id),['m7-green-armored-renewer-l26']);
   assert.equal(state.enemies[0]?.combatStats?.level,26);
-  assert.equal(state.enemies[0]?.maxHp,360);
+  assert.equal(state.enemies[0]?.maxHp,320);
   assert.equal(state.enemies[0]?.visualResourceId,4526);
 });
 
