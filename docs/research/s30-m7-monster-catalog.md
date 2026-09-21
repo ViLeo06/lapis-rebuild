@@ -6,17 +6,17 @@ Baseline: `main@1d592d0e2194567c5d7d863e6a48250407dabeb3`
 
 ## Result
 
-S30 defines a fixed-level, data-driven Lv1-65 monster foundation for M7. It replaces the design assumption of two generic training dummies with **18 combat archetypes** across all seven approved bands and exposes an exact 15-milestone candidate matrix for S33.
+S30 defines a fixed-level, data-driven Lv1-65 monster foundation for M7. It replaces the design assumption of two generic training dummies with **19 combat archetypes** across all seven approved bands and exposes an exact 15-milestone candidate matrix for S33.
 
 The catalog deliberately reuses the four S17 visual families that were actually reviewed from the fixed-hash 2.2 client. It does **not** pretend that 18 distinct historical species identities have been recovered.
 
-- Combat archetypes: 18
+- Combat archetypes: 19
 - Original reviewed visual families used: `B4524`, `B4525`, `B4526`, `B4544`
 - Bands: T1..T7 / Lv1-65
 - Fixed-level rule: enabled
 - Player-level enemy scaling: disabled
 - Self-healing acceptance target: `m7-green-armored-renewer-l26`
-- Elite: `m7-green-armored-elite-l55`, `m7-cyan-spectral-elite-l56`
+- Elite: `m7-green-armored-elite-l55`, `m7-cyan-spectral-elite-l60`
 - Boss: `m7-spectral-overseer-boss-l65`
 
 ## Sources reviewed
