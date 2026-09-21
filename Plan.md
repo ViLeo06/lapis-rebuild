@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.4｜更新：2026-09-20｜Web-first  
+> 版本：v3.5｜更新：2026-09-21｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -25,6 +25,7 @@
 - 最终 M5 单 HTML：11,190,078 bytes；SHA-256 `12cd51547679d4aae225f5382941ddd93c878e3a93a56910607012f5fe3d9140`。自动/人工式浏览器链路已经证明自然闭环；**最终玩家体感验收仍以用户亲自试玩为准。**
 - 2026-09-19 用户亲自试玩已给出 M5 体感门结论：**未通过**。NPC 虽可见，但世界 NPC 当前不是可点击交互目标；点击引导员会落入地图点击移动路径，无法自然触发对话/任务。HUD 也仍明显偏开发壳：状态栏过大、引导框和下方框位置不合理、遮挡偏重，且未优先复用已经搜集到的原版/同期界面证据。项目立即转入 **M5.1 User Playtest Repair**。
 - 2026-09-20 用户亲自试玩最终 S24 standalone HTML 后明确确认 **通过**。M5.1 已完成原版结构优先 HUD、NPC pointer/hitbox、显式对话/任务选择、手机触控、延迟追中相机与战斗主动撤退确认。最终验收运行时 head `97bd5063749a15e114ce85119015f9dcb8b7afc0`；run `35442734082` synthetic/private-original/Chromium/offline 成功，E2E `58 passed / 4 skipped / 0 failed`；artifact `10583854810`；最终单 HTML 11,214,215 bytes，SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。**M5 Playability Gate 通过，项目正式进入 M6 Dual-class Completion。**
+- 2026-09-21 M6 Dual-class Completion 已完成自动化与人工验收。S25/S26/S28 已汇入 S29；原 S27 分支无实现，后由 S29 补齐巫师十阶段。生产 runtime 现支持剑士 `100→190`、巫师 `109→199` 共 20 阶段，保留 M5.1 三技能基线、阶段晋阶、M6 SaveV2 extension、装备约束与双职业独立存档轨道。fixed-hash private runtime head `0a51f242a6357031f7f5b83c743fae7724c7e2f9` 的 private E2E 为 `61 passed / 4 skipped / 0 failed`；最终 M6 validation run `35562393435` success，新 30 分钟 soak `1,800,634 ms`、0 page error、0 external request。最终 private HTML 22,968,621 bytes，SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。用户已于 2026-09-21 人工试玩确认无问题，**M6 Gate 正式通过**。
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -172,17 +173,17 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-下一阶段正式进入 **M6 Dual-class Completion / 双职业完整化**。目标不再是继续证明基础 Web 闭环，而是把已通过人工门禁的训练切片扩展为可持续成长的剑士/巫师双职业游戏主线。
+**M6 已关闭。下一里程碑仍处于方案讨论阶段，尚未立项、尚未分支开发。**
 
-M6 采用五条工作线 S25–S29：
+当前讨论方向聚焦于把“十阶段职业框架”扩成真正可反复调试的战斗内容层，包括更多怪物与等级梯度、不同阶段职业技能补齐、训练营多 battle-scene/怪物组合选择，以及战斗内恢复 HP/MP 的动作。正式里程碑编号、任务拆分、数值政策和验收标准需在方案确认后再写入执行计划。
 
-- **S25 — Dual-class Matrix / Data Archaeology：** 固定剑士 B100–B190、巫师 B109–B199 十阶段的视觉、authored stats、技能、装备与转职/成长证据矩阵；缺失服务器规则继续明确标记 reconstruction policy。
-- **S26 — Swordsman Ten-stage Progression：** 剑士十阶段成长、合法装备、代表技能与阶段切换，优先新增职业域模块和测试，避免抢共享核心。
-- **S27 — Wizard Ten-stage Progression：** 巫师十阶段成长、MP/魔法、合法装备、代表技能与阶段切换，与 S26 保持相同数据契约。
-- **S28 — World / Quest / Equipment Expansion：** 扩充等级成长、装备/背包、转职/任务链、地图/场景和奖励闭环；所有退役服务器缺口集中为可替换 policy。
-- **S29 — M6 Integration / Acceptance：** 在 S25–S28 收口后统一接入共享 runtime，完成双职业十阶段 SaveV2 迁移、桌面/手机真实输入、fixed-hash private-original、standalone offline 与 soak 验收。
+在方案确认前：
 
-M6 的完成标准是：**剑士和巫师都能从初始阶段持续成长到第十阶段，并通过真实玩家输入完成代表任务、装备/技能使用、战斗、转职/阶段推进和存档恢复。** 自动测试仍不能替代关键视觉与玩法人工 spot-check。
+- 不把讨论中的怪物等级、难度、技能解锁、恢复数值写成原版事实；
+- 不启动新的共享 runtime 大改；
+- 继续以 authored client data / recovered evidence / reconstruction policy 三层分离为基本原则；
+- 下一阶段应优先服务“不同阶段角色 + 不同难度怪物 + 完整技能”的调试与可玩性，而不是继续扩大空壳地图数量。
+
 ---
 
 ## 1. 项目目标

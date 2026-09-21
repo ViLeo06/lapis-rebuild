@@ -1,0 +1,246 @@
+{
+  "schema": "lapis.m6.integration-acceptance-contract.v1",
+  "owner": "S29",
+  "baseline": {
+    "main_commit": "4aea5b81fa4cca00c9a80b3ff2389eb391c09b17",
+    "plan_version": "3.4",
+    "m5_1_runtime_head": "97bd5063749a15e114ce85119015f9dcb8b7afc0",
+    "s24_final_run": "35442734082",
+    "s24_soak_run": "35433856641",
+    "s24_private_html_sha256": "0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7"
+  },
+  "stage_families": {
+    "swordsman": [
+      100,
+      110,
+      120,
+      130,
+      140,
+      150,
+      160,
+      170,
+      180,
+      190
+    ],
+    "wizard": [
+      109,
+      119,
+      129,
+      139,
+      149,
+      159,
+      169,
+      179,
+      189,
+      199
+    ]
+  },
+  "evidence_levels": [
+    "VERIFIED",
+    "VERIFIED-STATIC-ORIGINAL",
+    "VERIFIED-HISTORICAL",
+    "RECOVERED_SECONDARY",
+    "INFERRED",
+    "SERVER-BOUNDARY",
+    "RECONSTRUCTION_POLICY",
+    "UNVERIFIED"
+  ],
+  "upstream_handoffs": [
+    {
+      "session": "S25",
+      "integration_note": "docs/integration-notes/s25-m6-dual-class-matrix.md",
+      "required": true,
+      "status": "integrated-pr-40"
+    },
+    {
+      "session": "S26",
+      "integration_note": "docs/integration-notes/s26-m6-swordsman-progression.md",
+      "required": true,
+      "status": "integrated-pr-39"
+    },
+    {
+      "session": "S27",
+      "integration_note": "docs/integration-notes/s27-m6-wizard-progression.md",
+      "required": true,
+      "status": "completed-directly-on-s29"
+    },
+    {
+      "session": "S28",
+      "integration_note": "docs/integration-notes/s28-m6-world-progression-content.md",
+      "required": true,
+      "status": "integrated-pr-41"
+    }
+  ],
+  "shared_runtime_owned_by_s29": [
+    "web/src/main.ts",
+    "web/src/scene.ts",
+    "web/src/battle.ts",
+    "web/src/m4-runtime-integration.ts",
+    "Plan.md",
+    "Backlog.md",
+    "docs/evidence-ledger.md"
+  ],
+  "current_baseline_constraints": {
+    "playable_class_catalog_ids": [
+      100,
+      110,
+      120,
+      130,
+      140,
+      150,
+      160,
+      170,
+      180,
+      190,
+      109,
+      119,
+      129,
+      139,
+      149,
+      159,
+      169,
+      179,
+      189,
+      199
+    ],
+    "runtime_save_character_ids": [
+      "100",
+      "110",
+      "120",
+      "130",
+      "140",
+      "150",
+      "160",
+      "170",
+      "180",
+      "190",
+      "109",
+      "119",
+      "129",
+      "139",
+      "149",
+      "159",
+      "169",
+      "179",
+      "189",
+      "199"
+    ],
+    "progression_scope": "single-active-profession-per-save",
+    "save_shape": "SaveV2-plus-M6-extension-stage-quest-equipment",
+    "equipment_slots": [
+      "weapon",
+      "armor",
+      "accessory-domain-placeholder"
+    ],
+    "quest_model": "M5.1 training player path mirrored into M6 quest/save authority; S28 generic quest-chain domain available for future content"
+  },
+  "required_upstream_contracts": {
+    "S25": [
+      "single-authoritative-dual-class-matrix",
+      "per-stage-provenance",
+      "stable-stage-identity-and-visual-bindings",
+      "explicit-server-boundary-gaps"
+    ],
+    "S26": [
+      "swordsman-stage-domain-100-through-190",
+      "stage-aware-authored-stats",
+      "stage-aware-skill-and-equipment-eligibility",
+      "save-persistence-contract",
+      "no-shared-runtime-glue"
+    ],
+    "S27": [
+      "wizard-stage-domain-109-through-199",
+      "stage-aware-authored-stats-and-mp",
+      "stage-aware-magic-and-equipment-eligibility",
+      "mp-readiness-consumption-contract",
+      "save-persistence-contract",
+      "no-shared-runtime-glue"
+    ],
+    "S28": [
+      "progression-authority",
+      "promotion-authority",
+      "quest-chain-authority",
+      "inventory-equipment-authority",
+      "savev2-backward-compatible-migration",
+      "receipt-idempotency"
+    ]
+  },
+  "progression_proof": {
+    "normal_game_entry_required": true,
+    "disallowed_shortcuts": [
+      "direct-memory-stage-mutation",
+      "test-only-stage-setter-as-acceptance-proof",
+      "raw-save-edit-as-acceptance-proof"
+    ],
+    "acceptable_acceleration": [
+      "deterministic-test-content-through-production-progression-authority",
+      "policy-controlled-reward-or-threshold-fixtures-through-normal-apis"
+    ]
+  },
+  "save_migration": {
+    "baseline_kind": "lapis-rebuild-save",
+    "baseline_version": 2,
+    "must_load_m5_1_savev2": true,
+    "must_preserve": [
+      "active-character",
+      "class-stage-state",
+      "inventory",
+      "equipment",
+      "quest-state",
+      "progression",
+      "reward-and-progression-receipts"
+    ],
+    "future_or_unknown_schema": "fail-closed-or-explicitly-migrated",
+    "version_bump_decision": "deferred-to-S28-and-S29-after-stable-handoff"
+  },
+  "m5_1_regression_gates": [
+    "npc-pointer",
+    "keyboard-e",
+    "mobile-touch",
+    "camera-delayed-centering",
+    "fullscreen-and-zoom",
+    "field-to-interior",
+    "monster-visible",
+    "battle",
+    "retreat-confirmation",
+    "quest-turn-in",
+    "developer-diagnostics-default-hidden",
+    "standalone-offline"
+  ],
+  "m6_acceptance_gates": [
+    "swordsman-ten-stage-completeness",
+    "wizard-ten-stage-completeness",
+    "stage-aware-skills-and-magic",
+    "mp-and-readiness",
+    "equipment-and-restrictions",
+    "normal-progression-and-promotion",
+    "quest-reward-receipt-idempotency",
+    "m5-1-savev2-migration",
+    "desktop-pointer-and-keyboard",
+    "mobile-touch",
+    "fixed-hash-private-original",
+    "standalone-offline",
+    "new-m6-wall-clock-soak",
+    "user-playtest"
+  ],
+  "integration_state": {
+    "s29_head": "2556c59e84b310ee559a1537c0b0c5422d0548f9",
+    "upstream_prs": {
+      "S25": 40,
+      "S26": 39,
+      "S27": "direct-on-S29",
+      "S28": 41
+    },
+    "production_runtime": {
+      "twenty_stage_class_catalog": true,
+      "twenty_stage_private_asset_pack": true,
+      "stage_aware_skills": true,
+      "stage_promotion": true,
+      "m6_save_extension": true,
+      "legacy_m5_1_save_migration": true,
+      "equipment_routed_through_m6_authority": true,
+      "single_active_profession_per_save": true
+    },
+    "final_validation": "RUNNING"
+  }
+}

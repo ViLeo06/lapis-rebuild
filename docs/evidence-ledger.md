@@ -94,6 +94,16 @@
 | WEB-076 | VERIFIED-ENGINEERING | Post-playtest camera contract eases toward the player's geometric center and converges after stop while retaining map-edge clamp; active battle supports confirmed retreat with cancel/resume, no reward/win credit and encounter re-trigger suppression until leaving radius | PR #36 latest runtime/tests; mobile acceptance executes retreat request → cancel → request → confirm |
 | WEB-077 | USER-ACCEPTED | On 2026-09-20 the user personally played the final S24 standalone HTML and explicitly accepted it for closeout and progression to M6 | Manual playtest gate; this is a player-experience acceptance, not evidence that reconstruction-only game rules are historical retail truth |
 
+## 2026-09-21 / M6 dual-class completion closure
+
+| ID | Level | Claim | Reproduction / scope |
+| --- | --- | --- | --- |
+| WEB-078 | VERIFIED-ENGINEERING | M6 production runtime exposes all twenty canonical profession stages: swordsman 100–190 and wizard 109–199, with production promotion authority, stage-aware visuals, equipment validation and M6 SaveV2 extension | PR #38 / S29 integration; S25/S26/S28 merged into S29; S27 implemented directly on S29 after its original branch was found empty |
+| WEB-079 | VERIFIED-ENGINEERING | M6 browser acceptance reaches swordsman 190 and wizard 199 through production reward/progression + promotion authority without direct stage mutation, while preserving M5.1 player interaction regressions | fixed-hash private runtime head `0a51f242a6357031f7f5b83c743fae7724c7e2f9`; private E2E `61 passed / 4 skipped / 0 failed` |
+| WEB-080 | VERIFIED-ENGINEERING | Final M6 30-minute wall-clock soak passed for 1,800,634 ms while alternating profession families, promoting to 110/119, equipping legal gear, Save/Load round-tripping M6 state, exercising camera/guide/diagnostics; zero page errors and zero external HTTP(S) requests | final validation run `35562393435`, artifact `10623039460`, `soak/report.json` |
+| WEB-081 | VERIFIED-ENGINEERING | Exact M6 private standalone HTML is 22,968,621 bytes with SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4` | fixed-hash private run lineage from head `0a51f242...`; later CI-only deltas were guarded by strict compare before retained-preview soak |
+| WEB-082 | VERIFIED-ENGINEERING | After the public fixed-client mirror returned HTTP 404, private/S17 CI did not silently drop evidence: both workflows use strict lineage guards that reject runtime/content deltas before inheriting previously verified fixed-hash artifacts/evidence | M6 final run `35562393435`; S17 retained-evidence run `35564552171` |
+| WEB-083 | USER-ACCEPTED | On 2026-09-21 the user personally played the exact M6 standalone HTML SHA `f509c71b...` and explicitly reported no problem and authorized merge | Human playtest gate; validates player-facing acceptance only, not historical retail correctness of reconstruction policies |
 ## Interpretation boundaries
 
 - `Body_` direction evidence applies to checked character families; it must not be mechanically applied to `FOCUS` MagicRes or other layer families.
