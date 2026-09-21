@@ -697,7 +697,7 @@ export class M4RuntimeIntegration{
     if(this.activeTrainingBattleId!==null){
       const preset=trainingBattleById(this.activeTrainingBattleId);
       const rank=trainingEnemyRank(preset);
-      const enemyCount=preset.monsterContract.reduce((total,row)=>total+row.count,0);
+      const enemyCount=Math.max(1,preset.candidateMonsterIds.length);
       const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
         Array.from({length:enemyCount},()=>({level:preset.fixedEnemyLevel,rank})),
       );
