@@ -695,6 +695,18 @@ export class M4RuntimeIntegration{
   }
 
   private applyBattleSettlement():void{
+    if(this.activeTrainingBattleId!==null){
+      const preset=trainingBattleById(this.activeTrainingBattleId);
+      const rank=trainingEnemyRank(preset);
+      const enemyCount=preset.monsterContract.reduce((total,row)=>total+row.count,0);
+      const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
+        Array.from({length:enemyCount},()=>({level:preset.fixedEnemyLevel,rank})),
+      );
+      const applied=applyBattleReward(this.rewards,'m7-training-battle-'+preset.id,'battle:m7-training:'+preset.id+':win',{gold:reward.gold,exp:reward.exp});
+      this.rewards=applied.state;this.scene.gold=this.rewards.gold;
+      this.setNotice('Training Battle #'+preset.id+' 胜利：固定 Enemy Lv.'+preset.fixedEnemyLevel+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
+      return;
+    }
     if(this.m5World){
       const level=Math.max(1,this.rewards.progression.level);
       const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter([{level,rank:'normal'},{level,rank:'normal'}]);
@@ -958,7 +970,7 @@ export class M4RuntimeIntegration{
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
-        skills:m6SkillIdsForCharacter(snapshot.character).map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
+        skills:this.runtimeSkillIds(snapshot.character).map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
       };
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);
@@ -967,8 +979,14 @@ export class M4RuntimeIntegration{
       this.hudHtml=hudHtml;
     }
 
-    const menuHtml=renderGameMenu({open:this.menuOpen,canSave:!snapshot.inBattleView,canLoad:!snapshot.inBattleView,devEnabled:this.developerMode});
-    if(menuHtml!==this.menuHtml){
+    const menuHtml=renderGameMenu({
+      open:this.menuOpen,
+      canSave:!snapshot.inBattleView&&!this.developerPresetActive&&!this.developerUnlockAllSkills,
+      canLoad:!snapshot.inBattleView,
+      devEnabled:this.developerMode,
+    });
+    const menuSignature=menuHtml+'|m7:'+this.selectedTrainingBattleId+':'+this.rewards.progression.level+':'+this.developerMode+':'+this.developerUnlockAllSkills+':'+snapshot.character;
+    if(menuSignature!==this.menuHtml){
       this.menuRoot.innerHTML=menuHtml;
       const grid=this.menuRoot.querySelector('.menu-grid');
       if(grid){
@@ -977,7 +995,13 @@ export class M4RuntimeIntegration{
         const disabled=promotion&&this.rewards.progression.level>=(promotion.minimumLevel??1)?'':' disabled';
         grid.insertAdjacentHTML('beforeend',`<button type="button" data-action="m6-promote"${promotion?disabled:' disabled'}>${promotionLabel}</button><button type="button" data-action="class-swordsman">新建剑士档</button><button type="button" data-action="class-wizard">新建巫师档</button>`);
       }
-      this.menuHtml=menuHtml;
+      const panel=this.menuRoot.querySelector<HTMLElement>('.menu-panel');
+      if(panel&&!snapshot.inBattleView){
+        panel.classList.add('m7-menu-panel');
+        panel.insertAdjacentHTML('beforeend',renderM7TrainingCamp(this.rewards.progression.level,this.selectedTrainingBattleId));
+        if(this.developerMode)panel.insertAdjacentHTML('beforeend',renderM7DeveloperPreset(definition.family as M7Profession,this.rewards.progression.level,this.developerUnlockAllSkills));
+      }
+      this.menuHtml=menuSignature;
     }
     const diagnostics:DiagnosticsState={
       open:this.developerMode,mapSelector:String(snapshot.mapId).padStart(4,'0'),rawTiming:`${snapshot.timing} → ${snapshot.duration.toFixed(2)}ms`,
