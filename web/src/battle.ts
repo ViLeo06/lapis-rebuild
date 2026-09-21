@@ -11,9 +11,11 @@ import type {AiBinding} from './ai-runtime.ts';
 import type {BattleEntry,RuntimeProvenance} from './runtime-boundaries.ts';
 import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
 import type {CombatantStats,EquipmentCombatBonuses,EnemyRank} from './combat/reconstruction-combat-balance.ts';
-import {createM7WizardStatusState} from './content/skills/wizard-seven-stage-runtime.ts';
+import {applyM7NatureForceStaffHit,consumeM7CursedSwordPhysicalWindow,createM7WizardStatusState,m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-stage-runtime.ts';
 import type {M7WizardStatusState} from './content/skills/wizard-seven-stage-runtime.ts';
+import {m7AdjustIncomingDamage} from './combat/m7-status-effects.ts';
 import type {M7StatusEffect} from './combat/m7-status-effects.ts';
+import {applyM7EnemyHealing,consumeM7EnemyActionBlock,m7EnemyAccuracyModifier,m7EnemyEffectiveRange,tickM7BattleStatuses} from './combat/m7-battle-skills.ts';
 
 export type Skill = {
   skill_id: number;
@@ -251,7 +253,7 @@ function nextBattleRandom(s:BattleState):number{
   return s.rngState/0x100000000;
 }
 
-function finish(s: BattleState) {
+export function reconcileBattlePhase(s: BattleState) {
   if(s.hp<=0)s.phase='lost';
   else if(s.phase==='active'&&s.enemies.every(e=>e.hp<=0)){
     s.phase='won';
@@ -266,6 +268,7 @@ export function useAttack(
   y:number,
   skill:Skill|null,
   bonus=0,
+  options:Readonly<{staffOrdinaryHit?:boolean}>={},
 ): {ok:boolean;message:string;event?:BattleEvent} {
   if(s.phase!=='active')return {ok:false,message:'请先进入战斗画面'};
   if(!actionReady(s))return {ok:false,message:'行动槽尚未蓄满'};
@@ -277,6 +280,7 @@ export function useAttack(
   const buff=sid===1301||sid===19301;
   const e=s.enemies.find(e=>e.id===targetId&&e.hp>0);
   if(!buff&&!e)return {ok:false,message:'请选择存活目标'};
+  if(!skill&&e&&!m7WizardOrdinaryAttackTargetable(e.m7Status.wizard))return {ok:false,message:'石化目标不能被普通攻击'};
   const range=sid&&sid>=19000?P.rangedRadiusPx:P.meleeRadiusPx;
   if(!buff&&e&&Math.hypot(e.x-x,e.y-y)>range)return {ok:false,message:'目标超出临时射程'};
 
@@ -295,10 +299,20 @@ export function useAttack(
     if(sid===19201&&resolution.dotTicks>0){
       e.poison=P.poisonDurationMs;e.poisonTickDamage=resolution.dotDamagePerTick;e.poisonTicks=resolution.dotTicks;e.poisonClock=0;
     }
+    let totalDamage=resolution.totalDamage;
+    if(!skill){
+      const curse=consumeM7CursedSwordPhysicalWindow(e.m7Status.wizard,totalDamage);
+      totalDamage=curse.damage;
+      e.m7Status=Object.freeze({...e.m7Status,wizard:curse.state});
+    }
     const before=e.hp;
-    e.hp=Math.max(0,e.hp-resolution.totalDamage);
+    e.hp=Math.max(0,e.hp-totalDamage);
     if(before>e.hp)event={kind:'hp-loss',target:e.id,source:'player',amount:before-e.hp,resultingHp:e.hp,provenance:balance.provenance};
-    if(s.manaBuff>0&&resolution.totalDamage>0)s.mp=Math.min(s.maxMp,s.mp+P.manaReturn);
+    if(!skill&&options.staffOrdinaryHit&&totalDamage>0){
+      const drain=applyM7NatureForceStaffHit(s.playerM7Status.wizard,s.mp,s.maxMp,e.mp,nextBattleRandom(s));
+      s.mp=drain.casterMp;e.mp=drain.targetMp;
+    }
+    if(s.manaBuff>0&&totalDamage>0)s.mp=Math.min(s.maxMp,s.mp+P.manaReturn);
   }else if(e){
     if(sid===19101)e.blind=P.blindDurationMs;
     else if(sid===19201){
@@ -314,7 +328,7 @@ export function useAttack(
       if(s.manaBuff>0)s.mp=Math.min(s.maxMp,s.mp+P.manaReturn);
     }
   }
-  finish(s);
+  reconcileBattlePhase(s);
   return {ok:true,message:`${skill?.name??'普通攻击'} / ${s.damagePolicyProvenance}`,event};
 }
 
@@ -324,6 +338,7 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   if(s.phase!=='active'||![delta,x,y,defense].every(Number.isFinite)||delta<0||defense<0)return events;
   const dt=Math.min(250,Math.max(0,delta));
   s.cooldown=Math.max(0,s.cooldown-dt);
+  events.push(...tickM7BattleStatuses(s,dt));
 
   // Original battle messages increment readiness one point at a time. The
   // 500ms cadence is recovered secondary evidence and remains pending an
@@ -332,7 +347,12 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   const ticks=Math.floor(s.actionClock/RECOVERED_READINESS.inferredTickMs);
   if(ticks>0){
     s.actionClock-=ticks*RECOVERED_READINESS.inferredTickMs;
-    s.action=Math.min(s.actionMax,s.action+ticks*RECOVERED_READINESS.incrementPerTick);
+    const slowMultiplier=s.playerSlowMs>0?0.5:1;
+    s.action=Math.min(s.actionMax,s.action+ticks*RECOVERED_READINESS.incrementPerTick*slowMultiplier);
+    if(s.playerStunActions>0&&s.action>=s.actionMax){
+      s.playerStunActions-=1;
+      s.action=0;
+    }
   }
 
   s.shield=Math.max(0,s.shield-dt);
@@ -361,27 +381,80 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   const damagePolicy=context?.damagePolicy??TRAINING_DAMAGE_POLICY;
   for(const [enemyIndex,e] of s.enemies.entries()){
     if(e.hp<=0)continue;
+    const traitCadence=e.traits.includes('fast')?0.72:e.traits.includes('tank')?1.12:1;
     const enemyIntervalMs=s.combatPlayerStats
       ?DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.tuning.cadence.enemyActionSeconds*1000*
-        (1+enemyIndex*DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.tuning.cadence.staggerPerEnemy)
-      :P.enemyIntervalMs;
+        traitCadence*(1+enemyIndex*DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.tuning.cadence.staggerPerEnemy)
+      :P.enemyIntervalMs*traitCadence;
     e.action=Math.min(s.actionMax,e.action+s.actionMax*dt/enemyIntervalMs);
     if(e.action+1e-8>=s.actionMax){
       e.action=0;
+      if(consumeM7EnemyActionBlock(e))continue;
+
+      const readyAbility=(kind:string)=>e.abilities.find(ability=>
+        ability.kind===kind&&(e.abilityCooldownMs[ability.abilityId]??0)<=0&&(ability.mpCost??0)<=e.mp
+      );
+      const heal=readyAbility('self-heal');
+      if(heal&&e.hp<e.maxHp*0.7){
+        const amount=heal.healHp??Math.max(1,Math.round(e.maxHp*0.15));
+        const result=applyM7EnemyHealing(e,amount);
+        e.mp=Math.max(0,e.mp-(heal.mpCost??0));
+        e.abilityCooldownMs[heal.abilityId]=(heal.cooldownSeconds??10)*1000;
+        continue;
+      }
+
+      const specialKinds=['command-burst','poison-dot','stun','slow','rapid-strike','enrage'] as const;
+      const special=specialKinds.map(kind=>readyAbility(kind)).find((ability):ability is ReconstructionEnemyAbility=>!!ability);
+      const base=e.abilities.find(ability=>['magic-bolt','ranged-strike','physical-strike'].includes(ability.kind));
+      const ability=special??base;
+      const baseRangeCells=e.attackRangeCells??(e.role==='melee'?1:P.enemyRangedCells);
+      const rangeCells=m7EnemyEffectiveRange(e,baseRangeCells);
       const range=e.role==='melee'?P.meleeRadiusPx:P.rangedRadiusPx;
-      const inRange=context?tileDistance(pixelCell(e.x,e.y),pixelCell(x,y))<=(e.role==='melee'?1:P.enemyRangedCells):Math.hypot(e.x-x,e.y-y)<=range;
+      const inRange=context?tileDistance(pixelCell(e.x,e.y),pixelCell(x,y))<=rangeCells:Math.hypot(e.x-x,e.y-y)<=range*Math.max(1,rangeCells);
       if(inRange){
+        if(ability?.kind==='poison-dot'){
+          const chance=ability.chance??1;
+          if(nextBattleRandom(s)<chance){
+            const sourceStat=e.combatStats?.magicAttack??e.combatStats?.attack??10;
+            s.playerPoisonDamage=Math.max(1,Math.round(sourceStat*(ability.powerMultiplier??0.15)));
+            s.playerPoisonTicks=Math.max(s.playerPoisonTicks,ability.ticks??4);
+            s.playerPoisonClock=0;
+            s.playerPoisonIntervalMs=Math.max(250,(ability.tickIntervalSeconds??5)*1000);
+          }
+          e.mp=Math.max(0,e.mp-(ability.mpCost??0));
+          e.abilityCooldownMs[ability.abilityId]=(ability.cooldownSeconds??10)*1000;
+          continue;
+        }
+        if(ability?.kind==='slow'){
+          if(nextBattleRandom(s)<(ability.chance??1))s.playerSlowMs=Math.max(s.playerSlowMs,(ability.durationSeconds??5)*1000);
+          e.mp=Math.max(0,e.mp-(ability.mpCost??0));
+          e.abilityCooldownMs[ability.abilityId]=(ability.cooldownSeconds??10)*1000;
+          continue;
+        }
+
         let damage:number,provenance:RuntimeProvenance;
         if(s.combatPlayerStats&&e.combatStats){
           const defender=s.shield>0?{...s.combatPlayerStats,defense:Math.round(s.combatPlayerStats.defense*1.45),magicDefense:Math.round(s.combatPlayerStats.magicDefense*1.45)}:s.combatPlayerStats;
-          const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(e.combatStats,defender,{kind:'physical',multiplier:1,hits:1,accuracyModifier:e.blind>0?-0.15:0},()=>nextBattleRandom(s));
-          damage=resolution.totalDamage;provenance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.provenance;
+          const kind=ability?.kind==='magic-bolt'||ability?.kind==='command-burst'?'magic':'physical';
+          const hits=ability?.kind==='rapid-strike'?2:1;
+          const multiplier=ability?.kind==='enrage'?1.35:(ability?.powerMultiplier??1);
+          const accuracyModifier=(e.blind>0?-0.15:0)+m7EnemyAccuracyModifier(e,kind);
+          const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(
+            e.combatStats,defender,{kind,multiplier,hits,accuracyModifier},()=>nextBattleRandom(s)
+          );
+          damage=m7AdjustIncomingDamage(resolution.totalDamage,kind,s.playerM7Status.swordsman);
+          provenance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.provenance;
         }else{
           damage=damagePolicy.enemyDamage(defense,e.blind>0,s.shield>0);provenance=damagePolicy.provenance;
         }
         const before=s.hp;
         s.hp=Math.max(0,s.hp-damage);
         if(before>s.hp)events.push({kind:'hp-loss',target:'player',source:e.id,amount:before-s.hp,resultingHp:s.hp,provenance});
+        if(ability?.kind==='stun'&&nextBattleRandom(s)<(ability.chance??1))s.playerStunActions+=1;
+        if(ability&&ability.kind!=='physical-strike'&&ability.kind!=='ranged-strike'&&ability.kind!=='magic-bolt'){
+          e.mp=Math.max(0,e.mp-(ability.mpCost??0));
+          if(ability.cooldownSeconds)e.abilityCooldownMs[ability.abilityId]=ability.cooldownSeconds*1000;
+        }
       }else if(context){
         const occupied=[pixelCell(x,y),...context.reserved,...s.enemies.filter(other=>other!==e&&other.hp>0).map(other=>pixelCell(other.x,other.y))];
         const next=enemyStep(context.collision,pixelCell(e.x,e.y),pixelCell(x,y),occupied);
@@ -389,6 +462,6 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
       }
     }
   }
-  finish(s);
+  reconcileBattlePhase(s);
   return events;
 }
