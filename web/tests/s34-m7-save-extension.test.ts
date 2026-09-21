@@ -71,3 +71,17 @@ test('S34 M7 SaveV2 persists current HP/MP and keeps legacy saves migratable',()
   const roundTrip=migrateSaveToM7(JSON.parse(serializeM7SaveV2(withVitals,context,M6_SAVE_CONTENT)),context,M6_SAVE_CONTENT);
   assert.deepEqual(roundTrip.m7.vitals,{hp:77,mp:33});
 });
+
+
+test('M6 stages eight to ten keep actual progression while M7 persistence caps only the seven-stage skill domain',()=>{
+  for(const [character,family] of [['190','swordsman'],['199','wizard']] as const){
+    const save=migrateSaveToM7(base(character,90),context,M6_SAVE_CONTENT);
+    assert.equal(save.progression.level,90);
+    assert.equal(save.m7.family,family);
+    assert.equal(m7RuntimeSkillCommands(save.m7.skills,character,65).length,7);
+    const serialized=serializeM7SaveV2(save,context,M6_SAVE_CONTENT);
+    const loaded=migrateSaveToM7(JSON.parse(serialized),context,M6_SAVE_CONTENT);
+    assert.equal(loaded.progression.level,90);
+    assert.deepEqual(loaded.m7,save.m7);
+  }
+});
