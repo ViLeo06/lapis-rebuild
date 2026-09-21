@@ -12,7 +12,7 @@ test('S33 defines exactly 15 fixed-level battles on the approved M7 cadence',()=
   assert.ok(M7_TRAINING_BATTLES.every(row=>row.trainingBindingEvidence==='RECONSTRUCTION_POLICY'));
 });
 
-test('S33 monster-role contract covers M7 tactical needs without inventing S30 monster ids',()=>{
+test('S33 training contract binds all 15 battles to explicit S30 candidate monster ids',()=>{
   const roles=new Set(M7_TRAINING_BATTLES.flatMap(row=>row.monsterContract.map(monster=>monster.role)));
   for(const role of ['melee','ranged','tank','fast','magic','dot','healer','control','elite','boss'])assert.ok(roles.has(role),role);
   assert.ok(M7_TRAINING_BATTLES.some(row=>row.monsterContract.some(monster=>monster.role==='healer')));
@@ -35,6 +35,8 @@ test('S33 reconstruction battle setup keeps enemy level fixed when player level 
 test('difficulty hint is dynamic presentation only',()=>{
   const preset=M7_TRAINING_BATTLES[8]!;
   assert.equal(resolvePlayerDifficultyHint(50,preset.recommendedLevel),'Easy');
+  assert.equal(resolvePlayerDifficultyHint(42,preset.recommendedLevel),'Easy');
+  assert.equal(resolvePlayerDifficultyHint(41,preset.recommendedLevel),'Normal');
   assert.equal(resolvePlayerDifficultyHint(35,preset.recommendedLevel),'Normal');
   assert.equal(resolvePlayerDifficultyHint(30,preset.recommendedLevel),'Hard');
   assert.equal(resolvePlayerDifficultyHint(20,preset.recommendedLevel),'Very Hard');
