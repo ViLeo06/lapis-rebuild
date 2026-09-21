@@ -60,3 +60,14 @@ test('Developer all-skills state cannot enter normal SaveV2.m7',()=>{
   const dev=createM7DeveloperSkillState('160',56);
   assert.throws(()=>createM7SaveExtension('160',56,dev));
 });
+
+
+test('S34 M7 SaveV2 persists current HP/MP and keeps legacy saves migratable',()=>{
+  const normal=createM7SaveExtension('100',6,undefined,{hp:123,mp:45});
+  assert.deepEqual(normal.vitals,{hp:123,mp:45});
+  const legacy=migrateSaveToM7(base('100',6),context,M6_SAVE_CONTENT);
+  assert.equal(legacy.m7.vitals,null);
+  const withVitals={...legacy,m7:createM7SaveExtension('100',6,legacy.m7.skills,{hp:77,mp:33})};
+  const roundTrip=migrateSaveToM7(JSON.parse(serializeM7SaveV2(withVitals,context,M6_SAVE_CONTENT)),context,M6_SAVE_CONTENT);
+  assert.deepEqual(roundTrip.m7.vitals,{hp:77,mp:33});
+});
