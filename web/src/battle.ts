@@ -11,6 +11,9 @@ import type {AiBinding} from './ai-runtime.ts';
 import type {BattleEntry,RuntimeProvenance} from './runtime-boundaries.ts';
 import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
 import type {CombatantStats,EquipmentCombatBonuses,EnemyRank} from './combat/reconstruction-combat-balance.ts';
+import {createM7WizardStatusState} from './content/skills/wizard-seven-stage-runtime.ts';
+import type {M7WizardStatusState} from './content/skills/wizard-seven-stage-runtime.ts';
+import type {M7StatusEffect} from './combat/m7-status-effects.ts';
 
 export type Skill = {
   skill_id: number;
@@ -21,16 +24,40 @@ export type Skill = {
   magic_pattern?: { magic_resources?: { magic_resource_id:number; role?:string; start_tick?:number }[] };
 };
 
+export type M7ActorStatusState=Readonly<{
+  swordsman:readonly M7StatusEffect[];
+  wizard:M7WizardStatusState;
+}>;
+
+export type ReconstructionEnemyAbility=Readonly<{
+  abilityId:string;
+  kind:string;
+  powerMultiplier?:number;
+  chance?:number;
+  durationSeconds?:number;
+  tickIntervalSeconds?:number;
+  ticks?:number;
+  healHp?:number;
+  cooldownSeconds?:number;
+  mpCost?:number;
+}>;
+
 export type Enemy = {
   id: string;
   hp: number;
   maxHp: number;
+  mp:number;
+  maxMp:number;
   x: number;
   y: number;
   role: 'melee'|'ranged';
   visualResourceId?:number;
   movementRangeCells?:number;
   attackRangeCells?:number;
+  traits:readonly string[];
+  abilities:readonly ReconstructionEnemyAbility[];
+  abilityCooldownMs:Record<string,number>;
+  m7Status:M7ActorStatusState;
   blind: number;
   poison: number;
   action: number;
@@ -64,6 +91,8 @@ export type ReconstructionEnemySetup=Readonly<{
   movementRangeCells:number;
   attackRangeCells:number;
   visualResourceId?:number;
+  traits?:readonly string[];
+  abilities?:readonly ReconstructionEnemyAbility[];
 }>;
 
 export type ReconstructionBattleSetup={
@@ -99,6 +128,13 @@ export type BattleState = {
   damagePolicyId:string;
   damagePolicyProvenance:RuntimeProvenance;
   combatPlayerStats:CombatantStats|null;
+  playerM7Status:M7ActorStatusState;
+  playerPoisonDamage:number;
+  playerPoisonTicks:number;
+  playerPoisonClock:number;
+  playerPoisonIntervalMs:number;
+  playerStunActions:number;
+  playerSlowMs:number;
   rngState:number;
 };
 
@@ -129,6 +165,13 @@ export function initialState(): BattleState {
     damagePolicyId:TRAINING_DAMAGE_POLICY.id,
     damagePolicyProvenance:TRAINING_DAMAGE_POLICY.provenance,
     combatPlayerStats:null,
+    playerM7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),
+    playerPoisonDamage:0,
+    playerPoisonTicks:0,
+    playerPoisonClock:0,
+    playerPoisonIntervalMs:0,
+    playerStunActions:0,
+    playerSlowMs:0,
     rngState:0x6d325a91,
   };
 }
@@ -166,8 +209,10 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
           magicDefense:row.magicDefense,
         });
         return {
-          id:row.id,hp:row.maxHp,maxHp:row.maxHp,x:x+65+index*72,y:y-(index%2)*30,role:row.role,
+          id:row.id,hp:row.maxHp,maxHp:row.maxHp,mp:row.maxMp,maxMp:row.maxMp,x:x+65+index*72,y:y-(index%2)*30,role:row.role,
           visualResourceId:row.visualResourceId,movementRangeCells:row.movementRangeCells,attackRangeCells:row.attackRangeCells,
+          traits:Object.freeze([...(row.traits??[])]),abilities:Object.freeze([...(row.abilities??[])]),abilityCooldownMs:{},
+          m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),
           blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats,poisonTickDamage:0,poisonTicks:0,poisonClock:0,
         };
       });
@@ -175,14 +220,14 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
       const melee=balance.enemyStats({id:'dummy-melee',level:enemyLevel,rank,role:'melee'});
       const ranged=balance.enemyStats({id:'dummy-ranged',level:enemyLevel,rank,role:'ranged'});
       s.enemies=[
-        {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,x:x+65,y,role:'melee',visualResourceId:4524,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-        {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+        {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,mp:melee.maxMp,maxMp:melee.maxMp,x:x+65,y,role:'melee',visualResourceId:4524,traits:Object.freeze(['melee']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+        {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,mp:ranged.maxMp,maxMp:ranged.maxMp,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,traits:Object.freeze(['ranged']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
       ];
     }
   }else{
     s.enemies=[
-      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,x:x+65,y,role:'melee',visualResourceId:4524,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,mp:0,maxMp:0,x:x+65,y,role:'melee',visualResourceId:4524,traits:Object.freeze(['melee']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,mp:0,maxMp:0,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,traits:Object.freeze(['ranged']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
     ];
   }
   return s;
