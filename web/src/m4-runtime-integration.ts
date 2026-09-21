@@ -393,6 +393,17 @@ export class M4RuntimeIntegration{
     this.render(this.scene.snapshot());
   }
 
+  acceptanceSetEnemyHp(targetId:string,hp:number):void{
+    if(!navigator.webdriver)throw new Error('M7 acceptance enemy fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('M7 acceptance enemy fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    if(!Number.isFinite(hp)||hp<=0||hp>=enemy.maxHp)throw new Error('Invalid acceptance enemy HP');
+    enemy.hp=hp;
+    enemy.action=this.scene.state.actionMax;
+    this.render(this.scene.snapshot());
+  }
+
   acceptanceGrantLevel(targetLevel:number):void{
     if(!navigator.webdriver)throw new Error('M6 acceptance reward fixture is automation-only');
     if(!Number.isInteger(targetLevel)||targetLevel<1||targetLevel>99)throw new Error('Invalid M6 acceptance target level');
