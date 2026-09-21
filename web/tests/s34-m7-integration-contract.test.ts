@@ -89,7 +89,7 @@ test('S34 contract records exact integrated upstream source heads',()=>{
   assert.equal(contract.upstream_handoffs[0]?.source_sha,'e26e68c9b28d98f4311490741a136723a2b064f2');
   assert.equal(contract.upstream_handoffs[1]?.source_sha,'911872bbc3b035090890c104c1e8884789b8e728');
   assert.equal(contract.upstream_handoffs[2]?.source_sha,'aec7d519c56443aca71e67440d7ed1971e07c906');
-  assert.equal(contract.upstream_handoffs[3]?.source_sha,'185f52abeeecd7687d1a6c00989955dd8530f9ab');
+  assert.equal(contract.upstream_handoffs[3]?.source_sha,'26ffefbcb8a764a062994293034dd2fb7752216b');
   assert.deepEqual(contract.evidence_levels,[
     'VERIFIED','VERIFIED-STATIC-ORIGINAL','VERIFIED-HISTORICAL','RECOVERED_SECONDARY',
     'INFERRED','SERVER-BOUNDARY','RECONSTRUCTION_POLICY','UNVERIFIED',
