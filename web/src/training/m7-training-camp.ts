@@ -16,6 +16,7 @@ export type M7TrainingBattlePreset=Readonly<{
   battleZoneId:number;
   sceneTitle:string;
   monsterContract:readonly TrainingMonsterContract[];
+  candidateMonsterIds:readonly string[];
   difficultyBand:TrainingDifficultyBand;
   purpose:string;
   sceneEvidence:'VERIFIED-STATIC-ORIGINAL';
@@ -36,21 +37,21 @@ const monsters=(...rows:Array<[TrainingMonsterRole,number]>):readonly TrainingMo
   Object.freeze(rows.map(([role,count])=>Object.freeze({role,count})));
 
 const raw:readonly Omit<M7TrainingBattlePreset,'stage'|'sceneTitle'|'sceneEvidence'|'trainingBindingEvidence'|'monsterBindingEvidence'>[]=[
-  {id:1,recommendedLevel:2,fixedEnemyLevel:2,battleZoneId:1,monsterContract:monsters(['melee',1]),difficultyBand:'Normal',purpose:'新手移动、选敌与普通攻击教学'},
-  {id:2,recommendedLevel:5,fixedEnemyLevel:5,battleZoneId:3,monsterContract:monsters(['melee',1],['fast',1]),difficultyBand:'Normal',purpose:'Stage 1 毕业：基础输出与目标切换'},
-  {id:3,recommendedLevel:6,fixedEnemyLevel:6,battleZoneId:9,monsterContract:monsters(['melee',1],['ranged',1]),difficultyBand:'Normal',purpose:'Stage 2 入门：近远程混编'},
-  {id:4,recommendedLevel:10,fixedEnemyLevel:10,battleZoneId:11,monsterContract:monsters(['fast',1],['ranged',1]),difficultyBand:'Normal',purpose:'Stage 2 中期：站位与 readiness 节奏'},
-  {id:5,recommendedLevel:15,fixedEnemyLevel:15,battleZoneId:13,monsterContract:monsters(['tank',1],['ranged',1]),difficultyBand:'Hard',purpose:'Stage 2 毕业：集火与耐久目标'},
-  {id:6,recommendedLevel:16,fixedEnemyLevel:16,battleZoneId:15,monsterContract:monsters(['tank',1],['melee',1]),difficultyBand:'Normal',purpose:'Stage 3 入门：防御技能与持续接战'},
-  {id:7,recommendedLevel:25,fixedEnemyLevel:25,battleZoneId:21,monsterContract:monsters(['dot',1],['ranged',1]),difficultyBand:'Hard',purpose:'Stage 3 毕业：DOT 压力与行动管理'},
-  {id:8,recommendedLevel:26,fixedEnemyLevel:26,battleZoneId:23,monsterContract:monsters(['healer',1],['tank',1]),difficultyBand:'Hard',purpose:'Stage 4 入门：回血目标与禁疗验收'},
-  {id:9,recommendedLevel:35,fixedEnemyLevel:35,battleZoneId:31,monsterContract:monsters(['control',1],['fast',1]),difficultyBand:'Hard',purpose:'Stage 4 毕业：控制与快速目标'},
-  {id:10,recommendedLevel:36,fixedEnemyLevel:36,battleZoneId:41,monsterContract:monsters(['magic',1],['tank',1]),difficultyBand:'Hard',purpose:'Stage 5 入门：魔法/物理混合压力'},
-  {id:11,recommendedLevel:45,fixedEnemyLevel:45,battleZoneId:51,monsterContract:monsters(['dot',1],['magic',1],['ranged',1]),difficultyBand:'Hard',purpose:'Stage 5 毕业：持续伤害与多目标优先级'},
-  {id:12,recommendedLevel:46,fixedEnemyLevel:46,battleZoneId:61,monsterContract:monsters(['healer',1],['control',1],['tank',1]),difficultyBand:'Hard',purpose:'Stage 6 入门：恢复、控制与范围/命令测试'},
-  {id:13,recommendedLevel:55,fixedEnemyLevel:57,battleZoneId:71,monsterContract:monsters(['elite',1],['magic',1]),difficultyBand:'Elite',purpose:'Stage 6 毕业：越级精英压力'},
-  {id:14,recommendedLevel:56,fixedEnemyLevel:58,battleZoneId:81,monsterContract:monsters(['elite',1],['healer',1],['ranged',1]),difficultyBand:'Elite',purpose:'Stage 7 标准战：控制、禁疗与集火'},
-  {id:15,recommendedLevel:65,fixedEnemyLevel:70,battleZoneId:91,monsterContract:monsters(['boss',1],['elite',1],['control',1]),difficultyBand:'Boss',purpose:'Stage 7 Boss：Buff/Debuff、恢复与综合战术'},
+  {id:1,recommendedLevel:2,fixedEnemyLevel:2,battleZoneId:1,monsterContract:monsters(['melee',1]),candidateMonsterIds:Object.freeze(['m7-green-sword-trainee-l2']),difficultyBand:'Normal',purpose:'新手移动、选敌与普通攻击教学'},
+  {id:2,recommendedLevel:5,fixedEnemyLevel:5,battleZoneId:3,monsterContract:monsters(['fast',1]),candidateMonsterIds:Object.freeze(['m7-blue-polearm-skirmisher-l5']),difficultyBand:'Normal',purpose:'Stage 1 毕业：快速高压目标'},
+  {id:3,recommendedLevel:6,fixedEnemyLevel:6,battleZoneId:9,monsterContract:monsters(['tank',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-guard-l6']),difficultyBand:'Normal',purpose:'Stage 2 入门：高防目标'},
+  {id:4,recommendedLevel:10,fixedEnemyLevel:10,battleZoneId:11,monsterContract:monsters(['ranged',1],['tank',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-ranged-l10','m7-green-armored-guard-l6']),difficultyBand:'Normal',purpose:'Stage 2 中期：近远程目标优先级'},
+  {id:5,recommendedLevel:15,fixedEnemyLevel:15,battleZoneId:13,monsterContract:monsters(['dot',1],['ranged',1]),candidateMonsterIds:Object.freeze(['m7-blue-polearm-venom-l15','m7-cyan-spectral-ranged-l10']),difficultyBand:'Hard',purpose:'Stage 2 毕业：DOT 与远程压力'},
+  {id:6,recommendedLevel:16,fixedEnemyLevel:16,battleZoneId:15,monsterContract:monsters(['magic',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-hexer-l16']),difficultyBand:'Normal',purpose:'Stage 3 入门：魔法压力'},
+  {id:7,recommendedLevel:25,fixedEnemyLevel:25,battleZoneId:21,monsterContract:monsters(['melee',1],['control',1]),candidateMonsterIds:Object.freeze(['m7-green-sword-duelist-l22','m7-green-armored-controller-l25']),difficultyBand:'Hard',purpose:'Stage 3 毕业：爆发与控制组合'},
+  {id:8,recommendedLevel:26,fixedEnemyLevel:26,battleZoneId:23,monsterContract:monsters(['healer',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-renewer-l26']),difficultyBand:'Hard',purpose:'Stage 4 入门：回血目标与灰烬禁疗验收'},
+  {id:9,recommendedLevel:35,fixedEnemyLevel:35,battleZoneId:31,monsterContract:monsters(['control',1],['fast',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-binder-l32','m7-blue-polearm-raider-l35']),difficultyBand:'Hard',purpose:'Stage 4 毕业：控制与快速压力'},
+  {id:10,recommendedLevel:36,fixedEnemyLevel:36,battleZoneId:41,monsterContract:monsters(['tank',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-bulwark-l36']),difficultyBand:'Hard',purpose:'Stage 5 入门：高防持续目标'},
+  {id:11,recommendedLevel:45,fixedEnemyLevel:45,battleZoneId:51,monsterContract:monsters(['dot',1],['melee',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-venom-caster-l42','m7-green-sword-berserker-l45']),difficultyBand:'Hard',purpose:'Stage 5 毕业：DOT 与爆发管理'},
+  {id:12,recommendedLevel:46,fixedEnemyLevel:46,battleZoneId:61,monsterContract:monsters(['magic',1],['control',1]),candidateMonsterIds:Object.freeze(['m7-cyan-spectral-support-l46']),difficultyBand:'Hard',purpose:'Stage 6 入门：魔法与控制支援目标'},
+  {id:13,recommendedLevel:55,fixedEnemyLevel:55,battleZoneId:71,monsterContract:monsters(['elite',1],['magic',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-elite-l55','m7-cyan-spectral-support-l46']),difficultyBand:'Elite',purpose:'Stage 6 毕业：精英坦克与支援'},
+  {id:14,recommendedLevel:56,fixedEnemyLevel:56,battleZoneId:81,monsterContract:monsters(['fast',1]),candidateMonsterIds:Object.freeze(['m7-blue-polearm-vanguard-l56']),difficultyBand:'Elite',purpose:'Stage 7 标准战：快速近战压力'},
+  {id:15,recommendedLevel:65,fixedEnemyLevel:65,battleZoneId:91,monsterContract:monsters(['boss',1],['elite',1]),candidateMonsterIds:Object.freeze(['m7-spectral-overseer-boss-l65','m7-cyan-spectral-elite-l60']),difficultyBand:'Boss',purpose:'Stage 7 Boss：Buff/Debuff、恢复与综合战术'},
 ];
 
 export const M7_TRAINING_BATTLES:readonly M7TrainingBattlePreset[]=Object.freeze(raw.map(row=>{
