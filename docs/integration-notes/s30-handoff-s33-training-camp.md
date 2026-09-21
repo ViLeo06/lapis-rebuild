@@ -38,8 +38,8 @@ The Easy/Normal/Hard/Very Hard helper is UI-only and must not mutate those field
 | 11 | 45 | `m7-cyan-spectral-venom-caster-l42`, `m7-green-sword-berserker-l45` | Stage 5 graduation: DOT plus burst management |
 | 12 | 46 | `m7-cyan-spectral-support-l46` | Stage 6 entry: magic/control support target |
 | 13 | 55 | `m7-green-armored-elite-l55`, `m7-cyan-spectral-support-l46` | Stage 6 graduation: elite tank plus support |
-| 14 | 56 | `m7-cyan-spectral-elite-l56` | Stage 7 standard elite magic/DOT/control fight |
-| 15 | 65 | `m7-spectral-overseer-boss-l65`, `m7-cyan-spectral-elite-l56` | Stage 7 boss/composite systems test |
+| 14 | 56 | `m7-blue-polearm-vanguard-l56` | Stage 7 standard fight: fast melee pressure |
+| 15 | 65 | `m7-spectral-overseer-boss-l65`, `m7-cyan-spectral-elite-l60` | Stage 7 boss/composite systems test |
 
 This is a candidate roster, not the final S33 encounter definition. S33 may adjust counts/formation/scene bindings while preserving fixed S30 monster stats and provenance.
 
