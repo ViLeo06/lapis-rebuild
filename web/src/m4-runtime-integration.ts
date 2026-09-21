@@ -25,7 +25,7 @@ import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration
 import type {M6SaveV2} from './progression/m6-save-migration.ts';
 import {
   M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
-  m6SkillAvailableForCharacter,m6StageTrackForCharacter,
+  m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
 } from './m6-runtime-content.ts';
 import {ReconstructionWorldAuthority} from './world/world-authority.ts';
 import type {WorldRuntimeState} from './world/world-authority.ts';
@@ -465,7 +465,8 @@ export class M4RuntimeIntegration{
   private runtimeSkillIds(characterId:string|number):readonly number[]{
     const profession=playableClassById(characterId).family as M7Profession;
     if(this.developerMode&&this.developerUnlockAllSkills)return implementedFirstSevenSkillIds(profession);
-    return availableImplementedM7SkillIds(profession,this.rewards.progression.level);
+    if(this.developerPresetActive)return availableImplementedM7SkillIds(profession,this.rewards.progression.level);
+    return m6SkillIdsForCharacter(characterId);
   }
 
   private skillAllowedForRuntime(characterId:string|number,skillId:number):boolean{
