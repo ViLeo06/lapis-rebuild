@@ -110,7 +110,8 @@ Capabilities:
 - fills HP/MP through the current combat profile
 - picks first eligible owned weapon/armor under current M6 equipment rules
 - exposes reconstruction debug skill-point budget `max(0, level - 1)`
-- `Unlock all implemented skills` uses the first-seven-stage runtime skill provider and marks a Lv6 override contract
+- normal compatibility mode enforces M7 stage legality for the currently integrated first three skills: Stage 1 / 2 / 3 cumulative unlocks
+- `Unlock all implemented skills` opens all skills currently integrated on the branch and marks a Lv6 override contract; S34 replaces the provider with S31/S32 seven-skill books
 
 Debug persistence rule:
 
@@ -184,6 +185,8 @@ S34 should:
 - preserve normal stage/skill-point legality outside debug
 - keep developer books/overrides out of ordinary SaveV2
 - retain S33's profession/level preset and UI; do not duplicate a second Developer Preset flow
+
+S33's compatibility provider already prevents the old M6 behavior where all three representative skills appeared at Lv1. S34 should replace this provider with S31/S32 seven-skill books without changing the S33 preset UI.
 
 S33 does not claim that its metadata field alone changes skill coefficients before those upstream runtime adapters are integrated.
 
