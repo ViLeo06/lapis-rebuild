@@ -192,13 +192,13 @@ test('S14 M4 wizard uses authored vitals, visible magic and opt-in diagnostics',
   await page.keyboard.press('e');
   await expect.poll(async()=>(await snap(page)).inBattleView).toBe(true);
   await expect(page.locator('[data-skill-id="19101"]')).toBeVisible();
-  await expect(page.locator('[data-skill-id="19201"]')).toBeVisible();
-  await expect(page.locator('[data-skill-id="19301"]')).toBeVisible();
+  await expect(page.locator('[data-skill-id="19201"]')).toHaveCount(0);
+  await expect(page.locator('[data-skill-id="19301"]')).toHaveCount(0);
   const before=await snap(page);
   expect(before.hp).toBe(100);
   expect(before.mp).toBe(130);
   await expect.poll(async()=>(await snap(page)).actionReady,{timeout:10000}).toBe(true);
-  await page.keyboard.press('3');
+  await page.keyboard.press('1');
   await expect.poll(async()=>(await snap(page)).mp).toBeLessThan(before.mp);
   const after=await snap(page);
   expect(after.character).toBe('109');
