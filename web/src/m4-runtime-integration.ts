@@ -24,7 +24,7 @@ import {equipM6Item,evaluateM6EquipmentEligibility} from './progression/m6-equip
 import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration.ts';
 import type {M6SaveV2} from './progression/m6-save-migration.ts';
 import {
-  M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
+  M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6QuestChainForLegacyStage,
   m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
 } from './m6-runtime-content.ts';
 import {ReconstructionWorldAuthority} from './world/world-authority.ts';
@@ -53,6 +53,7 @@ import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleB
 import {integratedTrainingBattleById,reconstructionEnemiesForTrainingBattle} from './training/m7-integrated-training-catalog.ts';
 import {buildM7DeveloperCharacterPreset,implementedFirstSevenSkillIds} from './training/m7-developer-preset.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
+import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
 import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
@@ -202,7 +203,7 @@ export class M4RuntimeIntegration{
       developerMode:this.developerMode,
       lastAudio:this.lastAudio,
       playableRecovery:!!this.m5World,
-      m6:{stageId:this.m6Stage.stageId,family:this.m6Stage.family,promotionReceipts:[...this.m6Stage.promotionReceipts],nextStageId:m6PromotionRuleForCharacter(this.scene.character)?.toStageId??null,canPromote:(m6PromotionRuleForCharacter(this.scene.character)?.minimumLevel??Infinity)<=this.rewards.progression.level},
+      m6:{stageId:this.m6Stage.stageId,family:this.m6Stage.family,promotionReceipts:[...this.m6Stage.promotionReceipts],nextStageId:integratedPromotionRuleForCharacter(this.scene.character)?.toStageId??null,canPromote:(integratedPromotionRuleForCharacter(this.scene.character)?.minimumLevel??Infinity)<=this.rewards.progression.level},
       m7Training:{battleCount:M7_TRAINING_BATTLES.length,selectedBattleId:this.selectedTrainingBattleId,activeBattleId:this.activeTrainingBattleId,recoveryPolicyId:InfiniteTrainingRecoveryPolicy.id,developerPresetActive:this.developerPresetActive,unlockAllImplementedSkills:this.developerMode&&this.developerUnlockAllSkills,developerSkillPoints:this.developerSkillPoints,skillLevelOverride:this.developerMode&&this.developerUnlockAllSkills?6:null},
       worldPlan:this.m5World?{doorCell:this.m5World.doorCell,interiorEntry:this.m5World.interiorEntry,interiorExit:this.m5World.interiorExit,encounterCell:this.m5World.encounterCell}:null,
     };
@@ -402,7 +403,7 @@ export class M4RuntimeIntegration{
 
   private promoteM6Stage():void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再晋阶');return;}
-    const rule=m6PromotionRuleForCharacter(this.scene.character);
+    const rule=integratedPromotionRuleForCharacter(this.scene.character);
     if(!rule){this.setNotice('当前已经是本职业第十阶段');return;}
     const result=applyM6Promotion(
       m6StageTrackForCharacter(this.scene.character),
@@ -999,7 +1000,7 @@ export class M4RuntimeIntegration{
       this.menuRoot.innerHTML=menuHtml;
       const grid=this.menuRoot.querySelector('.menu-grid');
       if(grid){
-        const promotion=m6PromotionRuleForCharacter(snapshot.character);
+        const promotion=integratedPromotionRuleForCharacter(snapshot.character);
         const promotionLabel=promotion?`晋阶至 ${playableClassById(promotion.toStageId).displayName}（Lv.${promotion.minimumLevel}）`:'已达第十阶段';
         const disabled=promotion&&this.rewards.progression.level>=(promotion.minimumLevel??1)?'':' disabled';
         grid.insertAdjacentHTML('beforeend',`<button type="button" data-action="m6-promote"${promotion?disabled:' disabled'}>${promotionLabel}</button><button type="button" data-action="class-swordsman">新建剑士档</button><button type="button" data-action="class-wizard">新建巫师档</button>`);
