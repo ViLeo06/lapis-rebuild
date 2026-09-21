@@ -126,6 +126,19 @@ export function reconstructionEnemiesForTrainingBattle(id:number):readonly Recon
       movementRangeCells:monster.movementRange,
       attackRangeCells:monster.attackRange,
       visualResourceId:visual.sourceNumericId,
+      traits:monster.traits,
+      abilities:Object.freeze(monster.abilities.map(ability=>Object.freeze({
+        abilityId:ability.abilityId,
+        kind:ability.kind,
+        ...(ability.powerMultiplier===undefined?{}:{powerMultiplier:ability.powerMultiplier}),
+        ...(ability.chance===undefined?{}:{chance:ability.chance}),
+        ...(ability.durationSeconds===undefined?{}:{durationSeconds:ability.durationSeconds}),
+        ...(ability.tickIntervalSeconds===undefined?{}:{tickIntervalSeconds:ability.tickIntervalSeconds}),
+        ...(ability.ticks===undefined?{}:{ticks:ability.ticks}),
+        ...(ability.healHp===undefined?{}:{healHp:ability.healHp}),
+        ...(ability.cooldownSeconds===undefined?{}:{cooldownSeconds:ability.cooldownSeconds}),
+        ...(ability.mpCost===undefined?{}:{mpCost:ability.mpCost}),
+      }))),
     });
   }));
 }
