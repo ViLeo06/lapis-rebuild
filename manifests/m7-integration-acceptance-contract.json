@@ -152,22 +152,30 @@
     {
       "session": "S30",
       "branch": "codex/s30-m7-monster-difficulty-matrix",
-      "status": "pending"
+      "status": "integrated",
+      "pr": 43,
+      "source_sha": "e26e68c9b28d98f4311490741a136723a2b064f2"
     },
     {
       "session": "S31",
       "branch": "codex/s31-m7-swordsman-skills",
-      "status": "pending"
+      "status": "integrated",
+      "pr": 45,
+      "source_sha": "911872bbc3b035090890c104c1e8884789b8e728"
     },
     {
       "session": "S32",
       "branch": "codex/s32-m7-wizard-skills",
-      "status": "pending"
+      "status": "pending",
+      "pr": null,
+      "source_sha": null
     },
     {
       "session": "S33",
       "branch": "codex/s33-m7-training-recovery-debug",
-      "status": "pending"
+      "status": "integrated",
+      "pr": 44,
+      "source_sha": "185f52abeeecd7687d1a6c00989955dd8530f9ab"
     }
   ],
   "shared_runtime_owned_by_s34": [
