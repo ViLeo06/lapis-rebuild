@@ -5,7 +5,7 @@ Role: integration guidance only. S30 does not modify shared core.
 
 ## What S30 supplies
 
-- 18 fixed-level combat archetypes for Lv1-65.
+- 19 fixed-level combat archetypes for Lv1-65.
 - Seven-band difficulty matrix.
 - 15 exact S33 recommended-level candidate rows.
 - explicit reviewed S17 visual bindings.
