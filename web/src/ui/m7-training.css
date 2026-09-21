@@ -20,3 +20,6 @@
 .m7-developer-quick{display:flex;gap:4px;overflow:auto;padding:6px 3px 2px}.m7-developer-quick button{flex:0 0 58px;min-height:36px;cursor:pointer}
 .m7-recovery-command{border-color:#6f805e}.m7-recovery-command small{color:#b4c3a2}
 @media(max-width:700px){.m7-menu-panel{width:calc(100vw - 10px);max-height:calc(100vh - 10px)}.m7-training-list{grid-template-columns:1fr;max-height:46vh}.m7-developer-form{grid-template-columns:1fr 94px}.m7-debug-skills{grid-column:1/-1}.m7-developer-form>button{min-height:44px}.m7-training-battle>button{min-width:64px}.m7-developer-quick button{min-height:44px}.m7-recovery-command{min-height:44px}}
+
+/* Modal menu must stay above the legacy diagnostics aside when Developer mode is enabled. */
+body.m4-active #m4-menu-root{z-index:40}
