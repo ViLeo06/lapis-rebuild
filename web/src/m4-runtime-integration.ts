@@ -1,6 +1,6 @@
 import type {LabScene} from './scene.ts';
 import type {Skill} from './battle.ts';
-import {actionReady,consumeAction} from './battle.ts';
+import {actionReady,consumeAction,reconcileBattlePhase} from './battle.ts';
 import {battleProfileForClass,magicReadinessCost} from './battle-profile.ts';
 import {nearestAnchor,referenceCellToScreen} from './coordinates.ts';
 import {playableClassById,isEquipmentCompatibleWithClass} from './content/classes/class-catalog.ts';
@@ -510,6 +510,7 @@ export class M4RuntimeIntegration{
       const command=this.runtimeSkillCommands().find(row=>row.id===String(commandId)||row.authoredSkillId===Number(commandId));
       if(!command)throw new Error('当前职业/阶段不能使用该技能');
       const result=useM7Skill(this.scene.state,this.scene.selectedEnemy,this.scene.anchor.x,this.scene.anchor.y,command);
+      reconcileBattlePhase(this.scene.state);
       this.setNotice(result.message);
       if(!result.ok){this.render(this.scene.snapshot());return;}
       const visual=visualSkillForCommand(command);
