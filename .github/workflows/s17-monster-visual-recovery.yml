@@ -1,7 +1,7 @@
 name: S17 monster visual recovery
 on:
   push:
-    branches: ['codex/m5-monster-visual-recovery']
+    branches: ['codex/m5-monster-visual-recovery', 'codex/s29-m6-integration-acceptance']
     paths:
       - '.github/workflows/s17-monster-visual-recovery.yml'
       - 'tools/probe_monster_visuals.py'
