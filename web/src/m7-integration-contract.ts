@@ -18,8 +18,10 @@ export const M7_STAGE_IDS=Object.freeze({
   wizard:Object.freeze([109,119,129,139,149,159,169] as const),
 });
 
-export const M7_SWORDSMAN_SKILL_IDS=Object.freeze([1101,1201,1301,1401,1501,'battle-command','stun-attack'] as const);
-export const M7_WIZARD_SKILL_IDS=Object.freeze([19101,19201,19301,19401,19501,'blind','cursed-sword'] as const);
+export const M7_SWORDSMAN_SKILL_KEYS=Object.freeze(['1101','1201','1301','1401','1501','battle-command','stun-strike'] as const);
+export const M7_SWORDSMAN_AUTHORED_SKILL_IDS=Object.freeze([1101,1201,1301,1401,1501,null,null] as const);
+export const M7_WIZARD_SKILL_KEYS=Object.freeze(['dark-veil','poison-mist','nature-force','ashes','curse-eye','blindness','cursed-sword'] as const);
+export const M7_WIZARD_AUTHORED_SKILL_IDS=Object.freeze([19101,19201,19301,19401,19501,null,null] as const);
 
 export const M7_INFINITE_TRAINING_RECOVERY_POLICY=Object.freeze({
   id:'M7InfiniteTrainingRecoveryPolicy',
