@@ -14,6 +14,7 @@ declare global{
       exportJson:()=>string;
       restore:(raw:unknown)=>void;
       acceptanceGrantLevel?:(targetLevel:number)=>void;
+      acceptanceSetEnemyHp?:(targetId:string,hp:number)=>void;
     };
   }
 }
@@ -45,7 +46,10 @@ window.addEventListener('lapis-ready',()=>{
     load:()=>runtime.load(),
     exportJson:()=>runtime.exportJson(),
     restore:(raw:unknown)=>runtime.restore(raw),
-    ...(navigator.webdriver?{acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel)}:{}),
+    ...(navigator.webdriver?{
+      acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel),
+      acceptanceSetEnemyHp:(targetId:string,hp:number)=>runtime.acceptanceSetEnemyHp(targetId,hp),
+    }:{}),
   };
 });
 
