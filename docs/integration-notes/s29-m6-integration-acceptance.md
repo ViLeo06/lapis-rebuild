@@ -7,7 +7,7 @@ Plan: v3.4
 
 ## Current status
 
-**INTEGRATED / FINAL VALIDATION IN PROGRESS.**
+**CLOSED / AUTOMATED + USER ACCEPTANCE PASSED.**
 
 S29 started as a preflight-only branch. After review, the actual upstream state was:
 
@@ -28,7 +28,7 @@ The completed upstream PRs were retargeted to S29 rather than merged directly in
 3. PR #41 / S28 — world/progression/quest/equipment/save authority
 4. S27 — implemented directly on S29 because the original S27 branch had no delta
 
-`main` remains unchanged while M6 validation is open.
+`main` remained unchanged until automated and user acceptance both passed.
 
 ## S27 recovery completed on S29
 
@@ -168,17 +168,27 @@ Still reconstruction/server-boundary unless separately proven:
 - late-stage Magic behavior not covered by a complete content contract
 - exact MagicRes placement/blend semantics
 
-## Final validation gate
+## Final validation and human gate
 
-The remaining automated gate is one exact final S29 head with:
+Final automated validation completed successfully.
 
-1. synthetic parser/typecheck/unit/build
-2. Chromium + standalone offline
-3. fixed-hash 2.2 private-original pack
-4. real-resource browser acceptance
-5. new 30-minute M6 wall-clock soak
-6. final private standalone HTML artifact
+- fixed-hash private runtime head: `0a51f242a6357031f7f5b83c743fae7724c7e2f9`
+- fixed-hash installer SHA-256: `c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88`
+- private browser acceptance: `61 passed / 4 skipped / 0 failed`
+- final M6 validation run: `35562393435` — success
+- new M6 wall-clock soak: `1,800,634 ms`
+- soak page errors: `0`
+- soak external HTTP(S) requests: `0`
+- final validation artifact: `10623039460`
+- final private HTML bytes: `22,968,621`
+- final private HTML SHA-256: `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`
 
-After those are green, S29 will record the exact commit/run/artifact/HTML bytes/SHA-256 and provide that exact HTML for the user's hands-on playtest.
+The original public installer mirror later returned HTTP 404. Final validation retained the exact previously fixed-hash-verified private HTML only after a strict lineage check proved that later deltas were limited to CI/validation scripts and did not change runtime/content/resource-builder source.
 
-Per the project gate, `main` is not merged until the user accepts that exact final M6 build.
+S17's fixed-client workflow was likewise reconciled with a strict retained-evidence lineage gate; final S17 validation run `35564552171` passed.
+
+### User acceptance
+
+On 2026-09-21 the user personally played the exact M6 private HTML above and explicitly reported **no problem** and authorized merge.
+
+This closes the M6 human gate. It does not upgrade reconstruction-only combat/progression/server rules to historical retail truth.
