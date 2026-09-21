@@ -1,6 +1,7 @@
-import {m6SkillIdsForCharacter} from '../m6-runtime-content.ts';
 import {resolveM7Stage,resolveM7StageId} from './m7-level-axis.ts';
 import type {M7Profession} from './m7-level-axis.ts';
+import {M7_SWORDSMAN_SKILL_KEYS,m7SwordsmanSkill} from '../classes/swordsman-seven-stage-skills.ts';
+import {M7_WIZARD_SKILL_KEYS,m7WizardAllowedSkillKeys,m7WizardSkillByKey} from '../content/skills/wizard-seven-stage.ts';
 
 export const M7DeveloperPresetPolicy=Object.freeze({
   id:'m7-developer-character-preset-v1',
@@ -18,8 +19,8 @@ export type M7DeveloperCharacterPreset=Readonly<{
   stage:number;
   stageId:number;
   skillPoints:number;
-  legalSkillIds:readonly number[];
-  effectiveSkillIds:readonly number[];
+  legalSkillIds:readonly (number|string)[];
+  effectiveSkillIds:readonly (number|string)[];
   unlockAllImplementedSkills:boolean;
   skillLevelOverride:number|null;
   vitals:'full';
@@ -27,9 +28,26 @@ export type M7DeveloperCharacterPreset=Readonly<{
   provenance:'RECONSTRUCTION_POLICY';
 }>;
 
-export function implementedFirstSevenSkillIds(profession:M7Profession):readonly number[]{
-  const seventhStageId=profession==='swordsman'?160:169;
-  return Object.freeze([...m6SkillIdsForCharacter(seventhStageId)]);
+function identityForSwordsman(key:(typeof M7_SWORDSMAN_SKILL_KEYS)[number]):number|string{
+  const skill=m7SwordsmanSkill(key);
+  return skill.originalSkillId??`swordsman:${key}`;
+}
+function identityForWizard(key:(typeof M7_WIZARD_SKILL_KEYS)[number]):number|string{
+  const skill=m7WizardSkillByKey(key);
+  return skill.authoredSkillId??`wizard:${key}`;
+}
+export function availableImplementedM7SkillIds(profession:M7Profession,level:number):readonly (number|string)[]{
+  if(profession==='swordsman'){
+    return Object.freeze(M7_SWORDSMAN_SKILL_KEYS
+      .filter(key=>m7SwordsmanSkill(key).unlockLevel<=level)
+      .map(identityForSwordsman));
+  }
+  return Object.freeze(m7WizardAllowedSkillKeys(level).map(identityForWizard));
+}
+export function implementedFirstSevenSkillIds(profession:M7Profession):readonly (number|string)[]{
+  return profession==='swordsman'
+    ?Object.freeze(M7_SWORDSMAN_SKILL_KEYS.map(identityForSwordsman))
+    :Object.freeze(M7_WIZARD_SKILL_KEYS.map(identityForWizard));
 }
 
 export function buildM7DeveloperCharacterPreset(
@@ -39,7 +57,7 @@ export function buildM7DeveloperCharacterPreset(
 ):M7DeveloperCharacterPreset{
   const range=resolveM7Stage(level);
   const stageId=resolveM7StageId(profession,level);
-  const legalSkillIds=Object.freeze([...m6SkillIdsForCharacter(stageId)]);
+  const legalSkillIds=availableImplementedM7SkillIds(profession,level);
   const effectiveSkillIds=unlockAllImplementedSkills?implementedFirstSevenSkillIds(profession):legalSkillIds;
   return Object.freeze({
     profession,
