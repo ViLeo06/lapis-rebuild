@@ -3,6 +3,8 @@ import {
   S33_TRAINING_MILESTONE_CANDIDATES,
 } from '../content/monsters/monster-archetype-catalog.ts';
 import type {MonsterArchetype} from '../content/monsters/monster-archetype-catalog.ts';
+import {S17_MONSTER_VISUAL_CATALOG} from '../content/monsters/monster-visual-catalog.ts';
+import type {ReconstructionEnemySetup} from '../battle.ts';
 import {
   M7_TRAINING_BATTLES,
 } from './m7-training-camp.ts';
@@ -101,3 +103,29 @@ export function validateM7IntegratedTrainingBattles():void{
 }
 
 validateM7IntegratedTrainingBattles();
+
+
+export function reconstructionEnemiesForTrainingBattle(id:number):readonly ReconstructionEnemySetup[]{
+  const battle=integratedTrainingBattleById(id);
+  return Object.freeze(battle.enemies.map(enemy=>{
+    const monster=M7_MONSTER_ARCHETYPE_CATALOG.require(enemy.monsterId);
+    const visual=S17_MONSTER_VISUAL_CATALOG.require(monster.visualId);
+    const rank=monster.difficultyTier==='boss'?'boss':monster.difficultyTier==='elite'?'elite':'normal';
+    const role:ReconstructionEnemySetup['role']=monster.attackRange>1?'ranged':'melee';
+    return Object.freeze({
+      id:monster.monsterId,
+      level:monster.level,
+      rank,
+      role,
+      maxHp:monster.maxHp,
+      maxMp:monster.maxMp,
+      attack:monster.attack,
+      defense:monster.defense,
+      magicAttack:monster.magicAttack,
+      magicDefense:monster.magicDefense,
+      movementRangeCells:monster.movementRange,
+      attackRangeCells:monster.attackRange,
+      visualResourceId:visual.sourceNumericId,
+    });
+  }));
+}
