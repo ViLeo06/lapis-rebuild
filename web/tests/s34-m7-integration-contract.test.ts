@@ -81,11 +81,15 @@ test('S34 recovery remains an explicit reconstruction policy',()=>{
   assert.equal(contract.recovery.infinite,true);
 });
 
-test('S34 preflight records all upstream workers as pending rather than fabricating completion',()=>{
+test('S34 contract records exact upstream integration state without fabricating S32 completion',()=>{
   assert.equal(contract.owner,'S34');
   assert.equal(contract.baseline,'1d592d0e2194567c5d7d863e6a48250407dabeb3');
   assert.deepEqual(contract.upstream_handoffs.map(row=>row.session),['S30','S31','S32','S33']);
-  assert.ok(contract.upstream_handoffs.every(row=>row.status==='pending'));
+  assert.deepEqual(contract.upstream_handoffs.map(row=>row.status),['integrated','integrated','pending','integrated']);
+  assert.equal(contract.upstream_handoffs[0]?.source_sha,'e26e68c9b28d98f4311490741a136723a2b064f2');
+  assert.equal(contract.upstream_handoffs[1]?.source_sha,'911872bbc3b035090890c104c1e8884789b8e728');
+  assert.equal(contract.upstream_handoffs[2]?.source_sha,null);
+  assert.equal(contract.upstream_handoffs[3]?.source_sha,'185f52abeeecd7687d1a6c00989955dd8530f9ab');
   assert.deepEqual(contract.evidence_levels,[
     'VERIFIED','VERIFIED-STATIC-ORIGINAL','VERIFIED-HISTORICAL','RECOVERED_SECONDARY',
     'INFERRED','SERVER-BOUNDARY','RECONSTRUCTION_POLICY','UNVERIFIED',
