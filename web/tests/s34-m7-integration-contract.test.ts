@@ -6,9 +6,11 @@ import {
   M7_PROMOTION_LEVELS,
   M7_STAGE_IDS,
   M7_STAGE_RANGES,
-  M7_SWORDSMAN_SKILL_IDS,
+  M7_SWORDSMAN_AUTHORED_SKILL_IDS,
+  M7_SWORDSMAN_SKILL_KEYS,
   M7_TRAINING_RECOMMENDED_LEVELS,
-  M7_WIZARD_SKILL_IDS,
+  M7_WIZARD_AUTHORED_SKILL_IDS,
+  M7_WIZARD_SKILL_KEYS,
   isM7PromotionLevel,
   resolveM7StageId,
   resolveM7StageIndex,
@@ -18,7 +20,7 @@ type Contract={
   owner:string;
   baseline:string;
   stage_axis:{promotion_levels:number[];swordsman_stage_ids:number[];wizard_stage_ids:number[]};
-  skills:{swordsman:Array<number|string>;wizard:Array<number|string>;levels_per_skill:number};
+  skills:{swordsman_runtime_keys:string[];swordsman_authored_ids:Array<number|null>;wizard_runtime_keys:string[];wizard_authored_ids:Array<number|null>;levels_per_skill:number};
   training:{battle_count:number;recommended_levels:number[];enemy_scaling:string;required_archetypes:string[]};
   recovery:{policy_id:string;provenance:string;hp_amount:number;mp_amount:number;readiness_cost_candidate:number;infinite:boolean};
   upstream_handoffs:Array<{session:string;branch:string;status:string;pr:number|null;source_sha:string|null}>;
@@ -53,13 +55,15 @@ test('S34 stage resolver maps both professions without changing authored stage I
 });
 
 test('S34 contract locks seven skills with six levels for each profession',()=>{
-  assert.equal(M7_SWORDSMAN_SKILL_IDS.length,7);
-  assert.equal(M7_WIZARD_SKILL_IDS.length,7);
-  assert.equal(new Set(M7_SWORDSMAN_SKILL_IDS).size,7);
-  assert.equal(new Set(M7_WIZARD_SKILL_IDS).size,7);
+  assert.equal(M7_SWORDSMAN_SKILL_KEYS.length,7);
+  assert.equal(M7_WIZARD_SKILL_KEYS.length,7);
+  assert.equal(new Set(M7_SWORDSMAN_SKILL_KEYS).size,7);
+  assert.equal(new Set(M7_WIZARD_SKILL_KEYS).size,7);
   assert.equal(contract.skills.levels_per_skill,6);
-  assert.deepEqual(contract.skills.swordsman,[...M7_SWORDSMAN_SKILL_IDS]);
-  assert.deepEqual(contract.skills.wizard,[...M7_WIZARD_SKILL_IDS]);
+  assert.deepEqual(contract.skills.swordsman_runtime_keys,[...M7_SWORDSMAN_SKILL_KEYS]);
+  assert.deepEqual(contract.skills.swordsman_authored_ids,[...M7_SWORDSMAN_AUTHORED_SKILL_IDS]);
+  assert.deepEqual(contract.skills.wizard_runtime_keys,[...M7_WIZARD_SKILL_KEYS]);
+  assert.deepEqual(contract.skills.wizard_authored_ids,[...M7_WIZARD_AUTHORED_SKILL_IDS]);
 });
 
 test('S34 contract locks all 15 training battle boundaries and forbids enemy auto scaling',()=>{
