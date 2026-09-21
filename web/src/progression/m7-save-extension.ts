@@ -33,6 +33,11 @@ function familyFor(characterId:string|number):'swordsman'|'wizard'{
   return family;
 }
 
+export function m7PersistenceLevel(playerLevel:number):number{
+  if(!Number.isInteger(playerLevel)||playerLevel<1)throw new Error('Invalid player level');
+  return Math.min(65,playerLevel);
+}
+
 export function validateM7SaveExtension(raw:unknown,characterId:string,playerLevel:number):M7SaveExtension{
   if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('Invalid M7 save extension');
   const value=raw as Record<string,unknown>;
@@ -40,7 +45,7 @@ export function validateM7SaveExtension(raw:unknown,characterId:string,playerLev
   if(keys.some(key=>!ALLOWED_FIELDS.has(key))||[...REQUIRED_FIELDS].some(key=>!keys.includes(key)))throw new Error('Unknown M7 save extension field');
   const family=familyFor(characterId);
   if(value.schema!==1||value.family!==family||value.provenance!=='RECONSTRUCTION_POLICY')throw new Error('Unsupported M7 save extension');
-  const skills=validateM7IntegratedSkillState(value.skills as M7IntegratedSkillState,characterId,playerLevel,false);
+  const skills=validateM7IntegratedSkillState(value.skills as M7IntegratedSkillState,characterId,m7PersistenceLevel(playerLevel),false);
   const vitals=validateVitals(value.vitals);
   return Object.freeze({schema:1,family,skills,vitals,provenance:'RECONSTRUCTION_POLICY'});
 }
@@ -48,15 +53,16 @@ export function validateM7SaveExtension(raw:unknown,characterId:string,playerLev
 export function createM7SaveExtension(
   characterId:string,
   playerLevel:number,
-  skills:M7IntegratedSkillState=createM7IntegratedSkillState(characterId,playerLevel),
+  skills?:M7IntegratedSkillState,
   vitals:M7SavedVitals|null=null,
 ):M7SaveExtension{
   const family=familyFor(characterId);
+  const level=m7PersistenceLevel(playerLevel);
   return validateM7SaveExtension({
     schema:1,
     family,
-    skills,
+    skills:skills??createM7IntegratedSkillState(characterId,level),
     vitals,
     provenance:'RECONSTRUCTION_POLICY',
-  },characterId,playerLevel);
+  },characterId,level);
 }
