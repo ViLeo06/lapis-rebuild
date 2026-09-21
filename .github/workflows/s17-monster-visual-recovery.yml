@@ -95,6 +95,7 @@ jobs:
               '.github/workflows/web-ci.yml',
               '.github/workflows/s17-monster-visual-recovery.yml',
               'web/soak.mjs',
+              'web/m6-validation-trigger.txt',
           }
           changed={row['filename'] for row in payload.get('files',[])}
           unexpected=sorted(changed-allowed)
