@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {beginBattle,updateBattle,useAttack} from '../src/battle.ts';
+import {activeEnemyEncounterGroup,beginBattle,updateBattle,useAttack} from '../src/battle.ts';
 import {useM7Skill,tickM7BattleStatuses} from '../src/combat/m7-battle-skills.ts';
 import {createM7IntegratedSkillState,m7RuntimeSkillCommands} from '../src/training/m7-skill-progression.ts';
 import {reconstructionEnemiesForTrainingBattle} from '../src/training/m7-integrated-training-catalog.ts';
@@ -19,6 +19,30 @@ function command(character:string,level:number,id:string){
   assert.ok(row,`missing command ${id}`);
   return row;
 }
+
+test('S34 staged enemy groups cap simultaneous attackers at five and unlock sequentially',()=>{
+  const state=battle(15,'169',65);
+  assert.equal(state.enemies.length,20);
+  assert.equal(activeEnemyEncounterGroup(state),0);
+  assert.equal(state.enemies.filter(enemy=>enemy.encounterGroup===0).length,5);
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup>0).every(enemy=>enemy.action===0));
+
+  updateBattle(state,250,0,0,0);
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup===0).some(enemy=>enemy.action>0));
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup>0).every(enemy=>enemy.action===0));
+
+  const future=state.enemies.find(enemy=>enemy.encounterGroup===1)!;
+  state.action=state.actionMax;
+  const blocked=useAttack(state,future.id,0,0,null);
+  assert.equal(blocked.ok,false);
+  assert.match(blocked.message,/尚未投入战斗/);
+
+  for(const enemy of state.enemies.filter(enemy=>enemy.encounterGroup===0))enemy.hp=0;
+  assert.equal(activeEnemyEncounterGroup(state),1);
+  updateBattle(state,250,0,0,0);
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup===1).some(enemy=>enemy.action>0));
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup>1).every(enemy=>enemy.action===0));
+});
 
 test('S34 Sacrifice is a sustained periodic HP-cost buff with 1 HP floor',()=>{
   const state=battle(10,'140',36);
