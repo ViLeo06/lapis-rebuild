@@ -6,10 +6,11 @@ export const InfiniteTrainingRecoveryPolicy=Object.freeze({
   provenance:'RECONSTRUCTION_POLICY' as const,
   hpAmount:200,
   mpAmount:200,
-  readinessCost:10,
+  readinessCost:6,
+  estimatedWaitMs:3000,
   itemCost:0,
   usageLimit:null,
-  note:'Offline M7 training convenience action. It is not claimed as retail behavior.',
+  note:'Offline M7 training convenience action. Readiness cost 6 corresponds to about 3 seconds at the recovered 500ms readiness cadence; this is 2 seconds shorter than the prior M7 policy. It is not claimed as retail behavior.',
 });
 
 export type TrainingRecoveryKind='hp'|'mp';
