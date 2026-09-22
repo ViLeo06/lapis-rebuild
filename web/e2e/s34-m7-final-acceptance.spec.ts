@@ -110,6 +110,9 @@ test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll w
     return node?.closest<HTMLElement>('[data-action]')?.dataset.action??null;
   });
   expect(hitTarget).toBe('attack');
+  await waitReady(page);
+  await expect(attack).toBeEnabled();
+  await attack.click();
 
   const skills=page.locator('.skill-deck:visible').first();
   await expect(skills).toBeVisible();
