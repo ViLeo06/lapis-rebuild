@@ -123,8 +123,11 @@ export function applyM7WizardSkillStatus(
       });
     case 'poison-mist':{
       const intelligence=finiteNonNegative(context.intelligence??0,'wizard intelligence');
-      const damagePerTick=Math.max(1,Math.round(
+      const baselineDamagePerTick=Math.max(1,Math.round(
         numberParam(params,'baseDamage')+intelligence*numberParam(params,'intScale'),
+      ));
+      const damagePerTick=Math.max(1,Math.ceil(
+        baselineDamagePerTick*M7_WIZARD_RUNTIME_POLICY.poisonDamageMultiplier,
       ));
       return Object.freeze({
         ...current,
