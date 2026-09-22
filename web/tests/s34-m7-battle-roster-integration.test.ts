@@ -15,7 +15,10 @@ function setupFor(battleId:number,playerLevel:number){
 test('S34 battle core consumes explicit S30 fixed roster instead of dummy enemies',()=>{
   const state=beginBattle(100,100,{battleZoneId:23,provenance:'RECONSTRUCTION_POLICY',authority:'offline-reconstruction'},setupFor(8,26));
   assert.equal(state.battleZoneId,23);
-  assert.deepEqual(state.enemies.map(enemy=>enemy.id),['m7-green-armored-renewer-l26']);
+  assert.equal(state.enemies.length,9);
+  assert.equal(state.enemies[0]?.id,'m7-green-armored-renewer-l26');
+  assert.equal(new Set(state.enemies.map(enemy=>enemy.id)).size,9);
+  assert.deepEqual(state.enemies.map(enemy=>enemy.encounterGroup),[0,0,0,0,0,1,1,1,1]);
   assert.equal(state.enemies[0]?.combatStats?.level,26);
   assert.equal(state.enemies[0]?.maxHp,320);
   assert.equal(state.enemies[0]?.visualResourceId,4526);
