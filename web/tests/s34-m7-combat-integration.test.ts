@@ -20,28 +20,31 @@ function command(character:string,level:number,id:string){
   return row;
 }
 
-test('S34 staged enemy groups cap simultaneous attackers at five and unlock sequentially',()=>{
+test('S34 all enemy clusters coexist while proximity limits interaction to one five-enemy group',()=>{
   const state=battle(15,'169',65);
   assert.equal(state.enemies.length,20);
-  assert.equal(activeEnemyEncounterGroup(state),0);
-  assert.equal(state.enemies.filter(enemy=>enemy.encounterGroup===0).length,5);
-  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup>0).every(enemy=>enemy.action===0));
+  const groupSizes=[0,1,2,3].map(group=>state.enemies.filter(enemy=>enemy.encounterGroup===group).length);
+  assert.deepEqual(groupSizes,[5,5,5,5]);
 
-  updateBattle(state,250,0,0,0);
-  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup===0).some(enemy=>enemy.action>0));
-  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup>0).every(enemy=>enemy.action===0));
+  assert.equal(activeEnemyEncounterGroup(state,-1000,-1000),null);
+  updateBattle(state,250,-1000,-1000,0);
+  assert.ok(state.enemies.every(enemy=>enemy.action===0));
 
-  const future=state.enemies.find(enemy=>enemy.encounterGroup===1)!;
+  const nearby=state.enemies.find(enemy=>enemy.encounterGroup===2)!;
+  assert.equal(activeEnemyEncounterGroup(state,nearby.x,nearby.y),2);
+  updateBattle(state,250,nearby.x,nearby.y,0);
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup===2).some(enemy=>enemy.action>0));
+  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup!==2).every(enemy=>enemy.action===0));
+
+  const other=state.enemies.find(enemy=>enemy.encounterGroup===0)!;
   state.action=state.actionMax;
-  const blocked=useAttack(state,future.id,0,0,null);
+  const blocked=useAttack(state,other.id,nearby.x,nearby.y,null);
   assert.equal(blocked.ok,false);
-  assert.match(blocked.message,/尚未投入战斗/);
+  assert.match(blocked.message,/当前交互范围/);
 
-  for(const enemy of state.enemies.filter(enemy=>enemy.encounterGroup===0))enemy.hp=0;
-  assert.equal(activeEnemyEncounterGroup(state),1);
-  updateBattle(state,250,0,0,0);
-  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup===1).some(enemy=>enemy.action>0));
-  assert.ok(state.enemies.filter(enemy=>enemy.encounterGroup>1).every(enemy=>enemy.action===0));
+  state.action=state.actionMax;
+  const allowed=useAttack(state,nearby.id,nearby.x,nearby.y,null);
+  assert.equal(allowed.ok,true);
 });
 
 test('S34 Sacrifice is a sustained periodic HP-cost buff with 1 HP floor',()=>{
