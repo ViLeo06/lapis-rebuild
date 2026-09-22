@@ -119,7 +119,7 @@ export class LabScene extends Phaser.Scene {
       this.effectSprite=this.add.image(this.anchor.x+eb.left,this.anchor.y+eb.top,effectTextureKey(e.resource_id,0)).setOrigin(0).setDepth(30).setVisible(false);
     }
     this.overlay=this.add.graphics().setDepth(40);
-    this.minimapGraphics=this.add.graphics().setDepth(2000).setScrollFactor(0).setVisible(false);
+    this.minimapGraphics=this.add.graphics().setDepth(2000).setVisible(false);
     this.guideLabel=this.add.text(0,0,'M3 引导员\nRECONSTRUCTION',{
       fontFamily:'sans-serif',fontSize:'11px',color:'#f1d39a',backgroundColor:'#172322cc',align:'center',padding:{x:5,y:3}
     }).setOrigin(.5,1).setDepth(50);
@@ -335,7 +335,8 @@ export class LabScene extends Phaser.Scene {
     this.minimapModel=model;
     g.clear();
     if(!model){g.setVisible(false);return;}
-    g.setVisible(true).setScale(1/this.cameras.main.zoom);
+    const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
+    g.setVisible(true).setPosition(origin.x,origin.y).setScale(1/camera.zoom);
     const {layout}=model;
     g.fillStyle(0x0d1718,.76);
     g.fillRoundedRect(layout.x,layout.y,layout.width,layout.height,4);

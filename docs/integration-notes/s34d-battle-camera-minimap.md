@@ -26,7 +26,7 @@ The old fixed-client screen-edge dispatch and historical approximately 32px step
 
 S20 fixed-hash archaeology establishes `Dlg/SmallMap.Tdg`; historical UI evidence establishes a compact small map and a toggle. The confirmed battle-map legend uses blue for the player/friendly side and purple for enemies.
 
-The S34D reconstruction uses one Phaser `Graphics` object with no per-frame DOM-node creation. It renders:
+The S34D reconstruction uses one Phaser `Graphics` object with no per-frame DOM-node creation. The graphics object is anchored to the current camera world origin and inverse-scaled by camera zoom so it remains screen-fixed while the battlefield zoom changes. It renders:
 
 - full battlefield bounds;
 - blue player marker;
