@@ -16,6 +16,7 @@ import type {M7WizardStatusState} from './content/skills/wizard-seven-stage-runt
 import {m7AdjustIncomingDamage} from './combat/m7-status-effects.ts';
 import type {M7StatusEffect} from './combat/m7-status-effects.ts';
 import {applyM7EnemyHealing,consumeM7EnemyActionBlock,m7EnemyAccuracyModifier,m7EnemyEffectiveRange,tickM7BattleStatuses} from './combat/m7-battle-skills.ts';
+import {activeEnemyEncounterGroup} from './combat/m7-encounter-groups.ts';
 
 export type Skill = {
   skill_id: number;
@@ -263,14 +264,7 @@ function nextBattleRandom(s:BattleState):number{
   return s.rngState/0x100000000;
 }
 
-export function activeEnemyEncounterGroup(s:BattleState):number|null{
-  let active:number|null=null;
-  for(const enemy of s.enemies){
-    if(enemy.hp<=0)continue;
-    if(active===null||enemy.encounterGroup<active)active=enemy.encounterGroup;
-  }
-  return active;
-}
+export {activeEnemyEncounterGroup};
 
 export function reconcileBattlePhase(s: BattleState) {
   if(s.hp<=0)s.phase='lost';
@@ -299,7 +293,7 @@ export function useAttack(
   const buff=sid===1301||sid===19301;
   const e=s.enemies.find(e=>e.id===targetId&&e.hp>0);
   if(!buff&&!e)return {ok:false,message:'请选择存活目标'};
-  if(!buff&&e&&e.encounterGroup!==activeEnemyEncounterGroup(s))return {ok:false,message:'该敌群尚未投入战斗'};
+  if(!buff&&e&&e.encounterGroup!==activeEnemyEncounterGroup(s,x,y))return {ok:false,message:'该敌群尚未进入当前交互范围'};
   if(!skill&&e&&!m7WizardOrdinaryAttackTargetable(e.m7Status.wizard))return {ok:false,message:'石化目标不能被普通攻击'};
   const range=sid&&sid>=19000?P.rangedRadiusPx:P.meleeRadiusPx;
   if(!buff&&e&&Math.hypot(e.x-x,e.y-y)>range)return {ok:false,message:'目标超出临时射程'};
@@ -399,7 +393,7 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   // source/precedence metadata is carried on each instance, while historical
   // per-encounter AI payloads remain unavailable.
   const damagePolicy=context?.damagePolicy??TRAINING_DAMAGE_POLICY;
-  const activeGroup=activeEnemyEncounterGroup(s);
+  const activeGroup=activeEnemyEncounterGroup(s,x,y);
   for(const [enemyIndex,e] of s.enemies.entries()){
     if(e.hp<=0||activeGroup===null||e.encounterGroup!==activeGroup)continue;
     const traitCadence=e.traits.includes('fast')?0.72:e.traits.includes('tank')?1.12:1;
