@@ -27,6 +27,17 @@ WEB_VISUALS={1001:'training-guide-reconstruction',4524:'green-sword-humanoid-rec
 VISUAL_ACTIONS=('00','01','02','03')
 WEB_EFFECTS=(1,2,3,35,36,37,38)
 def digest(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+def resolve_rel_ci(root:Path,rel:str)->Path:
+    current=root
+    for part in Path(rel).parts:
+        direct=current/part
+        if direct.exists():
+            current=direct
+            continue
+        hits=[p for p in current.iterdir() if p.name.lower()==part.lower()]
+        if len(hits)!=1:raise FileNotFoundError(f'expected exactly one {part} in {current}, got {len(hits)}')
+        current=hits[0]
+    return current
 def find_ci(root:Path,name:str)->Path:
     hits=[p for p in root.iterdir() if p.is_file() and p.name.lower()==name.lower()]
     if len(hits)!=1:raise FileNotFoundError(f'expected exactly one {name} in {root}, got {len(hits)}')
@@ -98,7 +109,8 @@ def generate(client:Path,out:Path):
     if any(m['installer_sha256']!=INSTALLER_SHA for m in (base,effects,content)):raise ValueError('Baseline installer identity mismatch')
     sources={**base['files'],**effects['files'],**content['files']}
     for rel,expected in sources.items():
-        if digest(client/rel)!=expected:raise ValueError(f'Input differs from verified 2.2 baseline: {rel}')
+        resolved=resolve_rel_ci(client,rel)
+        if digest(resolved)!=expected:raise ValueError(f'Input differs from verified 2.2 baseline: {rel}')
     with tempfile.TemporaryDirectory(prefix='lapis-web-',dir=out.parent) as tmp_name:
         tmp=Path(tmp_name);stage=tmp/'pack'
         subprocess.run([sys.executable,str(ROOT/'tools/prepare_prototype.py'),'--char-dir',str(client/'Char'),'--sgres-dir',str(client/'SGRes'),'--out',str(stage)],check=True,capture_output=True,text=True)
