@@ -6,7 +6,7 @@ import type { LoadedPack, Animation, LoadedMap, EffectAsset } from './model.ts';
 import { referenceCellToScreen, referenceScreenToCell, closestWalkable, rawCell, nearestAnchor, findRoute, directionFor } from './coordinates.ts';
 import type { Cell } from './coordinates.ts';
 import { PROVISIONAL as P } from './config.ts';
-import { initialState, beginBattle, updateBattle, useAttack, actionReady, consumeAction } from './battle.ts';
+import { initialState, beginBattle, updateBattle, useAttack, actionReady, consumeAction, activeEnemyEncounterGroup } from './battle.ts';
 import type { Skill,ReconstructionBattleSetup } from './battle.ts';
 import { validateSave, writeSave, readSave } from './save.ts';
 import type { Save } from './save.ts';
@@ -137,7 +137,8 @@ export class LabScene extends Phaser.Scene {
         }
       }
       if(this.inBattleView){
-        const enemy=this.state.enemies.find(e=>e.hp>0&&Math.hypot(e.x-world.x,e.y-world.y)<30);
+        const activeGroup=activeEnemyEncounterGroup(this.state);
+        const enemy=this.state.enemies.find(e=>e.hp>0&&e.encounterGroup===activeGroup&&Math.hypot(e.x-world.x,e.y-world.y)<30);
         if(enemy){
           this.selectedEnemy=enemy.id;
           this.notice(`已选中 ${enemy.id}`);
@@ -170,7 +171,7 @@ export class LabScene extends Phaser.Scene {
   // gate input in the reconstruction runtime.
   private busy():boolean{return this.route.length>0||(this.slot!=='03'&&this.timedAction>0);}
   canAct():boolean{return this.inBattleView&&!this.battlePaused&&!document.hidden&&!this.busy()&&actionReady(this.state);}
-  private occupiedCells():Cell[]{return this.state.enemies.filter(e=>e.hp>0).map(e=>pixelCell(e.x,e.y));}
+  private occupiedCells():Cell[]{const group=activeEnemyEncounterGroup(this.state);return this.state.enemies.filter(e=>e.hp>0&&e.encounterGroup===group).map(e=>pixelCell(e.x,e.y));}
   private reachable():Cell[][]{return this.canAct()?[...reachableCells(this.currentMap().collision,pixelCell(this.anchor.x,this.anchor.y),this.battleMoveLimit(),this.occupiedCells()).values()].filter(p=>p.length>1):[];}
   toggleBattlePause(){if(this.inBattleView&&this.state.phase==='active')this.battlePaused=!this.battlePaused;}
   private battleMoveLimit():number{return Number(this.character)%10===9?P.wizardMoveCells:P.swordsmanMoveCells;}
@@ -312,7 +313,8 @@ export class LabScene extends Phaser.Scene {
     for(const row of this.worldMarkers.values())row.label.setVisible(!this.inBattleView&&row.spec.mapId===this.mapId);
     for(const actor of this.enemyVisualActors.values())actor.setVisible(false);
     if(this.inBattleView){
-      for(const enemy of this.state.enemies)this.enemyVisualActors.get(enemy.id)?.setVisible(enemy.hp>0);
+      const activeGroup=activeEnemyEncounterGroup(this.state);
+      for(const enemy of this.state.enemies)this.enemyVisualActors.get(enemy.id)?.setVisible(enemy.hp>0&&enemy.encounterGroup===activeGroup);
     }
   }
 
@@ -617,7 +619,7 @@ export class LabScene extends Phaser.Scene {
         stunActions:this.state.playerStunActions,slowMs:this.state.playerSlowMs,
       },
       battleZoneId:this.state.battleZoneId,battleEntryProvenance:this.state.battleEntryProvenance,damagePolicy:{id:this.state.damagePolicyId,provenance:this.state.damagePolicyProvenance},
-      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,mp:enemy.mp,maxMp:enemy.maxMp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),traits:[...enemy.traits],m7Status:{swordsman:enemy.m7Status.swordsman.map(status=>({...status})),wizard:{...enemy.m7Status.wizard}},aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
+      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,mp:enemy.mp,maxMp:enemy.maxMp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),encounterGroup:enemy.encounterGroup,visible:this.enemyVisualActors.get(enemy.id)?.image.visible??false,visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),traits:[...enemy.traits],m7Status:{swordsman:enemy.m7Status.swordsman.map(status=>({...status})),wizard:{...enemy.m7Status.wizard}},aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
       worldVisuals:[...this.worldVisualActors.values()].map(row=>({id:row.spec.id,mapId:row.spec.mapId,resourceId:row.spec.resourceId,visible:row.actor.image.visible,cell:row.spec.cell})),
       worldPointerTargets:this.worldPointerTargets().map(target=>({id:target.id,kind:target.kind,visible:target.visible,bounds:{...target.bounds},depth:target.depth})),
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,duration:this.effectDuration,timingPolicy:'RETAIL_COMMON' as const,playing:this.effectPlaying}:null,
@@ -679,9 +681,16 @@ export class LabScene extends Phaser.Scene {
       else if(event.target!=='player')this.enemyVisualActors.get(event.target)?.playTransient('03');
     }
     for(const row of this.worldVisualActors.values())row.actor.update(dt);
+    const activeGroup=activeEnemyEncounterGroup(this.state);
+    const selected=this.state.enemies.find(enemy=>enemy.id===this.selectedEnemy);
+    if(this.inBattleView&&this.state.phase==='active'&&(!selected||selected.hp<=0||selected.encounterGroup!==activeGroup)){
+      const replacement=this.state.enemies.find(enemy=>enemy.hp>0&&enemy.encounterGroup===activeGroup);
+      if(replacement)this.selectedEnemy=replacement.id;
+    }
     for(const enemy of this.state.enemies){
       const actor=this.enemyVisualActors.get(enemy.id);if(!actor)continue;
-      actor.setVisible(this.inBattleView&&enemy.hp>0).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(enemy.hp>0?1:.25);
+      const visible=this.inBattleView&&enemy.hp>0&&enemy.encounterGroup===activeGroup;
+      actor.setVisible(visible).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(visible?1:.25);
       actor.update(dt);
     }
     if(before!==this.state.phase){
