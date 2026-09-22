@@ -85,6 +85,16 @@ test('S34 training battles #1 and #15 launch concrete fixed S30 rosters',async({
     expect.arrayContaining(['boss']),
     expect.arrayContaining(['elite']),
   ]));
+  const firstWave=state.enemies.filter(row=>row.encounterGroup===0);
+  expect(firstWave).toHaveLength(5);
+  expect(state.enemies.filter(row=>row.visible).map(row=>row.id)).toEqual(firstWave.map(row=>row.id));
+  for(const enemy of firstWave){
+    await page.evaluate(id=>window.lapisM4!.acceptanceSetEnemyHp!(id,0),enemy.id);
+  }
+  await expect.poll(async()=>{
+    const next=await scene(page);
+    return next.enemies.filter(row=>row.visible).map(row=>row.encounterGroup);
+  }).toEqual([1,1,1,1,1]);
 });
 
 test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll while combat HUD refreshes',async({page})=>{
