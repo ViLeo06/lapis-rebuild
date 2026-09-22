@@ -29,6 +29,7 @@ import {
 import {m7WizardSkillLevel} from '../content/skills/wizard-seven-stage.ts';
 import type {M7WizardSkillKey} from '../content/skills/wizard-seven-stage.ts';
 import type {M7RuntimeSkillCommand} from '../training/m7-skill-progression.ts';
+import {activeEnemyEncounterGroup} from './m7-encounter-groups.ts';
 
 export const M7_WIZARD_INTELLIGENCE_BRIDGE_POLICY=Object.freeze({
   id:'M7WizardIntelligenceBridgePolicy',
@@ -122,6 +123,7 @@ function useSwordsman(
 
   const enemy=liveTarget(state,targetId);
   if(!enemy)return Object.freeze({ok:false,message:'请选择存活目标',events:[],affectedEnemyIds:[]});
+  if(enemy.encounterGroup!==activeEnemyEncounterGroup(state,x,y))return Object.freeze({ok:false,message:'该敌群尚未进入当前交互范围',events:[],affectedEnemyIds:[]});
   if(tileDistance(pixelCell(x,y),pixelCell(enemy.x,enemy.y))>1)return Object.freeze({ok:false,message:'目标超出技能射程（1格）',events:[],affectedEnemyIds:[]});
   if(!state.combatPlayerStats||!enemy.combatStats)return Object.freeze({ok:false,message:'M7 combat stats unavailable',events:[],affectedEnemyIds:[]});
 
@@ -169,7 +171,7 @@ function wizardTargets(
   const rawArea=numeric(params,'areaCells')??1;
   const radius=Math.max(0,Math.min(5,Math.ceil(Math.sqrt(Math.max(1,rawArea)))-1));
   const center=pixelCell(selected.x,selected.y);
-  return Object.freeze(state.enemies.filter(enemy=>enemy.hp>0&&tileDistance(center,pixelCell(enemy.x,enemy.y))<=radius));
+  return Object.freeze(state.enemies.filter(enemy=>enemy.hp>0&&enemy.encounterGroup===selected.encounterGroup&&tileDistance(center,pixelCell(enemy.x,enemy.y))<=radius));
 }
 
 function useWizard(
@@ -196,6 +198,10 @@ function useWizard(
   if(!selected){
     state.mp+=command.mpCost;state.action=Math.min(state.actionMax,state.action+command.readinessCost);
     return Object.freeze({ok:false,message:'请选择存活目标',events:[],affectedEnemyIds:[]});
+  }
+  if(selected.encounterGroup!==activeEnemyEncounterGroup(state,x,y)){
+    state.mp+=command.mpCost;state.action=Math.min(state.actionMax,state.action+command.readinessCost);
+    return Object.freeze({ok:false,message:'该敌群尚未进入当前交互范围',events:[],affectedEnemyIds:[]});
   }
   const range=numeric(params,'rangeCells')??P.battleSpellRangeCells;
   if(tileDistance(pixelCell(x,y),pixelCell(selected.x,selected.y))>range){
