@@ -123,7 +123,9 @@ test('S34 training battles #1 and #15 launch concrete fixed S30 rosters',async({
 test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll while combat HUD refreshes',async({page})=>{
   await ready(page);
   await developerPreset(page,'wizard',56,true);
-  await startTraining(page,14);
+  // Keep this HUD-only regression on the lowest-risk arena so enemy DPS cannot
+  // terminate the battle while we inspect DOM scroll persistence.
+  await startTraining(page,1);
 
   const attack=page.locator('[data-action="attack"]:visible').first();
   await expect(attack).toBeVisible();
@@ -175,7 +177,9 @@ test('S34A A hotkey uses ordinary-attack authority without legacy WASD double tr
 test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',async({page})=>{
   await ready(page);
   await developerPreset(page,'wizard',56,true);
-  await startTraining(page,14);
+  // Hotkey authority is independent of encounter difficulty; use battle #1 so
+  // the player remains alive through readiness waits and Esc-confirm checks.
+  await startTraining(page,1);
 
   const skillHotkeys=await page.locator('[data-action="skill"]:visible small').allTextContents();
   expect(skillHotkeys.slice(0,6)).toEqual(expect.arrayContaining([
