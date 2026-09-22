@@ -91,7 +91,7 @@ Python 3.12 负责：安装包静态拆解、旧格式解析、资源转换、�
 - 不直接向 `main` 提交。
 - 功能分支开发，通过 PR 集成。
 - 未经负责人明确批准不合并 `main`。
-- 当前阶段：**M6 已通过自动化与用户人工验收，下一里程碑处于方案讨论阶段**。在新 Plan 正式批准前，不启动新的共享 runtime 大改；沿用 `Plan.md v3.5` 的证据边界与 PR 规则。
+- 当前阶段：**M7 Combat Content Expansion 已通过工程/自动化门，等待用户对最终 private standalone 的人工试玩**。执行计划为 `Plan.md v3.6`；PR #42 在用户明确接受精确 HTML SHA 前不得合并 main，也不得用新的大范围 shared-runtime 工作覆盖待验缺陷。
 - 临时诊断/修复分支可使用 `codex/*`；验证后只做非 force 快进/正常 PR 集成。
 - 同一路径修改前读取最新 blob SHA，避免覆盖并发更新。
 - commit 保持小而清楚：`feat/fix/test/docs/refactor/chore`。
