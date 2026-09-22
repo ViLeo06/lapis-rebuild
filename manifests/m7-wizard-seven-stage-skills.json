@@ -38,6 +38,7 @@
     "magicReadinessCost": 10,
     "readinessProvenance": "RECOVERED_SECONDARY",
     "poisonTickIntervalMs": 5000,
+    "poisonDamageMultiplier": 1.5,
     "petrifyDotContinues": true,
     "provenance": "RECONSTRUCTION_POLICY"
   },
