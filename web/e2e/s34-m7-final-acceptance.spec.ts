@@ -85,9 +85,9 @@ test('S34 training battles #1 and #15 launch concrete fixed S30 rosters',async({
     expect.arrayContaining(['boss']),
     expect.arrayContaining(['elite']),
   ]));
-  expect(state.enemies.filter(row=>row.visible)).toHaveLength(20);
   const groupSizes=[0,1,2,3].map(group=>state.enemies.filter(row=>row.encounterGroup===group).length);
   expect(groupSizes).toEqual([5,5,5,5]);
+  expect(new Set(state.enemies.map(row=>`${row.x},${row.y}`)).size).toBe(20);
 });
 
 test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll while combat HUD refreshes',async({page})=>{
@@ -267,6 +267,7 @@ test('S34 private-original pack uses distinct fixed-client story battle zones',a
   expect(last.mapId).toBe(91);
   expect(last.mapName).not.toBe(first.mapName);
   expect(last.enemies).toHaveLength(20);
+  expect(last.enemies.filter(row=>row.visible)).toHaveLength(20);
   expect(last.enemies.some(row=>row.traits.includes('boss'))).toBe(true);
   expect(last.enemies.some(row=>row.traits.includes('elite'))).toBe(true);
 });
