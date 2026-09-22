@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BattleCameraPolicy} from '../src/view/battle-camera.ts';
+import {BattleCameraPolicy,battleEntryZoom} from '../src/view/battle-camera.ts';
 import {battleMinimapLayout,buildBattleMinimapModel,minimapContains,minimapToWorld} from '../src/view/battle-minimap.ts';
 
 const viewport={width:800,height:600};
@@ -103,4 +103,10 @@ test('S34D minimap edge target converges to the clamped camera destination',()=>
     current={scrollX:next.x,scrollY:next.y,zoom:1};
   }
   assert.ok(Math.hypot(current.scrollX-desired.x,current.scrollY-desired.y)<0.1);
+});
+
+
+test('S34D battle entry never zooms out to fit the encounter and covers undersized maps',()=>{
+  assert.equal(battleEntryZoom(viewport,world),1);
+  assert.equal(battleEntryZoom({width:1280,height:720},{x:0,y:0,width:1024,height:640}),1.25);
 });

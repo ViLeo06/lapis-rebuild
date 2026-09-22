@@ -16,7 +16,7 @@ import {frameIntervalMs,sequenceDurationMs} from './animation-policy.ts';
 import {createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY} from './runtime-boundaries.ts';
 import type {BattleEntry,InteractionIntent} from './runtime-boundaries.ts';
 import {ViewportController,BrowserFullscreenPort} from './view/viewport-controller.ts';
-import {BattleCameraPolicy} from './view/battle-camera.ts';
+import {BattleCameraPolicy,battleEntryZoom} from './view/battle-camera.ts';
 import {buildBattleMinimapModel,minimapContains,minimapToWorld} from './view/battle-minimap.ts';
 import type {BattleMinimapModel} from './view/battle-minimap.ts';
 import {VisualActor} from './visual-actor.ts';
@@ -235,10 +235,17 @@ export class LabScene extends Phaser.Scene {
   fit(){
     if(!this.cameras?.main)return;
     if(this.inBattleView){
-      // Battlefields may be larger than the viewport. Keep a normal playable
-      // scale and center on the player instead of fitting every enemy onscreen.
-      if(this.viewport){this.viewport.resetZoom();this.viewport.centerOn(this.anchor);}
-      else this.cameras.main.setZoom(1).centerOn(this.anchor.x,this.anchor.y);
+      // Never zoom out to fit the encounter. Large battlefields stay at 1:1;
+      // undersized maps may zoom in just enough to cover the viewport so no
+      // out-of-map blank area is exposed.
+      if(this.viewport){
+        const snapshot=this.viewport.snapshot();
+        this.viewport.setZoom(battleEntryZoom(snapshot.viewport,snapshot.world));
+        this.viewport.centerOn(this.anchor);
+      }else{
+        const {width,height}=this.currentMap().manifest.render;
+        this.cameras.main.setZoom(Math.max(1,this.scale.width/width,this.scale.height/height)).centerOn(this.anchor.x,this.anchor.y);
+      }
       return;
     }
     if(this.viewport){this.viewport.fitWorld();return;}

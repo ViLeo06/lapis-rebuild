@@ -21,6 +21,11 @@ export const DEFAULT_BATTLE_CAMERA_OPTIONS:BattleCameraOptions={
   manualLerp:0.14,
 };
 
+export function battleEntryZoom(viewport:Size,world:Rect):number{
+  const v=normalizeSize(viewport),w=normalizeRect(world);
+  return Math.max(1,v.width/w.width,v.height/w.height);
+}
+
 function alphaFor(lerp:number,deltaMs:number){
   const frameScale=Math.max(0,deltaMs)/16.6667;
   return 1-Math.pow(1-lerp,frameScale);

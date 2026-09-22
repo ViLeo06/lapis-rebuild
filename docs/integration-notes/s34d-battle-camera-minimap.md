@@ -11,8 +11,8 @@ This worker changes presentation/navigation only. It does not change poison bala
 
 ## Battle camera
 
-- Battle entry no longer frames `battleFocus` or shrinks the full encounter into one viewport.
-- Battle starts at the normal 1:1 camera zoom and centers/clamps around the player.
+- Battle entry no longer frames `battleFocus` or shrinks the full encounter into one viewport; cover-only zoom prevents out-of-map blank space on undersized fallback maps.
+- Battle never zooms out to fit the encounter. Large battlefields start at normal 1:1; an undersized map may zoom in only enough to cover the viewport, then center/clamp around the player.
 - Desktop fine-pointer input supports smooth edge scrolling.
 - Player proximity to the viewport safe edge provides delayed assist follow.
 - When the player stops and manual camera control is not active, the camera eases back toward the player rather than snapping.
