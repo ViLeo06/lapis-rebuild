@@ -46,6 +46,38 @@ function cameraCenter(state:Awaited<ReturnType<typeof scene>>){
   };
 }
 
+function minimapPanProbe(state:Awaited<ReturnType<typeof scene>>,preferEnemy=true){
+  const viewport=state.viewport,minimap=state.minimap;
+  if(!viewport||!minimap)throw new Error('Missing viewport/minimap snapshot');
+  const visibleW=viewport.viewport.width/state.camera.zoom;
+  const visibleH=viewport.viewport.height/state.camera.zoom;
+  const minX=viewport.world.x,minY=viewport.world.y;
+  const maxX=viewport.world.x+viewport.world.width-visibleW;
+  const maxY=viewport.world.y+viewport.world.height-visibleH;
+  const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
+  const candidate=(x:number,y:number)=>{
+    const nx=clamp((x-minimap.layout.inner.x)/minimap.layout.inner.width,0,1);
+    const ny=clamp((y-minimap.layout.inner.y)/minimap.layout.inner.height,0,1);
+    const worldX=viewport.world.x+nx*viewport.world.width;
+    const worldY=viewport.world.y+ny*viewport.world.height;
+    const desired={
+      x:clamp(worldX-visibleW/2,minX,maxX),
+      y:clamp(worldY-visibleH/2,minY,maxY),
+    };
+    return{x,y,desired,delta:Math.hypot(desired.x-state.camera.x,desired.y-state.camera.y)};
+  };
+  const choices=(preferEnemy?minimap.enemies.map(marker=>candidate(marker.x,marker.y)):[]);
+  choices.push(
+    candidate(minimap.layout.inner.x,minimap.layout.inner.y),
+    candidate(minimap.layout.inner.x+minimap.layout.inner.width,minimap.layout.inner.y),
+    candidate(minimap.layout.inner.x,minimap.layout.inner.y+minimap.layout.inner.height),
+    candidate(minimap.layout.inner.x+minimap.layout.inner.width,minimap.layout.inner.y+minimap.layout.inner.height),
+  );
+  const best=choices.reduce((a,b)=>b.delta>a.delta?b:a);
+  if(best.delta<=1)throw new Error('Battle camera has no legal minimap pan target');
+  return best;
+}
+
 test('S34D battle keeps normal scale, edge scrolls, and clamps inside a larger battlefield',async({page})=>{
   await ready(page);
   await startTraining(page,15);
@@ -102,28 +134,19 @@ test('S34D minimap shows all living enemies and consumes clicks as camera-only i
   expect(before.minimap?.viewport.width??0).toBeGreaterThan(0);
   expect(before.minimap?.viewport.height??0).toBeGreaterThan(0);
 
-  const center=cameraCenter(before);
-  const farthest=before.enemies.filter(enemy=>enemy.hp>0).reduce((best,enemy)=>{
-    const distance=Math.hypot(enemy.x-center.x,enemy.y-center.y);
-    return !best||distance>best.distance?{enemy,distance}:best;
-  },null as null|{enemy:(typeof before.enemies)[number];distance:number});
-  if(!farthest||!before.minimap)throw new Error('Missing far enemy/minimap');
-  const marker=before.minimap.enemies.find(enemy=>enemy.id===farthest.enemy.id);
-  if(!marker)throw new Error('Missing far enemy minimap marker');
-
-  const click=await canvasPoint(page,marker.x,marker.y);
+  if(!before.minimap)throw new Error('Missing minimap');
+  const probe=minimapPanProbe(before,true);
+  const click=await canvasPoint(page,probe.x,probe.y);
   const anchor={...before.anchor};
   const routeLength=before.routeLength;
   const selected=before.target;
   const enemyHp=before.enemies.map(enemy=>[enemy.id,enemy.hp] as const);
-  const beforeDistance=farthest.distance;
   await page.mouse.click(click.x,click.y);
 
   await expect.poll(async()=>{
     const now=await scene(page);
-    const c=cameraCenter(now);
-    return Math.hypot(farthest.enemy.x-c.x,farthest.enemy.y-c.y);
-  },{timeout:5000}).toBeLessThan(beforeDistance-4);
+    return Math.hypot(now.camera.x-probe.desired.x,now.camera.y-probe.desired.y);
+  },{timeout:5000}).toBeLessThan(probe.delta-1);
 
   const after=await scene(page);
   expect(after.anchor.x).toBeCloseTo(anchor.x,6);
@@ -132,10 +155,12 @@ test('S34D minimap shows all living enemies and consumes clicks as camera-only i
   expect(after.target).toBe(selected);
   expect(after.enemies.map(enemy=>[enemy.id,enemy.hp] as const)).toEqual(enemyHp);
 
-  await page.evaluate(({id})=>window.lapisM4!.acceptanceSetEnemyHp!(id,0),{id:farthest.enemy.id});
+  const deadId=before.enemies.find(enemy=>enemy.hp>0)?.id;
+  if(!deadId)throw new Error('Missing living enemy');
+  await page.evaluate(({id})=>window.lapisM4!.acceptanceSetEnemyHp!(id,0),{id:deadId});
   await expect.poll(async()=>{
     const minimap=(await scene(page)).minimap;
-    return minimap?.enemies.some(enemy=>enemy.id===farthest.enemy.id)??true;
+    return minimap?.enemies.some(enemy=>enemy.id===deadId)??true;
   }).toBe(false);
 });
 
@@ -150,18 +175,13 @@ test.describe('S34D mobile battle camera/minimap',()=>{
     const anchor={...before.anchor};
     const selected=before.target;
     const routeLength=before.routeLength;
-    const target={
-      x:before.minimap.layout.inner.x+before.minimap.layout.inner.width*.9,
-      y:before.minimap.layout.inner.y+before.minimap.layout.inner.height*.1,
-    };
-    const tap=await canvasPoint(page,target.x,target.y);
-    const centerBefore=cameraCenter(before);
+    const probe=minimapPanProbe(before,false);
+    const tap=await canvasPoint(page,probe.x,probe.y);
     await page.touchscreen.tap(tap.x,tap.y);
     await expect.poll(async()=>{
       const now=await scene(page);
-      const centerNow=cameraCenter(now);
-      return Math.hypot(centerNow.x-centerBefore.x,centerNow.y-centerBefore.y);
-    },{timeout:5000}).toBeGreaterThan(4);
+      return Math.hypot(now.camera.x-probe.desired.x,now.camera.y-probe.desired.y);
+    },{timeout:5000}).toBeLessThan(probe.delta-1);
 
     const after=await scene(page);
     expect(after.anchor.x).toBeCloseTo(anchor.x,6);

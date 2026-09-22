@@ -110,3 +110,25 @@ test('S34D battle entry never zooms out to fit the encounter and covers undersiz
   assert.equal(battleEntryZoom(viewport,world),1);
   assert.equal(battleEntryZoom({width:1280,height:720},{x:0,y:0,width:1024,height:640}),1.25);
 });
+
+
+test('S34D minimap can target a remote enemy group on a large battlefield',()=>{
+  const policy=new BattleCameraPolicy();
+  const camera={scrollX:0,scrollY:0,zoom:1};
+  const model=buildBattleMinimapModel(
+    viewport,
+    world,
+    camera,
+    {x:400,y:300},
+    [{id:'remote-group',x:2200,y:1400,hp:10,encounterGroup:3}],
+    0,
+  );
+  const remote=model.enemies[0]!;
+  const target=minimapToWorld(model.layout,world,remote);
+  const desired=policy.targetScroll(camera,target,viewport,world);
+  assert.ok(desired.x>1000);
+  assert.ok(desired.y>500);
+  const first=policy.centerStep(camera,target,viewport,world,16.6667);
+  assert.ok(first.x>camera.scrollX);
+  assert.ok(first.y>camera.scrollY);
+});
