@@ -89,3 +89,18 @@ test('S34D minimap click/tap mapping produces a camera target without any player
   assert.ok(Math.abs(target.x-1800)<1e-9);
   assert.ok(Math.abs(target.y-400)<1e-9);
 });
+
+
+test('S34D minimap edge target converges to the clamped camera destination',()=>{
+  const policy=new BattleCameraPolicy();
+  const camera={scrollX:400,scrollY:200,zoom:1};
+  const target={x:2400,y:1600};
+  const desired=policy.targetScroll(camera,target,viewport,world);
+  assert.deepEqual(desired,{x:1600,y:1000});
+  let current=camera;
+  for(let i=0;i<120;i++){
+    const next=policy.centerStep(current,target,viewport,world,16.6667);
+    current={scrollX:next.x,scrollY:next.y,zoom:1};
+  }
+  assert.ok(Math.hypot(current.scrollX-desired.x,current.scrollY-desired.y)<0.1);
+});
