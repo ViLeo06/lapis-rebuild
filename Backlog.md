@@ -213,13 +213,14 @@
 - [x] S17 evidence run `35690650505` success。
 - [x] Drive 18-part 安装包静态重组 SHA 精确匹配固定 2.2；原 EXE/DLL 未执行。
 - [x] private pack 3,771 indexed files / 89,656,141 bytes / 0 integrity failures。
-- [x] final standalone HTML：122,196,302 bytes；SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`。
-- [ ] **用户亲自试玩该精确 SHA 并确认 M7 Human Playability Gate。**
+- [x] 历史工程 standalone：122,196,302 bytes；SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`；该字节快照未持久化供下载。
+- [x] 当前用户 handoff standalone：`lapis-m7-private-62566a5-handoff.html`，122,196,302 bytes；SHA-256 `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f`；3,772/3,772 内嵌项校验通过。
+- [ ] **用户亲自试玩当前 handoff 精确 SHA 并确认 M7 Human Playability Gate。**
 - [ ] 用户通过前不得 merge PR #42/main。
 
 ## 下一步
 
-- [ ] 用户试玩 M7 final private standalone：职业/等级 → 15 场训练 → 技能 → Recovery → 不同怪物/场景 → 退出确认 → Save/Load。
+- [ ] 用户试玩当前 M7 handoff standalone（SHA `4c337dd2...`）：职业/等级 → 15 场训练 → 技能 → Recovery → 不同怪物/场景 → 退出确认 → Save/Load。
 - [ ] 若用户发现问题，在 S34 分支修复并重新生成新 SHA；旧 SHA 不再作为最终候选。
 - [ ] 用户明确通过后再更新 `USER-ACCEPTED` evidence、关闭 M7 Gate，并决定后续 Web 发布/内容扩展。
 
