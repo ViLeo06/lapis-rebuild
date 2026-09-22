@@ -68,14 +68,24 @@ Full report: `docs/validation/m7-final-20260922.md`.
 
 ## Private standalone
 
-- exact runtime source: `62566a549a2d1f6f2c15b1a4370329e4382ae94a`
-- fixed installer SHA: `c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88`
-- file: `lapis-m7-private-62566a5.html`
-- size: 122,196,302 bytes
-- SHA-256: `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`
-- visibility: private-only
+Historical engineering artifact:
 
-The original Windows client was never executed. The private pack was produced by static extraction and verified against fixed hashes.
+- exact runtime source: `62566a549a2d1f6f2c15b1a4370329e4382ae94a`
+- size: 122,196,302 bytes
+- recorded SHA-256: `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`
+- the exact historical byte snapshot was not retained for current download.
+
+Current user handoff:
+
+- file: `lapis-m7-private-62566a5-handoff.html`
+- size: 122,196,302 bytes
+- SHA-256: `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f`
+- embedded integrity: 3,772 / 3,772 entries, 0 failures
+- fixed installer SHA: `c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88`
+- private pack hash: `b310803ff4897f23f96cda34cc1989254261f8703d7457c3cf85691812e67287`
+- visibility: private-only.
+
+The handoff is a byte-distinct regeneration from the same executable source and exact fixed-hash private assets; it is not mislabeled as the historical artifact. The original Windows client was never executed.
 
 ## Remaining evidence boundary
 
@@ -83,4 +93,4 @@ The integration does not claim recovery of retired-server formulas or live paylo
 
 ## Merge gate
 
-PR #42 remains draft and **must not merge to main before the user's exact-artifact playtest**.
+PR #42 remains draft and **must not merge to main before the user plays and accepts the current handoff SHA `4c337dd2...`**.
