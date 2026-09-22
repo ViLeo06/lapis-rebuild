@@ -155,8 +155,15 @@ test('S34D minimap shows all living enemies and consumes clicks as camera-only i
   expect(after.target).toBe(selected);
   expect(after.enemies.map(enemy=>[enemy.id,enemy.hp] as const)).toEqual(enemyHp);
 
-  const deadId=selected;
+});
+
+test('S34D dead enemy marker disappears after a normal production attack kill',async({page})=>{
+  await ready(page);
+  await startTraining(page,1);
+  const before=await scene(page);
+  const deadId=before.target;
   if(!deadId)throw new Error('Missing selected living enemy');
+  expect(before.minimap?.enemies.some(enemy=>enemy.id===deadId)).toBe(true);
   await page.evaluate(({id})=>window.lapisM4!.acceptanceSetEnemyHp!(id,1),{id:deadId});
   const attack=page.locator('[data-action="attack"]:visible').first();
   await expect(attack).toBeEnabled();
