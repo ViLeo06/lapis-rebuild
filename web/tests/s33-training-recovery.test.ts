@@ -13,6 +13,11 @@ function readyState(){
   return state;
 }
 
+test('S34 recovery wait is two seconds shorter than the prior five-second policy',()=>{
+  assert.equal(InfiniteTrainingRecoveryPolicy.readinessCost,6);
+  assert.equal(InfiniteTrainingRecoveryPolicy.estimatedWaitMs,3000);
+});
+
 test('HP Recovery restores up to 200 and consumes centralized readiness cost',()=>{
   const state=readyState();
   state.shield=321;state.manaBuff=654;
