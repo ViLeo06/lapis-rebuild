@@ -155,9 +155,16 @@ test('S34D minimap shows all living enemies and consumes clicks as camera-only i
   expect(after.target).toBe(selected);
   expect(after.enemies.map(enemy=>[enemy.id,enemy.hp] as const)).toEqual(enemyHp);
 
-  const deadId=before.enemies.find(enemy=>enemy.hp>0)?.id;
-  if(!deadId)throw new Error('Missing living enemy');
-  await page.evaluate(({id})=>window.lapisM4!.acceptanceSetEnemyHp!(id,0),{id:deadId});
+  const deadId=selected;
+  if(!deadId)throw new Error('Missing selected living enemy');
+  await page.evaluate(({id})=>window.lapisM4!.acceptanceSetEnemyHp!(id,1),{id:deadId});
+  const attack=page.locator('[data-action="attack"]:visible').first();
+  await expect(attack).toBeEnabled();
+  await attack.click();
+  await expect.poll(async()=>{
+    const enemy=(await scene(page)).enemies.find(row=>row.id===deadId);
+    return enemy?.hp??0;
+  },{timeout:5000}).toBeLessThanOrEqual(0);
   await expect.poll(async()=>{
     const minimap=(await scene(page)).minimap;
     return minimap?.enemies.some(enemy=>enemy.id===deadId)??true;
