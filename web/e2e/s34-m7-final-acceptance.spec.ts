@@ -244,6 +244,7 @@ test.describe('S34 mobile seven-skill touch contract',()=>{
     await ready(page);
     await developerPreset(page,'wizard',56,true);
     await startTraining(page,14);
+    await legacyPause(page);
 
     const skills=page.locator('[data-action="skill"]:visible');
     await expect(skills).toHaveCount(7);
@@ -256,8 +257,7 @@ test.describe('S34 mobile seven-skill touch contract',()=>{
       expect(box?.height??0).toBeGreaterThanOrEqual(44);
     }
     const lastSkill=skills.nth(6);
-    const box=await lastSkill.boundingBox();
-    expect(box?.height??0).toBeGreaterThanOrEqual(44);
+    await expect.poll(async()=>(await lastSkill.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);
     await page.locator('[data-action="battle-exit-request"]:visible').tap();
     await expect(page.locator('[data-ui="battle-exit-confirm"]')).toBeVisible();
     await page.locator('[data-action="battle-exit-confirm"]:visible').tap();
