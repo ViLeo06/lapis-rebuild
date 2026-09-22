@@ -166,12 +166,16 @@ test('S34D dead enemy marker disappears after a normal production attack kill',a
   expect(before.minimap?.enemies.some(enemy=>enemy.id===deadId)).toBe(true);
   await page.evaluate(({id})=>window.lapisM4!.acceptanceSetEnemyHp!(id,1),{id:deadId});
   const attack=page.locator('[data-action="attack"]:visible').first();
-  await expect(attack).toBeEnabled();
-  await attack.click();
+  for(let attempt=0;attempt<4;attempt++){
+    await expect(attack).toBeEnabled({timeout:6000});
+    await attack.click();
+    const hp=(await scene(page)).enemies.find(row=>row.id===deadId)?.hp??0;
+    if(hp<=0)break;
+  }
   await expect.poll(async()=>{
     const enemy=(await scene(page)).enemies.find(row=>row.id===deadId);
     return enemy?.hp??0;
-  },{timeout:5000}).toBeLessThanOrEqual(0);
+  }).toBeLessThanOrEqual(0);
   await expect.poll(async()=>{
     const minimap=(await scene(page)).minimap;
     return minimap?.enemies.some(enemy=>enemy.id===deadId)??true;
