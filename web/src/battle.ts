@@ -198,7 +198,7 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
     s.damagePolicyId=balance.id;s.damagePolicyProvenance=balance.provenance;
     if(setup.enemies?.length){
       const groupLocalCounts=new Map<number,number>();
-      s.enemies=setup.enemies.map((row,index)=>{
+      s.enemies=setup.enemies.map(row=>{
         const encounterGroup=Math.max(0,Math.floor(row.encounterGroup??0));
         const localIndex=groupLocalCounts.get(encounterGroup)??0;
         groupLocalCounts.set(encounterGroup,localIndex+1);
