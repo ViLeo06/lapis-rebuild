@@ -35,10 +35,18 @@ jobs:
       - name: Build standalone synthetic preview
         shell: bash
         run: |
-          mkdir -p web/test-results
+          mkdir -p web/test-results web/ci-pack-builder
           python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/offline.html" | tee web/test-results/m7-standalone-synthetic.json
           cp "$RUNNER_TEMP/offline.html" web/test-results/lapis-m7-synthetic.html
-          tar -czf web/test-results/m7-private-pack-builder.tar.gz tools manifests web/THIRD_PARTY_NOTICES.txt
+          cp "$RUNNER_TEMP/offline.html" web/ci-pack-builder/lapis-m7-synthetic.html
+          tar -czf web/ci-pack-builder/m7-private-pack-builder.tar.gz tools manifests web/THIRD_PARTY_NOTICES.txt
+      - name: Publish current-code private pack builder before Playwright cleanup
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: m7-private-pack-builder
+          path: web/ci-pack-builder/
+          retention-days: 3
+          if-no-files-found: error
       - name: Chromium integration and offline tests
         working-directory: web
         env:
