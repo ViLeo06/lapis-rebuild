@@ -72,17 +72,46 @@ test('S34 training battles #1 and #15 launch concrete fixed S30 rosters',async({
   await ready(page);
   await startTraining(page,1);
   let state=await scene(page);
-  expect(state.enemies.map(row=>row.id)).toEqual(['m7-green-sword-trainee-l2']);
-  expect(state.enemies.map(row=>row.maxHp)).toEqual([90]);
+  expect(state.enemies).toHaveLength(2);
+  expect(state.enemies[0]?.id).toBe('m7-green-sword-trainee-l2');
+  expect(state.enemies.map(row=>row.maxHp)).toEqual([90,90]);
   await retreat(page);
 
   await startTraining(page,15);
   state=await scene(page);
-  expect(state.enemies.map(row=>row.id)).toEqual(['m7-spectral-overseer-boss-l65','m7-cyan-spectral-elite-l60']);
+  expect(state.enemies).toHaveLength(20);
+  expect(new Set(state.enemies.map(row=>row.id)).size).toBe(20);
   expect(state.enemies.map(row=>row.traits)).toEqual(expect.arrayContaining([
     expect.arrayContaining(['boss']),
     expect.arrayContaining(['elite']),
   ]));
+});
+
+test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll while combat HUD refreshes',async({page})=>{
+  await ready(page);
+  await developerPreset(page,'wizard',56,true);
+  await startTraining(page,14);
+
+  const attack=page.locator('[data-action="attack"]:visible').first();
+  await expect(attack).toBeVisible();
+  const hitTarget=await attack.evaluate(button=>{
+    const box=button.getBoundingClientRect();
+    const node=document.elementFromPoint(box.left+box.width/2,box.top+box.height/2) as HTMLElement|null;
+    return node?.closest<HTMLElement>('[data-action]')?.dataset.action??null;
+  });
+  expect(hitTarget).toBe('attack');
+
+  const skills=page.locator('.skill-deck:visible').first();
+  await expect(skills).toBeVisible();
+  const before=await skills.evaluate(node=>{
+    node.scrollLeft=node.scrollWidth;
+    return {left:node.scrollLeft,max:node.scrollWidth-node.clientWidth};
+  });
+  expect(before.max).toBeGreaterThan(40);
+  expect(before.left).toBeGreaterThan(40);
+  await page.waitForTimeout(1200);
+  const after=await skills.evaluate(node=>node.scrollLeft);
+  expect(after).toBeGreaterThanOrEqual(before.left-2);
 });
 
 test('S34 swordsman Lv36 Sacrifice is a real periodic non-lethal battle buff',async({page})=>{
@@ -231,5 +260,7 @@ test('S34 private-original pack uses distinct fixed-client story battle zones',a
   expect(last.battleZoneId).toBe(91);
   expect(last.mapId).toBe(91);
   expect(last.mapName).not.toBe(first.mapName);
-  expect(last.enemies.map(row=>row.visualResourceId)).toEqual([4544,4544]);
+  expect(last.enemies).toHaveLength(20);
+  expect(last.enemies.some(row=>row.traits.includes('boss'))).toBe(true);
+  expect(last.enemies.some(row=>row.traits.includes('elite'))).toBe(true);
 });
