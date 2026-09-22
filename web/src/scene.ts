@@ -274,7 +274,7 @@ export class LabScene extends Phaser.Scene {
       snapshot.camera,
       this.anchor,
       this.state.enemies,
-      activeEnemyEncounterGroup(this.state),
+      activeEnemyEncounterGroup(this.state,this.anchor.x,this.anchor.y),
       {bottomInset:this.battleMinimapBottomInset()},
     );
   }
