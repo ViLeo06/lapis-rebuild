@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   M7_INTEGRATED_TRAINING_BATTLES,
+  M7_MAX_ACTIVE_ENEMIES_PER_GROUP,
+  M7_TRAINING_ENEMY_COUNTS,
   integratedTrainingBattleById,
   validateM7IntegratedTrainingBattles,
 } from '../src/training/m7-integrated-training-catalog.ts';
@@ -15,6 +17,20 @@ test('S34 joins all 15 S33 presets to explicit S30 monster IDs',()=>{
     [2,5,6,10,15,16,25,26,35,36,45,46,55,56,65],
   );
   assert.equal(new Set(M7_INTEGRATED_TRAINING_BATTLES.map(row=>row.enemies.map(enemy=>enemy.monsterId).join('|'))).size,15);
+});
+
+
+test('S34 playtest roster grows from 2 to 20 while every engagement group stays at five or fewer',()=>{
+  assert.deepEqual(M7_INTEGRATED_TRAINING_BATTLES.map(row=>row.totalEnemyCount),[...M7_TRAINING_ENEMY_COUNTS]);
+  assert.equal(M7_INTEGRATED_TRAINING_BATTLES[0]!.totalEnemyCount,2);
+  assert.equal(M7_INTEGRATED_TRAINING_BATTLES.at(-1)!.totalEnemyCount,20);
+  for(const battle of M7_INTEGRATED_TRAINING_BATTLES){
+    const groups=new Map<number,number>();
+    for(const enemy of battle.enemies)groups.set(enemy.encounterGroup,(groups.get(enemy.encounterGroup)??0)+1);
+    assert.ok([...groups.values()].every(count=>count<=M7_MAX_ACTIVE_ENEMIES_PER_GROUP));
+    assert.equal(groups.size,battle.groupCount);
+    assert.equal(new Set(battle.enemies.map(enemy=>enemy.instanceId)).size,battle.enemies.length);
+  }
 });
 
 test('S34 concrete training enemy levels come only from fixed S30 rows',()=>{
