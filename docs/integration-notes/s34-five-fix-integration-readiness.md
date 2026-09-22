@@ -19,7 +19,7 @@ The four implementation Workers produced real diffs while this audit was in prog
 | S34B poison/grid | #47 | `b798d253285d337e72510d1a2f443bfc57f9684c` | 6 commits; 5 files | `m7-battle-skills.ts`, manifest; no `scene.ts` |
 | S34C encounter/direct attack | #48 | `0b9d84de6ffe4c1b392f98aa6e294697814a7714` | 1 commit; 3 files | `scene.ts`, `m7-encounter-groups.ts` |
 | S34A hotkeys/HUD | #49 | `817ef6af74592ac0b4dcfde68d33c03c3e95684f` | 2 commits; 9 files | `m4-runtime-integration.ts`, HUD, `main.ts` |
-| S34D camera/minimap | #50 | `460d30e36e9a08408521a7d1f46ce6407d3036ee` | 13 commits; 7 files | `scene.ts`, `viewport-controller.ts` |
+| S34D camera/minimap | #50 | `3462352b03d6f196d3be8db28e0066f7301785dd` | 16 commits; 7 files | `scene.ts`, `viewport-controller.ts` |
 
 All four PRs target `codex/s34-m7-integration-acceptance`. The target integration branch was still identical to the common baseline when these heads were audited. GitHub had not produced PR-triggered workflow runs/status contexts for these exact heads through the connected API, so this note treats each Worker-provided test claim as a handoff claim until the coordinator runs the integrated gate.
 
