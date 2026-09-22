@@ -26,10 +26,16 @@ import {
   m7WizardOrdinaryAttackTargetable,
   tickM7WizardStatus,
 } from '../content/skills/wizard-seven-stage-runtime.ts';
-import {m7WizardSkillLevel} from '../content/skills/wizard-seven-stage.ts';
+import {m7WizardSkillByKey,m7WizardSkillLevel} from '../content/skills/wizard-seven-stage.ts';
 import type {M7WizardSkillKey} from '../content/skills/wizard-seven-stage.ts';
 import type {M7RuntimeSkillCommand} from '../training/m7-skill-progression.ts';
 import {activeEnemyEncounterGroup} from './m7-encounter-groups.ts';
+import {
+  affectedM7GridTargets,
+  m7PoisonGeometry,
+  validateM7CastCell,
+} from './m7-grid-targeting.ts';
+import type {M7GridCell} from './m7-grid-targeting.ts';
 
 export const M7_WIZARD_INTELLIGENCE_BRIDGE_POLICY=Object.freeze({
   id:'M7WizardIntelligenceBridgePolicy',
@@ -42,6 +48,11 @@ export type M7SkillUseResult=Readonly<{
   message:string;
   events:readonly BattleEvent[];
   affectedEnemyIds:readonly string[];
+}>;
+
+export type M7SkillTargetSelection=Readonly<{
+  targetId?:string|null;
+  targetCell?:M7GridCell|null;
 }>;
 
 function randomUnit(state:BattleState):number{
@@ -161,22 +172,35 @@ function numeric(params:Readonly<Record<string,number|boolean>>,key:string):numb
   return typeof value==='number'&&Number.isFinite(value)?value:undefined;
 }
 
+function authoredAreaCode(key:M7WizardSkillKey):number|null{
+  const raw=m7WizardSkillByKey(key).authoredLv1?.area;
+  return typeof raw==='number'&&Number.isInteger(raw)&&raw>=1&&raw<=4?raw:null;
+}
+
 function wizardTargets(
   state:BattleState,
   selected:Enemy,
   key:M7WizardSkillKey,
-  params:Readonly<Record<string,number|boolean>>,
 ):readonly Enemy[]{
-  if(key!=='poison-mist'&&key!=='ashes'&&key!=='curse-eye')return Object.freeze([selected]);
-  const rawArea=numeric(params,'areaCells')??1;
-  const radius=Math.max(0,Math.min(5,Math.ceil(Math.sqrt(Math.max(1,rawArea)))-1));
-  const center=pixelCell(selected.x,selected.y);
-  return Object.freeze(state.enemies.filter(enemy=>enemy.hp>0&&enemy.encounterGroup===selected.encounterGroup&&tileDistance(center,pixelCell(enemy.x,enemy.y))<=radius));
+  if(key!=='ashes'&&key!=='curse-eye')return Object.freeze([selected]);
+  const areaCode=authoredAreaCode(key);
+  if(areaCode===null)return Object.freeze([selected]);
+  return affectedM7GridTargets(
+    state.enemies,
+    pixelCell(selected.x,selected.y),
+    areaCode,
+    selected.encounterGroup,
+  );
+}
+
+function refundWizardSpend(state:BattleState,command:M7RuntimeSkillCommand):void{
+  state.mp+=command.mpCost;
+  state.action=Math.min(state.actionMax,state.action+command.readinessCost);
 }
 
 function useWizard(
   state:BattleState,
-  targetId:string,
+  selection:M7SkillTargetSelection,
   x:number,
   y:number,
   command:M7RuntimeSkillCommand,
@@ -194,23 +218,56 @@ function useWizard(
     return Object.freeze({ok:true,message:`${command.displayName} Lv.${command.skillLevel} / RECONSTRUCTION_POLICY`,events:[],affectedEnemyIds:[]});
   }
 
-  const selected=liveTarget(state,targetId);
+  if(key==='poison-mist'){
+    const targetCell=selection.targetCell??null;
+    if(!targetCell){
+      refundWizardSpend(state,command);
+      return Object.freeze({ok:false,message:'请选择施法格',events:[],affectedEnemyIds:[]});
+    }
+    const activeGroup=activeEnemyEncounterGroup(state,x,y);
+    if(activeGroup===null){
+      refundWizardSpend(state,command);
+      return Object.freeze({ok:false,message:'当前没有可交互敌群',events:[],affectedEnemyIds:[]});
+    }
+    const geometry=m7PoisonGeometry(command.skillLevel);
+    const cast=validateM7CastCell(pixelCell(x,y),targetCell,geometry.castDistance);
+    if(!cast.ok){
+      refundWizardSpend(state,command);
+      return Object.freeze({ok:false,message:`目标格超出技能射程（${geometry.castDistance}格）`,events:[],affectedEnemyIds:[]});
+    }
+    const intelligence=state.combatPlayerStats?.magicAttack??0;
+    const targets=affectedM7GridTargets(state.enemies,targetCell,geometry.areaCode,activeGroup);
+    for(const enemy of targets){
+      enemy.m7Status=Object.freeze({
+        ...enemy.m7Status,
+        wizard:applyM7WizardSkillStatus(enemy.m7Status.wizard,key,command.skillLevel,{intelligence}),
+      });
+    }
+    return Object.freeze({
+      ok:true,
+      message:`${command.displayName} Lv.${command.skillLevel} / VERIFIED-STATIC-ORIGINAL grid geometry`,
+      events:[],
+      affectedEnemyIds:Object.freeze(targets.map(enemy=>enemy.id)),
+    });
+  }
+
+  const selected=liveTarget(state,selection.targetId??'');
   if(!selected){
-    state.mp+=command.mpCost;state.action=Math.min(state.actionMax,state.action+command.readinessCost);
+    refundWizardSpend(state,command);
     return Object.freeze({ok:false,message:'请选择存活目标',events:[],affectedEnemyIds:[]});
   }
   if(selected.encounterGroup!==activeEnemyEncounterGroup(state,x,y)){
-    state.mp+=command.mpCost;state.action=Math.min(state.actionMax,state.action+command.readinessCost);
+    refundWizardSpend(state,command);
     return Object.freeze({ok:false,message:'该敌群尚未进入当前交互范围',events:[],affectedEnemyIds:[]});
   }
   const range=numeric(params,'rangeCells')??P.battleSpellRangeCells;
   if(tileDistance(pixelCell(x,y),pixelCell(selected.x,selected.y))>range){
-    state.mp+=command.mpCost;state.action=Math.min(state.actionMax,state.action+command.readinessCost);
+    refundWizardSpend(state,command);
     return Object.freeze({ok:false,message:`目标超出技能射程（${range}格）`,events:[],affectedEnemyIds:[]});
   }
 
   const intelligence=state.combatPlayerStats?.magicAttack??0;
-  const targets=wizardTargets(state,selected,key,params);
+  const targets=wizardTargets(state,selected,key);
   for(const enemy of targets){
     enemy.m7Status=Object.freeze({
       ...enemy.m7Status,
@@ -225,6 +282,21 @@ function useWizard(
   });
 }
 
+export function useM7SkillTargeted(
+  state:BattleState,
+  selection:M7SkillTargetSelection,
+  x:number,
+  y:number,
+  command:M7RuntimeSkillCommand,
+):M7SkillUseResult{
+  if(state.phase!=='active')return Object.freeze({ok:false,message:'请先进入战斗画面',events:[],affectedEnemyIds:[]});
+  return command.family==='swordsman'
+    ?useSwordsman(state,selection.targetId??'',x,y,command)
+    :useWizard(state,selection,x,y,command);
+}
+
+// Compatibility bridge for the current Scene until S34 UI wiring switches poison
+// to the explicit targetCell contract. New callers should use useM7SkillTargeted.
 export function useM7Skill(
   state:BattleState,
   targetId:string,
@@ -232,10 +304,12 @@ export function useM7Skill(
   y:number,
   command:M7RuntimeSkillCommand,
 ):M7SkillUseResult{
-  if(state.phase!=='active')return Object.freeze({ok:false,message:'请先进入战斗画面',events:[],affectedEnemyIds:[]});
-  return command.family==='swordsman'
-    ?useSwordsman(state,targetId,x,y,command)
-    :useWizard(state,targetId,x,y,command);
+  let targetCell:M7GridCell|null=null;
+  if(command.family==='wizard'&&command.skillKey==='poison-mist'){
+    const selected=liveTarget(state,targetId);
+    if(selected)targetCell=pixelCell(selected.x,selected.y);
+  }
+  return useM7SkillTargeted(state,{targetId,targetCell},x,y,command);
 }
 
 export function tickM7BattleStatuses(state:BattleState,deltaMs:number):readonly BattleEvent[]{
