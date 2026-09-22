@@ -40,9 +40,22 @@ async function startManyEnemyBattle(page:Page){
 
 async function canvasPoint(page:Page,x:number,y:number){
   const state=await scene(page);
+  const viewport=state.viewport;
+  if(!viewport)throw new Error('Missing viewport snapshot');
   const box=await page.locator('canvas').boundingBox();
   if(!box)throw new Error('Missing canvas');
-  return {x:box.x+(x-state.camera.x)*state.camera.zoom,y:box.y+(y-state.camera.y)*state.camera.zoom};
+  const logicalX=(x-state.camera.x)*state.camera.zoom;
+  const logicalY=(y-state.camera.y)*state.camera.zoom;
+  return {x:box.x+logicalX*(box.width/viewport.viewport.width),y:box.y+logicalY*(box.height/viewport.viewport.height)};
+}
+
+async function canvasUiPoint(page:Page,x:number,y:number){
+  const state=await scene(page);
+  const viewport=state.viewport;
+  if(!viewport)throw new Error('Missing viewport snapshot');
+  const box=await page.locator('canvas').boundingBox();
+  if(!box)throw new Error('Missing canvas');
+  return {x:box.x+x*(box.width/viewport.viewport.width),y:box.y+y*(box.height/viewport.viewport.height)};
 }
 
 async function clickEnemy(page:Page,id:string){
@@ -85,6 +98,11 @@ async function setPlayerVitals(page:Page,hp:number,mp:number){
 
 function live(state:any){return state.enemies.filter((row:any)=>row.hp>0);}
 function poisoned(state:any){return live(state).filter((row:any)=>Boolean(row.m7Status?.wizard?.poison));}
+function activeGroup(state:any):number|null{
+  const activeMarker=state.minimap?.enemies?.find((row:any)=>row.active);
+  if(!activeMarker)return null;
+  return live(state).find((row:any)=>row.id===activeMarker.id)?.encounterGroup??null;
+}
 
 async function emptyPoisonCenter(state:any){
   const living=live(state);
@@ -124,7 +142,7 @@ test.describe('S34 five-fix final acceptance',()=>{
 
     let state:any=await extendedScene(page);
     expect(live(state).length).toBeGreaterThanOrEqual(20);
-    const firstGroup=state.activeEncounterGroup;
+    const firstGroup=activeGroup(state);
     expect(typeof firstGroup).toBe('number');
     const firstEnemy=live(state).find((row:any)=>row.encounterGroup===firstGroup);
     expect(firstEnemy).toBeTruthy();
@@ -141,7 +159,7 @@ test.describe('S34 five-fix final acceptance',()=>{
     const later=live(state).find((row:any)=>row.encounterGroup!==firstGroup);
     expect(later).toBeTruthy();
     await clickWorld(page,later.x-48,later.y+24);
-    await expect.poll(async()=>(await extendedScene(page)).activeEncounterGroup).not.toBe(firstGroup);
+    await expect.poll(async()=>activeGroup(await extendedScene(page))).not.toBe(firstGroup);
     await expectAllLivingVisible(page);
 
     await advanceBattleTime(page,10000);
@@ -192,12 +210,15 @@ test.describe('S34 five-fix final acceptance',()=>{
     await page.mouse.move(box.x+box.width-2,box.y+box.height/2);
     await expect.poll(async()=>(await scene(page)).camera.x).not.toBe(cameraBeforeEdge.x);
 
-    const map=page.locator('[data-ui="battle-minimap"]');
-    await expect(map).toBeVisible();
-    const mapBox=await map.boundingBox();if(!mapBox)throw new Error('Missing minimap');
+    const minimapBefore:any=await extendedScene(page);
+    expect(minimapBefore.minimap?.visible).toBe(true);
+    expect(minimapBefore.minimap?.enemies).toHaveLength(live(minimapBefore).length);
+    expect(minimapBefore.minimap?.viewport.width??0).toBeGreaterThan(0);
     const playerBefore=(await scene(page)).battleCell;
     const cameraBeforeMap=(await scene(page)).camera;
-    await page.mouse.click(mapBox.x+mapBox.width*0.8,mapBox.y+mapBox.height*0.5);
+    const inner=minimapBefore.minimap.layout.inner;
+    const mapClick=await canvasUiPoint(page,inner.x+inner.width*0.8,inner.y+inner.height*0.5);
+    await page.mouse.click(mapClick.x,mapClick.y);
     await expect.poll(async()=>(await scene(page)).camera.x).not.toBe(cameraBeforeMap.x);
     expect((await scene(page)).battleCell).toEqual(playerBefore);
 
@@ -216,7 +237,7 @@ test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
     await expectAllLivingVisible(page);
 
     let state:any=await extendedScene(page);
-    const active=state.activeEncounterGroup;
+    const active=activeGroup(state);
     const enemy=live(state).find((row:any)=>row.encounterGroup===active);
     expect(enemy).toBeTruthy();
     const before=enemy.hp;
@@ -238,12 +259,14 @@ test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
     await page.touchscreen.tap(centerPoint.x,centerPoint.y);
     await expect.poll(async()=>poisoned(await extendedScene(page)).length).toBeGreaterThanOrEqual(2);
 
-    const map=page.locator('[data-ui="battle-minimap"]');
-    await expect(map).toBeVisible();
-    const mapBox=await map.boundingBox();if(!mapBox)throw new Error('Missing minimap');
+    const minimapBefore:any=await extendedScene(page);
+    expect(minimapBefore.minimap?.visible).toBe(true);
+    expect(minimapBefore.minimap?.enemies).toHaveLength(live(minimapBefore).length);
     const playerBefore=(await scene(page)).battleCell;
     const cameraBefore=(await scene(page)).camera;
-    await page.touchscreen.tap(mapBox.x+mapBox.width*0.75,mapBox.y+mapBox.height*0.5);
+    const inner=minimapBefore.minimap.layout.inner;
+    const mapTap=await canvasUiPoint(page,inner.x+inner.width*0.75,inner.y+inner.height*0.5);
+    await page.touchscreen.tap(mapTap.x,mapTap.y);
     await expect.poll(async()=>(await scene(page)).camera.x).not.toBe(cameraBefore.x);
     expect((await scene(page)).battleCell).toEqual(playerBefore);
 
