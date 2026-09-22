@@ -33,7 +33,7 @@ async function startTraining(page:Page,id:number){
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
-const monsterFamilyId=(id:string)=>id.replace(/#\\d+$/,'');
+const monsterFamilyId=(id:string)=>id.replace(/#\d+$/,'');
 
 async function legacyPause(page:Page){
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
