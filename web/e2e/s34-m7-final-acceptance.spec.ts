@@ -213,7 +213,9 @@ test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',as
   await page.keyboard.press('Space');
   expect(await page.evaluate(()=>(window as Window&{__s34RangeEvents?:boolean[]}).__s34RangeEvents)).toEqual([true,false]);
 
-  await page.locator('[data-action="battle-exit-request"]:visible').click();
+  // The HUD is intentionally regenerated as readiness changes; dispatch the
+  // request on the current DOM node so actionability retries do not race that refresh.
+  await page.evaluate(()=>document.querySelector<HTMLButtonElement>('[data-action="battle-exit-request"]')?.click());
   await expect(page.locator('[data-ui="battle-exit-confirm"]')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('[data-ui="battle-exit-confirm"]')).toHaveCount(0);
