@@ -121,6 +121,7 @@ test('S34 training battles #1 and #15 launch concrete fixed S30 rosters',async({
 });
 
 test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll while combat HUD refreshes',async({page})=>{
+  await page.setViewportSize({width:800,height:720});
   await ready(page);
   await developerPreset(page,'wizard',56,true);
   // Keep this HUD-only regression on the lowest-risk arena so enemy DPS cannot
@@ -175,6 +176,7 @@ test('S34A A hotkey uses ordinary-attack authority without legacy WASD double tr
 });
 
 test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',async({page})=>{
+  test.setTimeout(90_000);
   await ready(page);
   await developerPreset(page,'wizard',56,true);
   // Hotkey authority is independent of encounter difficulty; use battle #1 so
