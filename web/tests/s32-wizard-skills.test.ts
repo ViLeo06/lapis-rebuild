@@ -5,6 +5,7 @@ import {
   M7_WIZARD_SKILLS,
   M7_WIZARD_SKILL_KEYS,
   M7_WIZARD_STAGE_RANGES,
+  M7_WIZARD_RUNTIME_POLICY,
   createM7WizardSkillBook,
   developerM7WizardSkillBook,
   m7WizardAllowedSkillKeys,
@@ -127,9 +128,11 @@ test('black veil is physical accuracy denial while blindness is stronger and als
   assert.equal(m7WizardEffectiveRangeCells(4,status),2);
 });
 
-test('poison mist scales with INT and ticks independently of actor actions',()=>{
+test('poison mist scales with INT, receives the approved >=50% boost, and ticks independently of actor actions',()=>{
   const low=applyM7WizardSkillStatus(createM7WizardStatusState(),'poison-mist',6,{intelligence:10});
   const high=applyM7WizardSkillStatus(createM7WizardStatusState(),'poison-mist',6,{intelligence:100});
+  assert.equal(M7_WIZARD_RUNTIME_POLICY.poisonDamageMultiplier,1.5);
+  assert.equal(high.poison?.damagePerTick,50,'Lv6 INT 100 baseline 33 is boosted to ceil(33*1.5)=50');
   assert.ok((high.poison?.damagePerTick??0)>(low.poison?.damagePerTick??0));
   const first=tickM7WizardStatus(high,4999);
   assert.equal(first.poisonDamage,0);
