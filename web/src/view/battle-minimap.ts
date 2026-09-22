@@ -58,7 +58,7 @@ export function buildBattleMinimapModel(
   camera:CameraState,
   player:Point,
   enemies:readonly BattleMinimapEnemy[],
-  activeGroup:number,
+  activeGroup:number|null,
   options:Partial<BattleMinimapOptions>={},
 ):BattleMinimapModel{
   const v=normalizeSize(viewport),w=normalizeRect(world),layout=battleMinimapLayout(v,w,options);
