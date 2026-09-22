@@ -78,9 +78,13 @@ export class BattleCameraPolicy{
     };
   }
 
+  targetScroll(camera:CameraState,target:Point,viewport:Size,world:Rect):Point{
+    return scrollForCenter(target,normalizeSize(viewport),normalizeRect(world),finitePositive(camera.zoom,'camera zoom'));
+  }
+
   centerStep(camera:CameraState,target:Point,viewport:Size,world:Rect,deltaMs:number):Point{
     const v=normalizeSize(viewport),w=normalizeRect(world),zoom=finitePositive(camera.zoom,'camera zoom');
-    const desired=scrollForCenter(target,v,w,zoom),alpha=alphaFor(this.options.manualLerp,deltaMs);
+    const desired=this.targetScroll(camera,target,v,w),alpha=alphaFor(this.options.manualLerp,deltaMs);
     return clampScroll({
       x:camera.scrollX+(desired.x-camera.scrollX)*alpha,
       y:camera.scrollY+(desired.y-camera.scrollY)*alpha,
