@@ -52,6 +52,7 @@ export type Enemy = {
   maxMp:number;
   x: number;
   y: number;
+  encounterGroup:number;
   role: 'melee'|'ranged';
   visualResourceId?:number;
   movementRangeCells?:number;
@@ -84,6 +85,7 @@ export type ReconstructionEnemySetup=Readonly<{
   level:number;
   rank:EnemyRank;
   role:'melee'|'ranged';
+  encounterGroup?:number;
   maxHp:number;
   maxMp:number;
   attack:number;
@@ -195,7 +197,15 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
     s.hp=player.maxHp;s.maxHp=player.maxHp;s.mp=player.maxMp;s.maxMp=player.maxMp;
     s.damagePolicyId=balance.id;s.damagePolicyProvenance=balance.provenance;
     if(setup.enemies?.length){
+      const groupLocalCounts=new Map<number,number>();
       s.enemies=setup.enemies.map((row,index)=>{
+        const encounterGroup=Math.max(0,Math.floor(row.encounterGroup??0));
+        const localIndex=groupLocalCounts.get(encounterGroup)??0;
+        groupLocalCounts.set(encounterGroup,localIndex+1);
+        const groupX=65+encounterGroup*210;
+        const groupY=encounterGroup===0?0:(encounterGroup%2===1?1:-1)*(90+encounterGroup*25);
+        const localX=(localIndex%3)*58;
+        const localY=Math.floor(localIndex/3)*70+(localIndex%2===0?0:30);
         const template=balance.enemyStats({id:row.id,level:row.level,rank:row.rank,role:row.role});
         const combatStats:CombatantStats=Object.freeze({
           ...template,
@@ -211,7 +221,7 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
           magicDefense:row.magicDefense,
         });
         return {
-          id:row.id,hp:row.maxHp,maxHp:row.maxHp,mp:row.maxMp,maxMp:row.maxMp,x:x+65+index*72,y:y-(index%2)*30,role:row.role,
+          id:row.id,hp:row.maxHp,maxHp:row.maxHp,mp:row.maxMp,maxMp:row.maxMp,x:x+groupX+localX,y:y+groupY+localY,encounterGroup,role:row.role,
           visualResourceId:row.visualResourceId,movementRangeCells:row.movementRangeCells,attackRangeCells:row.attackRangeCells,
           traits:Object.freeze([...(row.traits??[])]),abilities:Object.freeze([...(row.abilities??[])]),abilityCooldownMs:{},
           m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),
@@ -222,14 +232,14 @@ export function beginBattle(x:number,y:number,entry?:BattleEntry,setup?:Reconstr
       const melee=balance.enemyStats({id:'dummy-melee',level:enemyLevel,rank,role:'melee'});
       const ranged=balance.enemyStats({id:'dummy-ranged',level:enemyLevel,rank,role:'ranged'});
       s.enemies=[
-        {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,mp:melee.maxMp,maxMp:melee.maxMp,x:x+65,y,role:'melee',visualResourceId:4524,traits:Object.freeze(['melee']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-        {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,mp:ranged.maxMp,maxMp:ranged.maxMp,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,traits:Object.freeze(['ranged']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+        {id:'dummy-melee',hp:melee.maxHp,maxHp:melee.maxHp,mp:melee.maxMp,maxMp:melee.maxMp,x:x+65,y,encounterGroup:0,role:'melee',visualResourceId:4524,traits:Object.freeze(['melee']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:melee,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+        {id:'dummy-ranged',hp:ranged.maxHp,maxHp:ranged.maxHp,mp:ranged.maxMp,maxMp:ranged.maxMp,x:x+155,y:y-30,encounterGroup:0,role:'ranged',visualResourceId:4544,traits:Object.freeze(['ranged']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),combatStats:ranged,poisonTickDamage:0,poisonTicks:0,poisonClock:0},
       ];
     }
   }else{
     s.enemies=[
-      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,mp:0,maxMp:0,x:x+65,y,role:'melee',visualResourceId:4524,traits:Object.freeze(['melee']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
-      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,mp:0,maxMp:0,x:x+155,y:y-30,role:'ranged',visualResourceId:4544,traits:Object.freeze(['ranged']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-melee',hp:P.enemyHp,maxHp:P.enemyHp,mp:0,maxMp:0,x:x+65,y,encounterGroup:0,role:'melee',visualResourceId:4524,traits:Object.freeze(['melee']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
+      {id:'dummy-ranged',hp:P.enemyHp,maxHp:P.enemyHp,mp:0,maxMp:0,x:x+155,y:y-30,encounterGroup:0,role:'ranged',visualResourceId:4544,traits:Object.freeze(['ranged']),abilities:Object.freeze([]),abilityCooldownMs:{},m7Status:Object.freeze({swordsman:Object.freeze([]),wizard:createM7WizardStatusState()}),blind:0,poison:0,action:0,aiBinding:trainingAiBinding(),poisonTickDamage:0,poisonTicks:0,poisonClock:0},
     ];
   }
   return s;
@@ -251,6 +261,15 @@ export function consumeAction(s:BattleState,cost=s.moveReadinessCost): boolean {
 function nextBattleRandom(s:BattleState):number{
   s.rngState=(Math.imul(s.rngState,1664525)+1013904223)>>>0;
   return s.rngState/0x100000000;
+}
+
+export function activeEnemyEncounterGroup(s:BattleState):number|null{
+  let active:number|null=null;
+  for(const enemy of s.enemies){
+    if(enemy.hp<=0)continue;
+    if(active===null||enemy.encounterGroup<active)active=enemy.encounterGroup;
+  }
+  return active;
 }
 
 export function reconcileBattlePhase(s: BattleState) {
@@ -280,6 +299,7 @@ export function useAttack(
   const buff=sid===1301||sid===19301;
   const e=s.enemies.find(e=>e.id===targetId&&e.hp>0);
   if(!buff&&!e)return {ok:false,message:'请选择存活目标'};
+  if(!buff&&e&&e.encounterGroup!==activeEnemyEncounterGroup(s))return {ok:false,message:'该敌群尚未投入战斗'};
   if(!skill&&e&&!m7WizardOrdinaryAttackTargetable(e.m7Status.wizard))return {ok:false,message:'石化目标不能被普通攻击'};
   const range=sid&&sid>=19000?P.rangedRadiusPx:P.meleeRadiusPx;
   if(!buff&&e&&Math.hypot(e.x-x,e.y-y)>range)return {ok:false,message:'目标超出临时射程'};
@@ -379,8 +399,9 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   // source/precedence metadata is carried on each instance, while historical
   // per-encounter AI payloads remain unavailable.
   const damagePolicy=context?.damagePolicy??TRAINING_DAMAGE_POLICY;
+  const activeGroup=activeEnemyEncounterGroup(s);
   for(const [enemyIndex,e] of s.enemies.entries()){
-    if(e.hp<=0)continue;
+    if(e.hp<=0||activeGroup===null||e.encounterGroup!==activeGroup)continue;
     const traitCadence=e.traits.includes('fast')?0.72:e.traits.includes('tank')?1.12:1;
     const enemyIntervalMs=s.combatPlayerStats
       ?DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.tuning.cadence.enemyActionSeconds*1000*
