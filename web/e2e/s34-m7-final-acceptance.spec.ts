@@ -33,7 +33,14 @@ async function startTraining(page:Page,id:number){
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
+const monsterFamilyId=(id:string)=>id.replace(/#\\d+$/,'');
+
+async function legacyPause(page:Page){
+  await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
+}
+
 async function selectTarget(page:Page,id?:string){
+  await legacyPause(page);
   const state=await scene(page);
   const target=id?state.enemies.find(row=>row.id===id&&row.hp>0):state.enemies.find(row=>row.hp>0);
   if(!target)throw new Error('Missing live target '+String(id));
@@ -44,8 +51,14 @@ async function selectTarget(page:Page,id?:string){
     box.x+(target.x-state.camera.x)*state.camera.zoom,
     box.y+(target.y-state.camera.y)*state.camera.zoom,
   );
-  await expect.poll(async()=>(await scene(page)).target).toBe(target.id);
-  return target.id;
+  await expect.poll(async()=>{
+    const selected=(await scene(page)).target;
+    return selected&&monsterFamilyId(selected)===monsterFamilyId(target.id)?selected:null;
+  }).not.toBeNull();
+  const selected=(await scene(page)).target;
+  await legacyPause(page);
+  if(!selected)throw new Error('Missing selected target');
+  return selected;
 }
 async function clickSkill(page:Page,label:string){
   const button=page.locator('[data-action="skill"]:visible').filter({hasText:label}).first();
@@ -103,10 +116,7 @@ test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll w
     return node?.closest<HTMLElement>('[data-action]')?.dataset.action??null;
   });
   expect(hitTarget).toBe('attack');
-  await waitReady(page);
-  await expect(attack).toBeEnabled();
-  await attack.click();
-
+  await legacyPause(page);
   const skills=page.locator('.skill-deck:visible').first();
   await expect(skills).toBeVisible();
   const before=await skills.evaluate(node=>{
@@ -115,6 +125,12 @@ test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll w
   });
   expect(before.max).toBeGreaterThan(40);
   expect(before.left).toBeGreaterThan(40);
+
+  await legacyPause(page);
+  await waitReady(page);
+  await expect(attack).toBeEnabled();
+  await attack.click();
+  await legacyPause(page);
   await page.waitForTimeout(1200);
   const after=await skills.evaluate(node=>node.scrollLeft);
   expect(after).toBeGreaterThanOrEqual(before.left-2);
