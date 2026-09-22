@@ -1057,7 +1057,13 @@ export class M4RuntimeIntegration{
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);
     if(hudHtml!==this.hudHtml){
+      const commandScrollLeft=this.hudRoot.querySelector<HTMLElement>('.command-deck')?.scrollLeft??0;
+      const skillScrollLeft=this.hudRoot.querySelector<HTMLElement>('.skill-deck')?.scrollLeft??0;
       this.hudRoot.innerHTML=hudHtml;
+      const commandDeck=this.hudRoot.querySelector<HTMLElement>('.command-deck');
+      const skillDeck=this.hudRoot.querySelector<HTMLElement>('.skill-deck');
+      if(commandDeck)commandDeck.scrollLeft=commandScrollLeft;
+      if(skillDeck)skillDeck.scrollLeft=skillScrollLeft;
       this.hudHtml=hudHtml;
     }
 
