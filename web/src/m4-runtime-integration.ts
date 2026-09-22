@@ -59,8 +59,14 @@ import {m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-st
 import type {M7Profession} from './training/m7-level-axis.ts';
 import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
 import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
+import {battleSkillHotkeyLabel,resolveBattleHotkey} from './input/battle-hotkeys.ts';
+import type {BattleHotkeyCommand} from './input/battle-hotkeys.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
+type BattleInputSceneContract=LabScene&{
+  setBattleRangeOverlayVisible?:(visible:boolean)=>void;
+  cancelBattleTargeting?:()=>boolean;
+};
 const QUEST_STAGES:readonly QuestStage[]=['not_started','accepted','objective','ready_to_turn_in','complete'];
 const CLASS_RESOLVER:EquipmentCompatibilityResolver=(characterId,item)=>{
   try{return isEquipmentCompatibleWithClass(characterId,item.itemId,item.slot);}catch{return false;}
@@ -128,6 +134,7 @@ export class M4RuntimeIntegration{
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
   private battleExitConfirm=false;
+  private battleRangeOverlayVisible=false;
   private suppressEncounterUntilLeave=false;
   private selectedTrainingBattleId=1;
   private activeTrainingBattleId:number|null=null;
@@ -339,6 +346,7 @@ export class M4RuntimeIntegration{
       else if(action==='recovery-hp')this.trainingRecovery('hp');
       else if(action==='recovery-mp')this.trainingRecovery('mp');
       else if(action==='rest')this.rest();
+      else if(action==='battle-range-toggle')this.toggleBattleRangeOverlay();
       else if(action==='battle-exit-request')this.requestBattleExit();
       else if(action==='battle-exit-cancel')this.cancelBattleExit();
       else if(action==='battle-exit-confirm')this.confirmBattleExit();
@@ -359,24 +367,66 @@ export class M4RuntimeIntegration{
     });
     window.addEventListener('keydown',event=>{
       if((event.target as HTMLElement).closest('input,select,button,textarea'))return;
-      if(event.key==='Escape'){
-        if(this.battleExitConfirm){this.cancelBattleExit();return;}
-        if(this.activeDialogue){this.activeDialogue=null;this.render(this.scene.snapshot());return;}
-        this.menuOpen=!this.menuOpen;this.render(this.scene.snapshot());return;
+      const battleCommand=resolveBattleHotkey(event.key,this.scene.inBattleView);
+      if(battleCommand){
+        event.preventDefault();
+        this.executeBattleHotkey(battleCommand);
+        return;
       }
+      if(event.key==='Escape'){this.handleEscape();return;}
       if(event.key==='f'||event.key==='F'){event.preventDefault();void this.scene.toggleFullscreen();return;}
       if(event.key==='+'||event.key==='='){event.preventDefault();this.scene.zoomIn();return;}
       if(event.key==='-'){event.preventDefault();this.scene.zoomOut();return;}
       if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
       if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.beginNpcInteraction(undefined,'keyboard');return;}
-      if(this.scene.inBattleView&&/^[1-7]$/.test(event.key)){
-        const skills=this.runtimeSkillCommands();
-        const command=skills[Number(event.key)-1];if(command)this.useSkill(command.id);
-      }
+      // Hidden compatibility aliases only. H/M are intentionally absent from the battle HUD.
       if(this.scene.inBattleView&&(event.key==='h'||event.key==='H')){event.preventDefault();this.trainingRecovery('hp');return;}
       if(this.scene.inBattleView&&(event.key==='m'||event.key==='M')){event.preventDefault();this.trainingRecovery('mp');return;}
-      if(this.scene.inBattleView&&(event.key==='r'||event.key==='R'))this.rest();
     });
+  }
+
+  private executeBattleHotkey(command:BattleHotkeyCommand):void{
+    if(!this.scene.inBattleView)return;
+    if(command.kind==='attack'){this.scene.attack(null);return;}
+    if(command.kind==='recovery'){this.trainingRecovery(command.resource);return;}
+    if(command.kind==='rest'){this.rest();return;}
+    if(command.kind==='skill'){
+      const skill=this.runtimeSkillCommands()[command.slot];
+      if(skill)this.useSkill(skill.id);
+      else this.setNotice(`技能槽 ${command.slot+1} 当前未配置`);
+      return;
+    }
+    if(command.kind==='toggle-range'){this.toggleBattleRangeOverlay();return;}
+    this.handleEscape();
+  }
+
+  private battleInputScene():BattleInputSceneContract{return this.scene as BattleInputSceneContract;}
+
+  private handleEscape():void{
+    if(this.scene.inBattleView&&this.battleInputScene().cancelBattleTargeting?.()){
+      this.setNotice('已取消当前技能瞄准 / 命令');
+      this.render(this.scene.snapshot());
+      return;
+    }
+    if(this.battleExitConfirm){this.cancelBattleExit();return;}
+    if(this.activeDialogue){this.activeDialogue=null;this.render(this.scene.snapshot());return;}
+    this.menuOpen=!this.menuOpen;
+    this.render(this.scene.snapshot());
+  }
+
+  private publishBattleRangeOverlay(visible:boolean,announce:boolean):void{
+    this.battleRangeOverlayVisible=visible;
+    this.battleInputScene().setBattleRangeOverlayVisible?.(visible);
+    window.dispatchEvent(new CustomEvent('lapis-battle-range-overlay',{detail:{visible}}));
+    if(announce){
+      this.setNotice(`战斗移动 / 攻击 / 施法范围：${visible?'显示':'隐藏'}`);
+      this.render(this.scene.snapshot());
+    }
+  }
+
+  private toggleBattleRangeOverlay():void{
+    if(!this.scene.inBattleView)return;
+    this.publishBattleRangeOverlay(!this.battleRangeOverlayVisible,true);
   }
 
   private changeClass(id:'100'|'109'):void{
@@ -408,6 +458,14 @@ export class M4RuntimeIntegration{
     if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
     if(!Number.isFinite(hp)||hp<=0||hp>=enemy.maxHp)throw new Error('Invalid acceptance enemy HP');
     enemy.hp=hp;
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceSetPlayerMp(mp:number):void{
+    if(!navigator.webdriver)throw new Error('M7 acceptance player MP fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('M7 acceptance player MP fixture requires active battle');
+    if(!Number.isFinite(mp)||mp<0)throw new Error('Invalid acceptance player MP');
+    this.scene.state.mp=Math.min(this.scene.state.maxMp,Math.floor(mp));
     this.render(this.scene.snapshot());
   }
 
@@ -948,6 +1006,7 @@ export class M4RuntimeIntegration{
   }
 
   private onSnapshot(snapshot:Snapshot):void{
+    if(!snapshot.inBattleView&&this.battleRangeOverlayVisible)this.publishBattleRangeOverlay(false,false);
     if(this.lastSnapshot&&snapshot.inBattleView){
       if(snapshot.hp<this.lastSnapshot.hp){
         this.present(this.presentation.hit({targetId:'player',amount:this.lastSnapshot.hp-snapshot.hp,resultingHp:snapshot.hp,maxHp:this.scene.state.maxHp}));
@@ -1052,7 +1111,7 @@ export class M4RuntimeIntegration{
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
-        skills:this.runtimeSkillCommands().map((command,index)=>({id:command.authoredSkillId??command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:String(index+1),disabled:snapshot.mp<command.mpCost})),
+        skills:this.runtimeSkillCommands().map((command,index)=>({id:command.authoredSkillId??command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:battleSkillHotkeyLabel(index),disabled:snapshot.mp<command.mpCost})),
       };
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);

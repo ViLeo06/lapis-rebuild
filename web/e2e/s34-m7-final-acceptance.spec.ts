@@ -47,6 +47,36 @@ async function selectTarget(page:Page,id?:string){
   await expect.poll(async()=>(await scene(page)).target).toBe(target.id);
   return target.id;
 }
+async function clickBattleCell(page:Page,cell:readonly[number,number]){
+  const state=await scene(page);
+  const canvas=page.locator('canvas');
+  const box=await canvas.boundingBox();
+  if(!box)throw new Error('Missing canvas');
+  const worldX=(cell[0]+1)*32,worldY=(cell[1]+1)*16;
+  await page.mouse.click(
+    box.x+(worldX-state.camera.x)*state.camera.zoom,
+    box.y+(worldY-state.camera.y)*state.camera.zoom,
+  );
+}
+async function moveIntoOrdinaryAttackRange(page:Page,targetId:string){
+  for(let attempt=0;attempt<10;attempt++){
+    await waitReady(page);
+    const state=await scene(page);
+    const target=state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!target)throw new Error('Target died before ordinary-attack hotkey acceptance');
+    const distance=Math.max(Math.abs(target.cell[0]-state.battleCell[0]),Math.abs(target.cell[1]-state.battleCell[1]));
+    if(distance<=1)return;
+    const options=[...state.reachable].sort((a,b)=>
+      Math.max(Math.abs(a[0]-target.cell[0]),Math.abs(a[1]-target.cell[1]))-
+      Math.max(Math.abs(b[0]-target.cell[0]),Math.abs(b[1]-target.cell[1]))
+    );
+    if(!options.length)throw new Error('No reachable cell for ordinary-attack hotkey acceptance');
+    const before=JSON.stringify(state.battleCell);
+    await clickBattleCell(page,options[0]);
+    await expect.poll(async()=>JSON.stringify((await scene(page)).battleCell),{timeout:10000}).not.toBe(before);
+  }
+  throw new Error('Could not reach ordinary-attack range');
+}
 async function clickSkill(page:Page,label:string){
   const button=page.locator('[data-action="skill"]:visible').filter({hasText:label}).first();
   await expect(button).toBeVisible();
@@ -118,6 +148,99 @@ test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll w
   await page.waitForTimeout(1200);
   const after=await skills.evaluate(node=>node.scrollLeft);
   expect(after).toBeGreaterThanOrEqual(before.left-2);
+});
+
+test('S34A A hotkey uses ordinary-attack authority without legacy WASD double trigger',async({page})=>{
+  await ready(page);
+  await page.keyboard.press('a');
+  expect((await scene(page)).inBattleView).toBe(false);
+
+  await startTraining(page,1);
+  const targetId=await selectTarget(page);
+  await moveIntoOrdinaryAttackRange(page,targetId);
+  await waitReady(page);
+  const before=await scene(page);
+  const beforeCell=JSON.stringify(before.battleCell);
+  expect(before.actionReady).toBe(true);
+
+  await page.keyboard.press('a');
+  await expect.poll(async()=>(await scene(page)).action,{timeout:5000}).toBeLessThan(before.action);
+  const after=await scene(page);
+  expect(JSON.stringify(after.battleCell)).toBe(beforeCell);
+  expect(after.target).toBe(targetId);
+});
+
+test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',async({page})=>{
+  await ready(page);
+  await developerPreset(page,'wizard',56,true);
+  await startTraining(page,14);
+
+  const skillHotkeys=await page.locator('[data-action="skill"]:visible small').allTextContents();
+  expect(skillHotkeys.slice(0,6)).toEqual(expect.arrayContaining([
+    expect.stringContaining('Q / 1'),expect.stringContaining('W / 2'),
+    expect.stringContaining('E / 3'),expect.stringContaining('R / 4'),
+    expect.stringContaining('5'),expect.stringContaining('6'),
+  ]));
+  expect(skillHotkeys[6]??'').not.toContain('7 ·');
+
+  await waitReady(page);
+  await page.keyboard.press('s');
+  await expect(page.locator('#m4-runtime-notice')).toContainText('HP');
+  await waitReady(page);
+  await page.keyboard.press('d');
+  await expect(page.locator('#m4-runtime-notice')).toContainText('MP');
+
+  await waitReady(page);
+  const beforeRest=await scene(page);
+  await page.keyboard.press('f');
+  await expect(page.locator('#m4-runtime-notice')).toContainText('休息');
+  await expect.poll(async()=>(await scene(page)).action).toBeLessThan(beforeRest.action);
+
+  await page.evaluate(()=>{
+    const target=window as Window&{__s34RangeEvents?:boolean[]};
+    target.__s34RangeEvents=[];
+    window.addEventListener('lapis-battle-range-overlay',event=>{
+      target.__s34RangeEvents!.push(Boolean((event as CustomEvent<{visible:boolean}>).detail.visible));
+    });
+  });
+  await page.keyboard.press('Space');
+  await page.keyboard.press('Space');
+  expect(await page.evaluate(()=>(window as Window&{__s34RangeEvents?:boolean[]}).__s34RangeEvents)).toEqual([true,false]);
+
+  await page.locator('[data-action="battle-exit-request"]:visible').click();
+  await expect(page.locator('[data-ui="battle-exit-confirm"]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-ui="battle-exit-confirm"]')).toHaveCount(0);
+  expect((await scene(page)).inBattleView).toBe(true);
+
+  // E and numeric slot 3 are the same Nature Force command authority.
+  await waitReady(page);
+  await page.evaluate(()=>window.lapisM4!.acceptanceSetPlayerMp!(9999));
+  const beforeQwer=await scene(page);
+  await page.keyboard.press('e');
+  await expect.poll(async()=>(await scene(page)).mp).toBeLessThan(beforeQwer.mp);
+  const afterQwer=await scene(page);
+  expect(afterQwer.action).toBeLessThan(beforeQwer.action);
+
+  const blockedMp=afterQwer.mp;
+  await page.keyboard.press('e');
+  await page.waitForTimeout(100);
+  expect((await scene(page)).mp).toBe(blockedMp);
+
+  await waitReady(page);
+  await page.evaluate(()=>window.lapisM4!.acceptanceSetPlayerMp!(9999));
+  const beforeNumeric=await scene(page);
+  await page.keyboard.press('3');
+  await expect.poll(async()=>(await scene(page)).mp).toBeLessThan(beforeNumeric.mp);
+
+  await waitReady(page);
+  await page.evaluate(()=>window.lapisM4!.acceptanceSetPlayerMp!(0));
+  const beforeNoMp=await scene(page);
+  await page.keyboard.press('e');
+  await page.waitForTimeout(100);
+  const afterNoMp=await scene(page);
+  expect(afterNoMp.mp).toBe(0);
+  expect(afterNoMp.action).toBe(beforeNoMp.action);
 });
 
 test('S34 swordsman Lv36 Sacrifice is a real periodic non-lethal battle buff',async({page})=>{

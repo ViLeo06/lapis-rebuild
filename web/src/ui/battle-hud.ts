@@ -25,9 +25,10 @@ export function renderBattleHud(player:PlayerHudState,battle:BattleHudState):str
       <button type="button" class="battle-command primary-command" data-action="attack"${attrDisabled(unavailable||!battle.canAttack)}><span>普通攻击</span><small>A</small></button>
       <div class="skill-deck" aria-label="技能栏">${skills}</div>
       <div class="battle-utility-deck" aria-label="战斗辅助操作">
-        <button type="button" class="battle-command m7-recovery-command" data-action="recovery-hp"${attrDisabled(unavailable||player.hp>=player.hpMax)}><span>HP +${InfiniteTrainingRecoveryPolicy.hpAmount}</span><small>H · 行动 ${InfiniteTrainingRecoveryPolicy.readinessCost} · 约 ${InfiniteTrainingRecoveryPolicy.estimatedWaitMs/1000} 秒</small></button>
-        <button type="button" class="battle-command m7-recovery-command" data-action="recovery-mp"${attrDisabled(unavailable||player.mp>=player.mpMax)}><span>MP +${InfiniteTrainingRecoveryPolicy.mpAmount}</span><small>M · 行动 ${InfiniteTrainingRecoveryPolicy.readinessCost} · 约 ${InfiniteTrainingRecoveryPolicy.estimatedWaitMs/1000} 秒</small></button>
-        <button type="button" class="battle-command" data-action="rest"${attrDisabled(unavailable||!battle.canRest)}><span>休息</span><small>R</small></button>
+        <button type="button" class="battle-command m7-recovery-command" data-action="recovery-hp"${attrDisabled(unavailable||player.hp>=player.hpMax)}><span>HP +${InfiniteTrainingRecoveryPolicy.hpAmount}</span><small>S · 行动 ${InfiniteTrainingRecoveryPolicy.readinessCost} · 约 ${InfiniteTrainingRecoveryPolicy.estimatedWaitMs/1000} 秒</small></button>
+        <button type="button" class="battle-command m7-recovery-command" data-action="recovery-mp"${attrDisabled(unavailable||player.mp>=player.mpMax)}><span>MP +${InfiniteTrainingRecoveryPolicy.mpAmount}</span><small>D · 行动 ${InfiniteTrainingRecoveryPolicy.readinessCost} · 约 ${InfiniteTrainingRecoveryPolicy.estimatedWaitMs/1000} 秒</small></button>
+        <button type="button" class="battle-command" data-action="rest"${attrDisabled(unavailable||!battle.canRest)}><span>休息</span><small>F</small></button>
+        <button type="button" class="battle-command quiet-command" data-action="battle-range-toggle"${attrDisabled(battle.phase!=='active')}><span>范围</span><small>Space</small></button>
         <button type="button" class="battle-command quiet-command" data-action="battle-menu"><span>菜单</span><small>Esc</small></button>
         ${battle.phase==='active'?`<button type="button" class="battle-command quiet-command" data-action="battle-exit-request"><span>退出战斗</span><small>撤退</small></button>`:''}
         ${battle.canReturn?`<button type="button" class="battle-command return-command" data-action="return"><span>返回</span><small>结算</small></button>`:''}
