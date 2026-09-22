@@ -1,6 +1,6 @@
 # Backlog
 
-> 2026-09-21 | Web-first | Plan v3.5 | M6 user gate passed | active: next milestone planning
+> 2026-09-22 | Web-first | Plan v3.6 | M7 engineering gate passed | active: M7 user playtest
 
 ## 已完成基线
 
@@ -174,13 +174,54 @@
 - [x] 最终 private HTML：22,968,621 bytes；SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。
 - [x] 2026-09-21 用户亲自试玩确认无问题；M6 human gate 通过。
 
-## 下一里程碑 — 方案讨论中
+## M7 S30–S34 — Combat Content Expansion
 
-- [ ] 怪物内容扩充与等级/难度梯度：方案待确认。
-- [ ] 剑士/巫师各阶段实际技能补齐：方案待确认。
-- [ ] 训练营多 battle scene / 怪物组合选择：方案待确认。
-- [ ] HP/MP 恢复动作与无限调试道具：方案待确认。
-- [ ] 正式编号、任务拆分、文件所有权与验收标准：待用户确认方案后再立项。
+### S30 Monster Catalog / Difficulty
+- [x] 19 个固定等级怪物 archetype，覆盖 Lv1–65 七等级段。
+- [x] melee / high-offense / high-defense / fast / ranged / tank / DOT / control / magic / healer / elite / boss 覆盖。
+- [x] Lv26 self-healing monster 可用于灰烬/healingBlocked 验收。
+- [x] 怪物等级/属性不随玩家等级自动缩放；数值统一标 `M7MonsterBalancePolicy / RECONSTRUCTION_POLICY`。
+- [x] PR #43，集成 SHA `e26e68c9b28d98f4311490741a136723a2b064f2`。
+
+### S31 Swordsman Seven-stage Skills
+- [x] 前七技能全部实现，Stage 解锁为 Lv1/6/16/26/36/46/56。
+- [x] 7 技能 × 6 级 = 42 skill-level states。
+- [x] 舍身为 60s 持续 Buff + 10s 周期 HP 代价 + 1 HP floor；与爆发独立。
+- [x] 强防仅降低物理伤害；重击与打晕控制定位分离。
+- [x] PR #45，集成 SHA `911872bbc3b035090890c104c1e8884789b8e728`。
+
+### S32 Wizard Seven-stage Skills
+- [x] 前七技能全部实现，Stage 解锁为 Lv1/6/16/26/36/46/56。
+- [x] 7 技能 × 6 级 = 42 skill-level states。
+- [x] 毒雾 INT scaling + DOT；自然力量 staff hit 吸 MP；灰烬禁疗；石化行动/普通攻击限制；黑暗之帐与失明分离；诅咒之剑一次双倍窗口。
+- [x] PR #46，集成 SHA `aec7d519c56443aca71e67440d7ed1971e07c906`。
+
+### S33 Training / Recovery / Developer Preset
+- [x] 15 场训练战：推荐等级 2/5/6/10/15/16/25/26/35/36/45/46/55/56/65。
+- [x] 15 个 original-client battle zone 目标：1/3/9/11/13/15/21/23/31/41/51/61/71/81/91。
+- [x] HP +200 / MP +200，readiness cost 10，无限次数，不消耗道具。
+- [x] 双职业 Developer Preset + Unlock All Skills Lv6；Debug 状态阻止污染普通 SaveV2。
+- [x] 手机端 Training/Recovery/Skill/Exit 全可触控。
+- [x] PR #44，集成 SHA `26ffefbcb8a764a062994293034dd2fb7752216b`。
+
+### S34 Integration / Acceptance
+- [x] S30–S33 精确 head 集成，不合并 main。
+- [x] production first-seven promotion axis 改为 6/16/26/36/46/56，同时保留 M6 Stage 8–10。
+- [x] shared battle core 使用 fixed concrete S30 roster + explicit battle zone。
+- [x] M7 status/skill runtime、healer/禁疗、DOT、stun、petrify、Sacrifice、Recovery、SaveV2 接入。
+- [x] Web/parser run `35690650510` success：84 parser + 269 unit + 72 Playwright passed / 4 skipped / 0 failed。
+- [x] S17 evidence run `35690650505` success。
+- [x] Drive 18-part 安装包静态重组 SHA 精确匹配固定 2.2；原 EXE/DLL 未执行。
+- [x] private pack 3,771 indexed files / 89,656,141 bytes / 0 integrity failures。
+- [x] final standalone HTML：122,196,302 bytes；SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`。
+- [ ] **用户亲自试玩该精确 SHA 并确认 M7 Human Playability Gate。**
+- [ ] 用户通过前不得 merge PR #42/main。
+
+## 下一步
+
+- [ ] 用户试玩 M7 final private standalone：职业/等级 → 15 场训练 → 技能 → Recovery → 不同怪物/场景 → 退出确认 → Save/Load。
+- [ ] 若用户发现问题，在 S34 分支修复并重新生成新 SHA；旧 SHA 不再作为最终候选。
+- [ ] 用户明确通过后再更新 `USER-ACCEPTED` evidence、关闭 M7 Gate，并决定后续 Web 发布/内容扩展。
 
 ## 边界
 
