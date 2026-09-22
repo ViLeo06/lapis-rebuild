@@ -26,7 +26,7 @@
 - 2026-09-19 用户亲自试玩已给出 M5 体感门结论：**未通过**。NPC 虽可见，但世界 NPC 当前不是可点击交互目标；点击引导员会落入地图点击移动路径，无法自然触发对话/任务。HUD 也仍明显偏开发壳：状态栏过大、引导框和下方框位置不合理、遮挡偏重，且未优先复用已经搜集到的原版/同期界面证据。项目立即转入 **M5.1 User Playtest Repair**。
 - 2026-09-20 用户亲自试玩最终 S24 standalone HTML 后明确确认 **通过**。M5.1 已完成原版结构优先 HUD、NPC pointer/hitbox、显式对话/任务选择、手机触控、延迟追中相机与战斗主动撤退确认。最终验收运行时 head `97bd5063749a15e114ce85119015f9dcb8b7afc0`；run `35442734082` synthetic/private-original/Chromium/offline 成功，E2E `58 passed / 4 skipped / 0 failed`；artifact `10583854810`；最终单 HTML 11,214,215 bytes，SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。**M5 Playability Gate 通过，项目正式进入 M6 Dual-class Completion。**
 - 2026-09-21 M6 Dual-class Completion 已完成自动化与人工验收。S25/S26/S28 已汇入 S29；原 S27 分支无实现，后由 S29 补齐巫师十阶段。生产 runtime 现支持剑士 `100→190`、巫师 `109→199` 共 20 阶段，保留 M5.1 三技能基线、阶段晋阶、M6 SaveV2 extension、装备约束与双职业独立存档轨道。fixed-hash private runtime head `0a51f242a6357031f7f5b83c743fae7724c7e2f9` 的 private E2E 为 `61 passed / 4 skipped / 0 failed`；最终 M6 validation run `35562393435` success，新 30 分钟 soak `1,800,634 ms`、0 page error、0 external request。最终 private HTML 22,968,621 bytes，SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。用户已于 2026-09-21 人工试玩确认无问题，**M6 Gate 正式通过**。
-- 2026-09-22 M7 Combat Content Expansion 已完成 S30–S34 工程集成。当前生产 runtime 具备 19 个固定等级怪物 archetype、Lv1–65 七阶段怪物梯度、剑士/巫师各 7 技能 × 6 级、15 场固定 roster/不同 battle zone 训练战、无限 HP/MP Recovery、Developer Preset、手机端核心操作与 M7 SaveV2。可执行源 head `62566a549a2d1f6f2c15b1a4370329e4382ae94a` 的 run `35690650510` 为 parser 84/84、unit 269/269、Playwright 72 passed / 4 skipped / 0 failed；S17 evidence run `35690650505` success。最终 private-original HTML 为 122,196,302 bytes，SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`。**M7 Engineering Gate 通过；Human Playability Gate 等待用户对该精确 SHA 试玩，PR #42 不得提前合并 main。**
+- 2026-09-22 M7 Combat Content Expansion 已完成 S30–S34 工程集成。当前生产 runtime 具备 19 个固定等级怪物 archetype、Lv1–65 七阶段怪物梯度、剑士/巫师各 7 技能 × 6 级、15 场固定 roster/不同 battle zone 训练战、无限 HP/MP Recovery、Developer Preset、手机端核心操作与 M7 SaveV2。可执行源 head `62566a549a2d1f6f2c15b1a4370329e4382ae94a` 的 run `35690650510` 为 parser 84/84、unit 269/269、Playwright 72 passed / 4 skipped / 0 failed；S17 evidence run `35690650505` success。工程收口时生成过 122,196,302 bytes、SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b` 的 private-original artifact，但该字节快照未持久化到 GitHub/Drive。当前可实际交付给用户的同源码/同 fixed-hash 资产重建包为 `lapis-m7-private-62566a5-handoff.html`，同为 122,196,302 bytes，SHA-256 `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f`，3,772/3,772 内嵌项校验通过。**M7 Engineering Gate 通过；Human Playability Gate 以当前可下载 handoff SHA 为准，PR #42 不得提前合并 main。**
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -176,7 +176,7 @@ S4 已到达明确的 client evidence boundary：
 
 **M7 工程集成已完成，当前唯一阶段门是用户对最终 private-original standalone HTML 的人工试玩。**
 
-在用户对 SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b` 明确验收前：
+在用户对当前可下载 handoff SHA-256 `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f` 明确验收前：
 
 - PR #42 保持未合并；
 - 不把自动测试或 private pack 哈希完整性等同于用户体感通过；
