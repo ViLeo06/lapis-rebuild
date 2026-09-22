@@ -19,10 +19,12 @@ import {ViewportController,BrowserFullscreenPort} from './view/viewport-controll
 import {VisualActor} from './visual-actor.ts';
 import {inflatePointerBounds,pickWorldPointerTarget,unionPointerBounds} from './input/world-pointer-arbitration.ts';
 import type {WorldPointerBounds,WorldPointerTarget} from './input/world-pointer-arbitration.ts';
+import {enemyVisibleInBattle,resolveBattlePointerAction} from './combat/m7-encounter-groups.ts';
 
 type FieldReturn = {mapId:number;anchor:{x:number;y:number};direction:number;camera:{x:number;y:number;zoom:number}};
 export type WorldVisualSpec={id:string;mapId:number;cell:Cell;resourceId:number;label:string;kind:'npc'|'encounter'};
 export type WorldMarkerSpec={id:string;mapId:number;cell:Cell;label:string};
+export type BattleSkillTargetingAdapter=Readonly<{isTargetingSkill:()=>boolean;onEnemyPointer?:(enemyId:string)=>void}>;
 
 export class LabScene extends Phaser.Scene {
   pack: LoadedPack;
@@ -65,6 +67,7 @@ export class LabScene extends Phaser.Scene {
   private reconstructionBattleSetup?:ReconstructionBattleSetup;
   private worldVisualActors=new Map<string,{spec:WorldVisualSpec;actor:VisualActor;label:Phaser.GameObjects.Text}>();
   private worldInteractionHandler?: (entityId:string)=>void;
+  private battleSkillTargetingAdapter?:BattleSkillTargetingAdapter;
   private worldMarkers=new Map<string,{spec:WorldMarkerSpec;label:Phaser.GameObjects.Text}>();
   private enemyVisualActors=new Map<string,VisualActor>();
   private overlay!: Phaser.GameObjects.Graphics;
@@ -137,11 +140,14 @@ export class LabScene extends Phaser.Scene {
         }
       }
       if(this.inBattleView){
-        const activeGroup=activeEnemyEncounterGroup(this.state);
-        const enemy=this.state.enemies.find(e=>e.hp>0&&e.encounterGroup===activeGroup&&Math.hypot(e.x-world.x,e.y-world.y)<30);
-        if(enemy){
-          this.selectedEnemy=enemy.id;
-          this.notice(`已选中 ${enemy.id}`);
+        const action=resolveBattlePointerAction(this.state,world.x,world.y,this.isTargetingSkill());
+        if(action){
+          this.selectedEnemy=action.enemy.id;
+          if(action.kind==='skill-target'){
+            this.battleSkillTargetingAdapter?.onEnemyPointer?.(action.enemy.id);
+            return;
+          }
+          this.attack(null);
           return;
         }
       }
@@ -171,7 +177,7 @@ export class LabScene extends Phaser.Scene {
   // gate input in the reconstruction runtime.
   private busy():boolean{return this.route.length>0||(this.slot!=='03'&&this.timedAction>0);}
   canAct():boolean{return this.inBattleView&&!this.battlePaused&&!document.hidden&&!this.busy()&&actionReady(this.state);}
-  private occupiedCells():Cell[]{const group=activeEnemyEncounterGroup(this.state);return this.state.enemies.filter(e=>e.hp>0&&e.encounterGroup===group).map(e=>pixelCell(e.x,e.y));}
+  private occupiedCells():Cell[]{const group=activeEnemyEncounterGroup(this.state,this.anchor.x,this.anchor.y);return this.state.enemies.filter(e=>e.hp>0&&e.encounterGroup===group).map(e=>pixelCell(e.x,e.y));}
   private reachable():Cell[][]{return this.canAct()?[...reachableCells(this.currentMap().collision,pixelCell(this.anchor.x,this.anchor.y),this.battleMoveLimit(),this.occupiedCells()).values()].filter(p=>p.length>1):[];}
   toggleBattlePause(){if(this.inBattleView&&this.state.phase==='active')this.battlePaused=!this.battlePaused;}
   private battleMoveLimit():number{return Number(this.character)%10===9?P.wizardMoveCells:P.swordsmanMoveCells;}
@@ -245,6 +251,8 @@ export class LabScene extends Phaser.Scene {
   viewportSnapshot(){return this.viewport?.snapshot()??null}
 
   setWorldInteractionHandler(handler:((entityId:string)=>void)|undefined){this.worldInteractionHandler=handler;}
+  setBattleSkillTargetingAdapter(adapter:BattleSkillTargetingAdapter|undefined){this.battleSkillTargetingAdapter=adapter;}
+  isTargetingSkill():boolean{return this.battleSkillTargetingAdapter?.isTargetingSkill()??false;}
 
   private worldPointerTargets():WorldPointerTarget[]{
     const targets:WorldPointerTarget[]=[];
@@ -313,8 +321,7 @@ export class LabScene extends Phaser.Scene {
     for(const row of this.worldMarkers.values())row.label.setVisible(!this.inBattleView&&row.spec.mapId===this.mapId);
     for(const actor of this.enemyVisualActors.values())actor.setVisible(false);
     if(this.inBattleView){
-      const activeGroup=activeEnemyEncounterGroup(this.state);
-      for(const enemy of this.state.enemies)this.enemyVisualActors.get(enemy.id)?.setVisible(enemy.hp>0&&enemy.encounterGroup===activeGroup);
+      for(const enemy of this.state.enemies)this.enemyVisualActors.get(enemy.id)?.setVisible(enemyVisibleInBattle(enemy));
     }
   }
 
@@ -681,15 +688,15 @@ export class LabScene extends Phaser.Scene {
       else if(event.target!=='player')this.enemyVisualActors.get(event.target)?.playTransient('03');
     }
     for(const row of this.worldVisualActors.values())row.actor.update(dt);
-    const activeGroup=activeEnemyEncounterGroup(this.state);
+    const activeGroup=activeEnemyEncounterGroup(this.state,this.anchor.x,this.anchor.y);
     const selected=this.state.enemies.find(enemy=>enemy.id===this.selectedEnemy);
-    if(this.inBattleView&&this.state.phase==='active'&&(!selected||selected.hp<=0||selected.encounterGroup!==activeGroup)){
+    if(this.inBattleView&&this.state.phase==='active'&&activeGroup!==null&&(!selected||selected.hp<=0||selected.encounterGroup!==activeGroup)){
       const replacement=this.state.enemies.find(enemy=>enemy.hp>0&&enemy.encounterGroup===activeGroup);
       if(replacement)this.selectedEnemy=replacement.id;
     }
     for(const enemy of this.state.enemies){
       const actor=this.enemyVisualActors.get(enemy.id);if(!actor)continue;
-      const visible=this.inBattleView&&enemy.hp>0&&enemy.encounterGroup===activeGroup;
+      const visible=this.inBattleView&&enemyVisibleInBattle(enemy);
       actor.setVisible(visible).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(visible?1:.25);
       actor.update(dt);
     }
