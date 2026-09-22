@@ -13,48 +13,13 @@
     "UNVERIFIED"
   ],
   "levelAxis": [
-    {
-      "stage": 1,
-      "classId": 109,
-      "minLevel": 1,
-      "maxLevel": 5
-    },
-    {
-      "stage": 2,
-      "classId": 119,
-      "minLevel": 6,
-      "maxLevel": 15
-    },
-    {
-      "stage": 3,
-      "classId": 129,
-      "minLevel": 16,
-      "maxLevel": 25
-    },
-    {
-      "stage": 4,
-      "classId": 139,
-      "minLevel": 26,
-      "maxLevel": 35
-    },
-    {
-      "stage": 5,
-      "classId": 149,
-      "minLevel": 36,
-      "maxLevel": 45
-    },
-    {
-      "stage": 6,
-      "classId": 159,
-      "minLevel": 46,
-      "maxLevel": 55
-    },
-    {
-      "stage": 7,
-      "classId": 169,
-      "minLevel": 56,
-      "maxLevel": 65
-    }
+    {"stage":1,"classId":109,"minLevel":1,"maxLevel":5},
+    {"stage":2,"classId":119,"minLevel":6,"maxLevel":15},
+    {"stage":3,"classId":129,"minLevel":16,"maxLevel":25},
+    {"stage":4,"classId":139,"minLevel":26,"maxLevel":35},
+    {"stage":5,"classId":149,"minLevel":36,"maxLevel":45},
+    {"stage":6,"classId":159,"minLevel":46,"maxLevel":55},
+    {"stage":7,"classId":169,"minLevel":56,"maxLevel":65}
   ],
   "skillPointPolicy": {
     "id": "M7WizardSkillPointPolicy",
@@ -85,74 +50,15 @@
       "unlockStage": 1,
       "unlockLevel": 1,
       "target": "enemy",
-      "authoredLv1": {
-        "name": "黑暗之帐(Lv1)",
-        "mpCost": 20,
-        "distance": 2,
-        "area": 0,
-        "attackType": 122,
-        "effectA": 5,
-        "effectB": 10,
-        "effectC": 0,
-        "tick": 15,
-        "magicPatternId": 181,
-        "explanation": "降低命中率."
-      },
-      "evidence": {
-        "identity": "VERIFIED-STATIC-ORIGINAL",
-        "highLevelBehavior": "VERIFIED-STATIC-ORIGINAL",
-        "historical": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY"
-      },
+      "authoredLv1": {"name":"黑暗之帐(Lv1)","mpCost":20,"distance":2,"area":0,"attackType":122,"effectA":5,"effectB":10,"effectC":0,"tick":15,"magicPatternId":181,"explanation":"降低命中率."},
+      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-STATIC-ORIGINAL","historical":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 20000,
-          "physicalHitModifier": -0.15,
-          "magicHitModifier": 0
-        },
-        {
-          "level": 2,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 22000,
-          "physicalHitModifier": -0.2,
-          "magicHitModifier": 0
-        },
-        {
-          "level": 3,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 24000,
-          "physicalHitModifier": -0.25,
-          "magicHitModifier": 0
-        },
-        {
-          "level": 4,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 26000,
-          "physicalHitModifier": -0.3,
-          "magicHitModifier": 0
-        },
-        {
-          "level": 5,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 28000,
-          "physicalHitModifier": -0.35,
-          "magicHitModifier": 0
-        },
-        {
-          "level": 6,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "physicalHitModifier": -0.4,
-          "magicHitModifier": 0
-        }
+        {"level":1,"mpCost":20,"readinessCost":10,"durationMs":20000,"physicalHitModifier":-0.15,"magicHitModifier":0},
+        {"level":2,"mpCost":20,"readinessCost":10,"durationMs":22000,"physicalHitModifier":-0.20,"magicHitModifier":0},
+        {"level":3,"mpCost":20,"readinessCost":10,"durationMs":24000,"physicalHitModifier":-0.25,"magicHitModifier":0},
+        {"level":4,"mpCost":20,"readinessCost":10,"durationMs":26000,"physicalHitModifier":-0.30,"magicHitModifier":0},
+        {"level":5,"mpCost":20,"readinessCost":10,"durationMs":28000,"physicalHitModifier":-0.35,"magicHitModifier":0},
+        {"level":6,"mpCost":20,"readinessCost":10,"durationMs":30000,"physicalHitModifier":-0.40,"magicHitModifier":0}
       ]
     },
     {
@@ -162,106 +68,15 @@
       "unlockStage": 2,
       "unlockLevel": 6,
       "target": "enemy-area",
-      "authoredLv1": {
-        "name": "毒雾(Lv1)",
-        "mpCost": 20,
-        "distance": 4,
-        "area": 1,
-        "attackType": 16,
-        "effectA": -15,
-        "effectB": 20,
-        "effectC": 8,
-        "tick": 12,
-        "magicPatternId": 182,
-        "explanation": "用毒使其中毒."
-      },
-      "evidence": {
-        "identity": "VERIFIED-STATIC-ORIGINAL",
-        "highLevelBehavior": "VERIFIED-HISTORICAL",
-        "intScaling": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY",
-        "gridGeometry": "VERIFIED-STATIC-ORIGINAL",
-        "castDistanceByLevel": "VERIFIED-STATIC-ORIGINAL"
-      },
+      "authoredLv1": {"name":"毒雾(Lv1)","mpCost":20,"distance":4,"area":1,"attackType":16,"effectA":-15,"effectB":20,"effectC":8,"tick":12,"magicPatternId":182,"explanation":"用毒使其中毒."},
+      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-HISTORICAL","intScaling":"VERIFIED-HISTORICAL","gridGeometry":"VERIFIED-STATIC-ORIGINAL","castDistanceByLevel":"VERIFIED-STATIC-ORIGINAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "tickIntervalMs": 5000,
-          "ticks": 6,
-          "baseDamage": 4,
-          "intScale": 0.12,
-          "rangeCells": 4,
-          "areaCells": 5,
-          "areaCode": 1
-        },
-        {
-          "level": 2,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "tickIntervalMs": 5000,
-          "ticks": 6,
-          "baseDamage": 5,
-          "intScale": 0.14,
-          "rangeCells": 4,
-          "areaCells": 5,
-          "areaCode": 1
-        },
-        {
-          "level": 3,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "tickIntervalMs": 5000,
-          "ticks": 6,
-          "baseDamage": 6,
-          "intScale": 0.16,
-          "rangeCells": 5,
-          "areaCells": 13,
-          "areaCode": 2
-        },
-        {
-          "level": 4,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "tickIntervalMs": 5000,
-          "ticks": 6,
-          "baseDamage": 7,
-          "intScale": 0.18,
-          "rangeCells": 5,
-          "areaCells": 13,
-          "areaCode": 2
-        },
-        {
-          "level": 5,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "tickIntervalMs": 5000,
-          "ticks": 6,
-          "baseDamage": 8,
-          "intScale": 0.2,
-          "rangeCells": 6,
-          "areaCells": 13,
-          "areaCode": 2
-        },
-        {
-          "level": 6,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "tickIntervalMs": 5000,
-          "ticks": 6,
-          "baseDamage": 10,
-          "intScale": 0.225,
-          "rangeCells": 6,
-          "areaCells": 25,
-          "areaCode": 3
-        }
+        {"level":1,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":4,"intScale":0.12,"rangeCells":4,"areaCode":1,"areaCells":5},
+        {"level":2,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":5,"intScale":0.14,"rangeCells":4,"areaCode":1,"areaCells":5},
+        {"level":3,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":6,"intScale":0.16,"rangeCells":5,"areaCode":2,"areaCells":13},
+        {"level":4,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":7,"intScale":0.18,"rangeCells":5,"areaCode":2,"areaCells":13},
+        {"level":5,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":8,"intScale":0.20,"rangeCells":6,"areaCode":2,"areaCells":13},
+        {"level":6,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":10,"intScale":0.225,"rangeCells":6,"areaCode":3,"areaCells":25}
       ]
     },
     {
@@ -271,74 +86,15 @@
       "unlockStage": 3,
       "unlockLevel": 16,
       "target": "self",
-      "authoredLv1": {
-        "name": "自然力量(Lv1)",
-        "mpCost": 20,
-        "distance": 0,
-        "area": 0,
-        "attackType": 111,
-        "effectA": 0,
-        "effectB": 20,
-        "effectC": 0,
-        "tick": 10,
-        "magicPatternId": 183,
-        "explanation": "用手杖攻击的时候,_吸收魔法力."
-      },
-      "evidence": {
-        "identity": "VERIFIED-STATIC-ORIGINAL",
-        "highLevelBehavior": "VERIFIED-HISTORICAL",
-        "drainRange": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY"
-      },
+      "authoredLv1": {"name":"自然力量(Lv1)","mpCost":20,"distance":0,"area":0,"attackType":111,"effectA":0,"effectB":20,"effectC":0,"tick":10,"magicPatternId":183,"explanation":"用手杖攻击的时候,_吸收魔法力."},
+      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-HISTORICAL","drainRange":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "drainMin": 1,
-          "drainMax": 1
-        },
-        {
-          "level": 2,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "drainMin": 1,
-          "drainMax": 2
-        },
-        {
-          "level": 3,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "drainMin": 1,
-          "drainMax": 2
-        },
-        {
-          "level": 4,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "drainMin": 2,
-          "drainMax": 3
-        },
-        {
-          "level": 5,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "drainMin": 2,
-          "drainMax": 3
-        },
-        {
-          "level": 6,
-          "mpCost": 20,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "drainMin": 3,
-          "drainMax": 3
-        }
+        {"level":1,"mpCost":20,"readinessCost":10,"durationMs":45000,"drainMin":1,"drainMax":1},
+        {"level":2,"mpCost":20,"readinessCost":10,"durationMs":45000,"drainMin":1,"drainMax":2},
+        {"level":3,"mpCost":20,"readinessCost":10,"durationMs":45000,"drainMin":1,"drainMax":2},
+        {"level":4,"mpCost":20,"readinessCost":10,"durationMs":45000,"drainMin":2,"drainMax":3},
+        {"level":5,"mpCost":20,"readinessCost":10,"durationMs":45000,"drainMin":2,"drainMax":3},
+        {"level":6,"mpCost":20,"readinessCost":10,"durationMs":45000,"drainMin":3,"drainMax":3}
       ]
     },
     {
@@ -348,68 +104,15 @@
       "unlockStage": 4,
       "unlockLevel": 26,
       "target": "enemy-area",
-      "authoredLv1": {
-        "name": "灰烬(Lv1)",
-        "mpCost": 27,
-        "distance": 3,
-        "area": 2,
-        "attackType": 122,
-        "effectA": 0,
-        "effectB": 30,
-        "effectC": 15,
-        "tick": 15,
-        "magicPatternId": 184,
-        "explanation": "阻止体力的恢复."
-      },
-      "evidence": {
-        "identity": "VERIFIED-STATIC-ORIGINAL",
-        "highLevelBehavior": "VERIFIED-STATIC-ORIGINAL",
-        "historical": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY"
-      },
+      "authoredLv1": {"name":"灰烬(Lv1)","mpCost":27,"distance":3,"area":2,"attackType":122,"effectA":0,"effectB":30,"effectC":15,"tick":15,"magicPatternId":184,"explanation":"阻止体力的恢复."},
+      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-STATIC-ORIGINAL","historical":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 27,
-          "readinessCost": 10,
-          "durationMs": 20000,
-          "healingBlocked": true
-        },
-        {
-          "level": 2,
-          "mpCost": 27,
-          "readinessCost": 10,
-          "durationMs": 25000,
-          "healingBlocked": true
-        },
-        {
-          "level": 3,
-          "mpCost": 27,
-          "readinessCost": 10,
-          "durationMs": 30000,
-          "healingBlocked": true
-        },
-        {
-          "level": 4,
-          "mpCost": 27,
-          "readinessCost": 10,
-          "durationMs": 35000,
-          "healingBlocked": true
-        },
-        {
-          "level": 5,
-          "mpCost": 27,
-          "readinessCost": 10,
-          "durationMs": 40000,
-          "healingBlocked": true
-        },
-        {
-          "level": 6,
-          "mpCost": 27,
-          "readinessCost": 10,
-          "durationMs": 45000,
-          "healingBlocked": true
-        }
+        {"level":1,"mpCost":27,"readinessCost":10,"durationMs":20000,"healingBlocked":true},
+        {"level":2,"mpCost":27,"readinessCost":10,"durationMs":25000,"healingBlocked":true},
+        {"level":3,"mpCost":27,"readinessCost":10,"durationMs":30000,"healingBlocked":true},
+        {"level":4,"mpCost":27,"readinessCost":10,"durationMs":35000,"healingBlocked":true},
+        {"level":5,"mpCost":27,"readinessCost":10,"durationMs":40000,"healingBlocked":true},
+        {"level":6,"mpCost":27,"readinessCost":10,"durationMs":45000,"healingBlocked":true}
       ]
     },
     {
@@ -419,74 +122,15 @@
       "unlockStage": 5,
       "unlockLevel": 36,
       "target": "enemy-area",
-      "authoredLv1": {
-        "name": "诅咒之眼(Lv1)",
-        "mpCost": 18,
-        "distance": 4,
-        "area": 2,
-        "attackType": 122,
-        "effectA": 0,
-        "effectB": 20,
-        "effectC": 10,
-        "tick": 15,
-        "magicPatternId": 185,
-        "explanation": "把敌人石化,_防止敌人行动."
-      },
-      "evidence": {
-        "identity": "VERIFIED-STATIC-ORIGINAL",
-        "highLevelBehavior": "VERIFIED-HISTORICAL",
-        "untargetableWhilePetrified": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY"
-      },
+      "authoredLv1": {"name":"诅咒之眼(Lv1)","mpCost":18,"distance":4,"area":2,"attackType":122,"effectA":0,"effectB":20,"effectC":10,"tick":15,"magicPatternId":185,"explanation":"把敌人石化,_防止敌人行动."},
+      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-HISTORICAL","untargetableWhilePetrified":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 18,
-          "readinessCost": 10,
-          "durationMs": 5000,
-          "petrified": true,
-          "ordinaryAttackTargetable": false
-        },
-        {
-          "level": 2,
-          "mpCost": 18,
-          "readinessCost": 10,
-          "durationMs": 7000,
-          "petrified": true,
-          "ordinaryAttackTargetable": false
-        },
-        {
-          "level": 3,
-          "mpCost": 18,
-          "readinessCost": 10,
-          "durationMs": 9000,
-          "petrified": true,
-          "ordinaryAttackTargetable": false
-        },
-        {
-          "level": 4,
-          "mpCost": 18,
-          "readinessCost": 10,
-          "durationMs": 11000,
-          "petrified": true,
-          "ordinaryAttackTargetable": false
-        },
-        {
-          "level": 5,
-          "mpCost": 18,
-          "readinessCost": 10,
-          "durationMs": 13000,
-          "petrified": true,
-          "ordinaryAttackTargetable": false
-        },
-        {
-          "level": 6,
-          "mpCost": 18,
-          "readinessCost": 10,
-          "durationMs": 15000,
-          "petrified": true,
-          "ordinaryAttackTargetable": false
-        }
+        {"level":1,"mpCost":18,"readinessCost":10,"durationMs":5000,"petrified":true,"ordinaryAttackTargetable":false},
+        {"level":2,"mpCost":18,"readinessCost":10,"durationMs":7000,"petrified":true,"ordinaryAttackTargetable":false},
+        {"level":3,"mpCost":18,"readinessCost":10,"durationMs":9000,"petrified":true,"ordinaryAttackTargetable":false},
+        {"level":4,"mpCost":18,"readinessCost":10,"durationMs":11000,"petrified":true,"ordinaryAttackTargetable":false},
+        {"level":5,"mpCost":18,"readinessCost":10,"durationMs":13000,"petrified":true,"ordinaryAttackTargetable":false},
+        {"level":6,"mpCost":18,"readinessCost":10,"durationMs":15000,"petrified":true,"ordinaryAttackTargetable":false}
       ]
     },
     {
@@ -497,67 +141,14 @@
       "unlockLevel": 46,
       "target": "enemy",
       "authoredLv1": null,
-      "evidence": {
-        "identity": "VERIFIED-HISTORICAL",
-        "clientId": "UNVERIFIED",
-        "highLevelBehavior": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY"
-      },
+      "evidence": {"identity":"VERIFIED-HISTORICAL","clientId":"UNVERIFIED","highLevelBehavior":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 24,
-          "readinessCost": 10,
-          "durationMs": 10000,
-          "physicalHitModifier": -0.35,
-          "magicHitModifier": -0.1,
-          "rangeReductionCells": 1
-        },
-        {
-          "level": 2,
-          "mpCost": 24,
-          "readinessCost": 10,
-          "durationMs": 11000,
-          "physicalHitModifier": -0.4,
-          "magicHitModifier": -0.14,
-          "rangeReductionCells": 1
-        },
-        {
-          "level": 3,
-          "mpCost": 24,
-          "readinessCost": 10,
-          "durationMs": 12000,
-          "physicalHitModifier": -0.45,
-          "magicHitModifier": -0.18,
-          "rangeReductionCells": 1
-        },
-        {
-          "level": 4,
-          "mpCost": 24,
-          "readinessCost": 10,
-          "durationMs": 13000,
-          "physicalHitModifier": -0.5,
-          "magicHitModifier": -0.22,
-          "rangeReductionCells": 2
-        },
-        {
-          "level": 5,
-          "mpCost": 24,
-          "readinessCost": 10,
-          "durationMs": 14000,
-          "physicalHitModifier": -0.55,
-          "magicHitModifier": -0.26,
-          "rangeReductionCells": 2
-        },
-        {
-          "level": 6,
-          "mpCost": 24,
-          "readinessCost": 10,
-          "durationMs": 15000,
-          "physicalHitModifier": -0.6,
-          "magicHitModifier": -0.3,
-          "rangeReductionCells": 2
-        }
+        {"level":1,"mpCost":24,"readinessCost":10,"durationMs":10000,"physicalHitModifier":-0.35,"magicHitModifier":-0.10,"rangeReductionCells":1},
+        {"level":2,"mpCost":24,"readinessCost":10,"durationMs":11000,"physicalHitModifier":-0.40,"magicHitModifier":-0.14,"rangeReductionCells":1},
+        {"level":3,"mpCost":24,"readinessCost":10,"durationMs":12000,"physicalHitModifier":-0.45,"magicHitModifier":-0.18,"rangeReductionCells":1},
+        {"level":4,"mpCost":24,"readinessCost":10,"durationMs":13000,"physicalHitModifier":-0.50,"magicHitModifier":-0.22,"rangeReductionCells":2},
+        {"level":5,"mpCost":24,"readinessCost":10,"durationMs":14000,"physicalHitModifier":-0.55,"magicHitModifier":-0.26,"rangeReductionCells":2},
+        {"level":6,"mpCost":24,"readinessCost":10,"durationMs":15000,"physicalHitModifier":-0.60,"magicHitModifier":-0.30,"rangeReductionCells":2}
       ]
     },
     {
@@ -568,55 +159,14 @@
       "unlockLevel": 56,
       "target": "enemy",
       "authoredLv1": null,
-      "evidence": {
-        "identity": "VERIFIED-HISTORICAL",
-        "clientId": "UNVERIFIED",
-        "highLevelBehavior": "VERIFIED-HISTORICAL",
-        "numericBalance": "RECONSTRUCTION_POLICY"
-      },
+      "evidence": {"identity":"VERIFIED-HISTORICAL","clientId":"UNVERIFIED","highLevelBehavior":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {
-          "level": 1,
-          "mpCost": 30,
-          "readinessCost": 10,
-          "durationMs": 10000,
-          "nextPhysicalDamageMultiplier": 2
-        },
-        {
-          "level": 2,
-          "mpCost": 30,
-          "readinessCost": 10,
-          "durationMs": 11000,
-          "nextPhysicalDamageMultiplier": 2
-        },
-        {
-          "level": 3,
-          "mpCost": 30,
-          "readinessCost": 10,
-          "durationMs": 12000,
-          "nextPhysicalDamageMultiplier": 2
-        },
-        {
-          "level": 4,
-          "mpCost": 30,
-          "readinessCost": 10,
-          "durationMs": 13000,
-          "nextPhysicalDamageMultiplier": 2
-        },
-        {
-          "level": 5,
-          "mpCost": 30,
-          "readinessCost": 10,
-          "durationMs": 14000,
-          "nextPhysicalDamageMultiplier": 2
-        },
-        {
-          "level": 6,
-          "mpCost": 30,
-          "readinessCost": 10,
-          "durationMs": 15000,
-          "nextPhysicalDamageMultiplier": 2
-        }
+        {"level":1,"mpCost":30,"readinessCost":10,"durationMs":10000,"nextPhysicalDamageMultiplier":2},
+        {"level":2,"mpCost":30,"readinessCost":10,"durationMs":11000,"nextPhysicalDamageMultiplier":2},
+        {"level":3,"mpCost":30,"readinessCost":10,"durationMs":12000,"nextPhysicalDamageMultiplier":2},
+        {"level":4,"mpCost":30,"readinessCost":10,"durationMs":13000,"nextPhysicalDamageMultiplier":2},
+        {"level":5,"mpCost":30,"readinessCost":10,"durationMs":14000,"nextPhysicalDamageMultiplier":2},
+        {"level":6,"mpCost":30,"readinessCost":10,"durationMs":15000,"nextPhysicalDamageMultiplier":2}
       ]
     }
   ],
