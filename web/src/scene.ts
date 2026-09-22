@@ -296,11 +296,8 @@ export class LabScene extends Phaser.Scene {
       const next=this.battleCamera.centerStep(snapshot.camera,this.battleCameraTarget,snapshot.viewport,snapshot.world,deltaMs);
       this.viewport.setScroll(next.x,next.y);
       const after=this.viewport.snapshot();
-      const center={
-        x:after.camera.scrollX+after.viewport.width/(2*after.camera.zoom),
-        y:after.camera.scrollY+after.viewport.height/(2*after.camera.zoom),
-      };
-      if(Math.hypot(center.x-this.battleCameraTarget.x,center.y-this.battleCameraTarget.y)<2){
+      const desired=this.battleCamera.targetScroll(after.camera,this.battleCameraTarget,after.viewport,after.world);
+      if(Math.hypot(after.camera.scrollX-desired.x,after.camera.scrollY-desired.y)<2){
         this.battleCameraTarget=null;
         this.battleCameraManualUntil=time+800;
       }
@@ -331,7 +328,7 @@ export class LabScene extends Phaser.Scene {
     this.minimapModel=model;
     g.clear();
     if(!model){g.setVisible(false);return;}
-    g.setVisible(true);
+    g.setVisible(true).setScale(1/this.cameras.main.zoom);
     const {layout}=model;
     g.fillStyle(0x0d1718,.76);
     g.fillRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
