@@ -55,6 +55,7 @@ import {buildM7DeveloperCharacterPreset} from './training/m7-developer-preset.ts
 import {createM7IntegratedSkillState,m7RuntimeSkillCommands,reconcileM7IntegratedSkillState} from './training/m7-skill-progression.ts';
 import type {M7IntegratedSkillState,M7RuntimeSkillCommand} from './training/m7-skill-progression.ts';
 import {useM7Skill} from './combat/m7-battle-skills.ts';
+import {m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-stage-runtime.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
 import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
 import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
@@ -287,6 +288,13 @@ export class M4RuntimeIntegration{
     this.scene.attack=(skill:Skill|null)=>{
       if(skill&&!this.skillAllowedForRuntime(this.scene.character,skill.skill_id)){
         this.setNotice('当前职业不能使用该技能');return;
+      }
+      if(!skill){
+        const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
+        if(target&&!m7WizardOrdinaryAttackTargetable(target.m7Status.wizard)){
+          this.setNotice('石化目标不能被普通攻击');
+          return;
+        }
       }
       const before=this.scene.snapshot();
       originalAttack(skill);
