@@ -152,7 +152,9 @@ test('S34 battle deck keeps ordinary attack exposed and preserves skill scroll w
 
 test('S34A A hotkey uses ordinary-attack authority without legacy WASD double trigger',async({page})=>{
   await ready(page);
-  await page.keyboard.press('a');
+  // Uppercase A avoids the intentional field WASD movement path while proving
+  // the battle-only attack binding is inert outside battle.
+  await page.keyboard.press('A');
   expect((await scene(page)).inBattleView).toBe(false);
 
   await startTraining(page,1);
