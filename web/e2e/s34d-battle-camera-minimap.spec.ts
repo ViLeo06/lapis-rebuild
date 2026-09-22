@@ -58,17 +58,29 @@ test('S34D battle keeps normal scale, edge scrolls, and clamps inside a larger b
   expect(visibleW).toBeLessThanOrEqual(viewport.world.width+.01);
   expect(visibleH).toBeLessThanOrEqual(viewport.world.height+.01);
 
-  const box=await page.locator('canvas').boundingBox();
-  if(!box)throw new Error('Missing canvas');
+  const minX=viewport.world.x,minY=viewport.world.y;
   const maxX=viewport.world.x+viewport.world.width-visibleW;
-  const panRight=maxX-entered.camera.x>24;
-  const beforeX=entered.camera.x;
-  await page.mouse.move(panRight?box.x+box.width-2:box.x+2,box.y+box.height*.42);
+  const maxY=viewport.world.y+viewport.world.height-visibleH;
+  const candidates=[
+    {axis:'x' as const,sign:1,room:maxX-entered.camera.x,x:viewport.viewport.width-2,y:viewport.viewport.height*.42},
+    {axis:'x' as const,sign:-1,room:entered.camera.x-minX,x:2,y:viewport.viewport.height*.42},
+    {axis:'y' as const,sign:-1,room:entered.camera.y-minY,x:viewport.viewport.width*.5,y:2},
+    {axis:'y' as const,sign:1,room:maxY-entered.camera.y,x:viewport.viewport.width*.5,y:viewport.viewport.height-2},
+  ];
+  const pan=candidates.find(candidate=>candidate.room>4);
+  if(!pan)throw new Error('Synthetic battle map has no scrollable camera axis');
+  const beforeAxis=pan.axis==='x'?entered.camera.x:entered.camera.y;
+  const client=await canvasPoint(page,pan.x,pan.y);
+  await page.locator('canvas').dispatchEvent('pointermove',{
+    clientX:client.x,clientY:client.y,pointerType:'mouse',buttons:0,
+  });
+  const threshold=Math.min(4,pan.room*.25);
   await expect.poll(async()=>{
-    const x=(await scene(page)).camera.x;
-    return panRight?x>beforeX+4:x<beforeX-4;
+    const camera=(await scene(page)).camera;
+    const current=pan.axis==='x'?camera.x:camera.y;
+    return pan.sign*(current-beforeAxis)>threshold;
   },{timeout:4000}).toBe(true);
-  await page.mouse.move(2,2);
+  await page.locator('canvas').dispatchEvent('pointerout',{pointerType:'mouse'});
 
   const moved=await scene(page);
   const movedViewport=moved.viewport!;
