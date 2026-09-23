@@ -16,6 +16,9 @@ import {frameIntervalMs,sequenceDurationMs} from './animation-policy.ts';
 import {createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY} from './runtime-boundaries.ts';
 import type {BattleEntry,InteractionIntent} from './runtime-boundaries.ts';
 import {ViewportController,BrowserFullscreenPort} from './view/viewport-controller.ts';
+import {BattleCameraPolicy,battleEntryZoom} from './view/battle-camera.ts';
+import {buildBattleMinimapModel,minimapContains,minimapToWorld} from './view/battle-minimap.ts';
+import type {BattleMinimapModel} from './view/battle-minimap.ts';
 import {VisualActor} from './visual-actor.ts';
 import {inflatePointerBounds,pickWorldPointerTarget,unionPointerBounds} from './input/world-pointer-arbitration.ts';
 import type {WorldPointerBounds,WorldPointerTarget} from './input/world-pointer-arbitration.ts';
@@ -64,6 +67,12 @@ export class LabScene extends Phaser.Scene {
   private effectSprite?:Phaser.GameObjects.Image;
   private viewport?:ViewportController;
   private cameraFollowEnabled=false;
+  private battleCamera=new BattleCameraPolicy();
+  private battleCameraPointer={x:0,y:0,inside:false,coarse:false};
+  private battleCameraTarget:{x:number;y:number}|null=null;
+  private battleCameraManualUntil=0;
+  private minimapGraphics?:Phaser.GameObjects.Graphics;
+  private minimapModel:BattleMinimapModel|null=null;
   private reconstructionBattleSetup?:ReconstructionBattleSetup;
   private worldVisualActors=new Map<string,{spec:WorldVisualSpec;actor:VisualActor;label:Phaser.GameObjects.Text}>();
   private worldInteractionHandler?: (entityId:string)=>void;
@@ -113,6 +122,7 @@ export class LabScene extends Phaser.Scene {
       this.effectSprite=this.add.image(this.anchor.x+eb.left,this.anchor.y+eb.top,effectTextureKey(e.resource_id,0)).setOrigin(0).setDepth(30).setVisible(false);
     }
     this.overlay=this.add.graphics().setDepth(40);
+    this.minimapGraphics=this.add.graphics().setDepth(2000).setVisible(false);
     this.guideLabel=this.add.text(0,0,'M3 引导员\nRECONSTRUCTION',{
       fontFamily:'sans-serif',fontSize:'11px',color:'#f1d39a',backgroundColor:'#172322cc',align:'center',padding:{x:5,y:3}
     }).setOrigin(.5,1).setDepth(50);
@@ -125,11 +135,15 @@ export class LabScene extends Phaser.Scene {
     this.fit();
     this.scale.on('resize',()=>this.viewport?.reclamp());
     this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{
+      this.battleCameraPointer={x:p.x,y:p.y,inside:true,coarse:this.coarsePointer()};
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
       this.hover={x:Math.round(world.x),y:Math.round(world.y)};
-      this.game.canvas.style.cursor=!this.inBattleView&&this.worldPointerTargetAt(world.x,world.y)?'pointer':'default';
+      const minimapHit=this.inBattleView&&this.minimapModel?minimapContains(this.minimapModel.layout,{x:p.x,y:p.y}):false;
+      this.game.canvas.style.cursor=minimapHit||(!this.inBattleView&&this.worldPointerTargetAt(world.x,world.y))?'pointer':'default';
     });
+    this.input.on('gameout',()=>{this.battleCameraPointer={...this.battleCameraPointer,inside:false};});
     this.input.on('pointerdown',(p:Phaser.Input.Pointer)=>{
+      if(this.inBattleView&&this.handleBattleMinimapPointer(p.x,p.y))return;
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
       if(!this.inBattleView){
         const target=this.worldPointerTargetAt(world.x,world.y);
@@ -226,15 +240,21 @@ export class LabScene extends Phaser.Scene {
   }
   fit(){
     if(!this.cameras?.main)return;
-    if(this.viewport){
-      if(this.inBattleView&&this.battleFocus){
-        const f=this.battleFocus;
-        this.viewport.frameRect({x:f.x-f.width/2,y:f.y-f.height/2,width:f.width,height:f.height});
-        return;
+    if(this.inBattleView){
+      // Never zoom out to fit the encounter. Large battlefields stay at 1:1;
+      // undersized maps may zoom in just enough to cover the viewport so no
+      // out-of-map blank area is exposed.
+      if(this.viewport){
+        const snapshot=this.viewport.snapshot();
+        this.viewport.setZoom(battleEntryZoom(snapshot.viewport,snapshot.world));
+        this.viewport.centerOn(this.anchor);
+      }else{
+        const {width,height}=this.currentMap().manifest.render;
+        this.cameras.main.setZoom(Math.max(1,this.scale.width/width,this.scale.height/height)).centerOn(this.anchor.x,this.anchor.y);
       }
-      this.viewport.fitWorld();return;
+      return;
     }
-    if(this.inBattleView&&this.battleFocus){const f=this.battleFocus;this.cameras.main.setZoom(Math.min(this.scale.width/f.width,this.scale.height/f.height)*.96).centerOn(f.x,f.y);return;}
+    if(this.viewport){this.viewport.fitWorld();return;}
     const {width,height}=this.currentMap().manifest.render;
     this.cameras.main.setZoom(Math.min(this.scale.width/width,this.scale.height/height)*.98).centerOn(width/2,height/2);
   }
@@ -249,6 +269,96 @@ export class LabScene extends Phaser.Scene {
   resetZoom(){if(this.viewport)return this.viewport.resetZoom();this.cameras.main.setZoom(1);return 1;}
   async toggleFullscreen(){return this.viewport?.toggleFullscreen()??false}
   viewportSnapshot(){return this.viewport?.snapshot()??null}
+
+  private coarsePointer(){
+    return typeof window.matchMedia==='function'&&window.matchMedia('(pointer: coarse)').matches;
+  }
+
+  private battleMinimapBottomInset(){
+    return this.scale.width<=700?220:this.scale.width<=900?168:118;
+  }
+
+  private currentBattleMinimapModel(){
+    if(!this.inBattleView||!this.viewport)return null;
+    const snapshot=this.viewport.snapshot();
+    return buildBattleMinimapModel(
+      snapshot.viewport,
+      snapshot.world,
+      snapshot.camera,
+      this.anchor,
+      this.state.enemies,
+      activeEnemyEncounterGroup(this.state,this.anchor.x,this.anchor.y),
+      {bottomInset:this.battleMinimapBottomInset()},
+    );
+  }
+
+  private handleBattleMinimapPointer(x:number,y:number){
+    const model=this.currentBattleMinimapModel();
+    if(!model||!minimapContains(model.layout,{x,y}))return false;
+    const world=this.viewport?.snapshot().world;
+    if(!world)return true;
+    this.battleCameraTarget=minimapToWorld(model.layout,world,{x,y});
+    this.battleCameraManualUntil=this.time.now+1400;
+    return true;
+  }
+
+  private updateBattleCamera(deltaMs:number,time:number){
+    if(!this.inBattleView||!this.viewport)return;
+    const snapshot=this.viewport.snapshot();
+    if(this.battleCameraTarget){
+      const next=this.battleCamera.centerStep(snapshot.camera,this.battleCameraTarget,snapshot.viewport,snapshot.world,deltaMs);
+      this.viewport.setScroll(next.x,next.y);
+      const after=this.viewport.snapshot();
+      const desired=this.battleCamera.targetScroll(after.camera,this.battleCameraTarget,after.viewport,after.world);
+      if(Math.hypot(after.camera.scrollX-desired.x,after.camera.scrollY-desired.y)<2){
+        this.battleCameraTarget=null;
+        this.battleCameraManualUntil=time+800;
+      }
+      return;
+    }
+    const model=this.currentBattleMinimapModel();
+    const overMinimap=model?minimapContains(model.layout,{x:this.battleCameraPointer.x,y:this.battleCameraPointer.y}):false;
+    const pointer=overMinimap?{...this.battleCameraPointer,inside:false}:this.battleCameraPointer;
+    const followPlayer=time>=this.battleCameraManualUntil;
+    const step=this.battleCamera.step(
+      snapshot.camera,
+      this.anchor,
+      snapshot.viewport,
+      snapshot.world,
+      deltaMs,
+      pointer,
+      followPlayer,
+      followPlayer&&this.route.length===0,
+    );
+    this.viewport.setScroll(step.scroll.x,step.scroll.y);
+    if(step.source==='edge')this.battleCameraManualUntil=time+900;
+  }
+
+  private drawBattleMinimap(){
+    const g=this.minimapGraphics;
+    if(!g)return;
+    const model=this.currentBattleMinimapModel();
+    this.minimapModel=model;
+    g.clear();
+    if(!model){g.setVisible(false);return;}
+    const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
+    g.setVisible(true).setPosition(origin.x,origin.y).setScale(1/camera.zoom);
+    const {layout}=model;
+    g.fillStyle(0x0d1718,.76);
+    g.fillRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
+    g.lineStyle(1,0xb5a47c,.72);
+    g.strokeRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
+    g.fillStyle(0x182322,.78);
+    g.fillRect(layout.inner.x,layout.inner.y,layout.inner.width,layout.inner.height);
+    g.lineStyle(1,0xd8c99d,.78);
+    g.strokeRect(model.viewport.x,model.viewport.y,model.viewport.width,model.viewport.height);
+    for(const enemy of model.enemies){
+      g.fillStyle(0x9b62b6,enemy.active?.95:.62);
+      g.fillCircle(enemy.x,enemy.y,enemy.active?3:2);
+    }
+    g.fillStyle(0x5ba8e8,1);
+    g.fillCircle(model.player.x,model.player.y,3);
+  }
 
   setWorldInteractionHandler(handler:((entityId:string)=>void)|undefined){this.worldInteractionHandler=handler;}
   setBattleSkillTargetingAdapter(adapter:BattleSkillTargetingAdapter|undefined){this.battleSkillTargetingAdapter=adapter;}
@@ -470,6 +580,8 @@ export class LabScene extends Phaser.Scene {
     this.state=beginBattle(this.anchor.x,this.anchor.y,entry,this.reconstructionBattleSetup);
     layout.enemies.forEach((cell,i)=>{const enemy=this.state.enemies[i];if(!enemy)return;const xy=referenceCellToScreen(cell);enemy.x=xy[0];enemy.y=xy[1];});
     this.ensureEnemyVisualActors();
+    this.battleCameraTarget=null;
+    this.battleCameraManualUntil=this.time.now+700;
     this.fit();
     this.selectedEnemy=this.state.enemies.find(enemy=>enemy.hp>0)?.id??'dummy-melee';
     this.setAction('00');
@@ -489,6 +601,10 @@ export class LabScene extends Phaser.Scene {
     this.battleEntry=null;
     this.battleFocus=null;
     this.battlePaused=false;
+    this.battleCameraTarget=null;
+    this.battleCameraManualUntil=0;
+    this.minimapModel=null;
+    this.minimapGraphics?.clear().setVisible(false);
     this.effectOrigin=null;
     this.state=initialState();
     this.route=[];
@@ -606,6 +722,15 @@ export class LabScene extends Phaser.Scene {
     const cam=this.cameras.main,origin=cam.getWorldPoint(0,0);
     return {
       camera:{x:origin.x,y:origin.y,zoom:cam.zoom},viewport:this.viewportSnapshot(),cameraFollow:this.cameraFollowEnabled,
+      battleCamera:{target:this.battleCameraTarget?{...this.battleCameraTarget}:null,manualUntil:this.battleCameraManualUntil},
+      minimap:this.minimapModel?{
+        visible:this.inBattleView,
+        layout:{...this.minimapModel.layout,inner:{...this.minimapModel.layout.inner}},
+        player:{...this.minimapModel.player},
+        enemies:this.minimapModel.enemies.map(enemy=>({...enemy})),
+        viewport:{...this.minimapModel.viewport},
+        policy:'RECONSTRUCTION_POLICY' as const,
+      }:null,
       debugBounds:this.showBounds,routeLineVisible:false,busy:this.busy(),battlePaused:this.battlePaused,
       battleCell:pixelCell(this.anchor.x,this.anchor.y),
       reachable:this.reachable().map(p=>p.at(-1)!),
@@ -636,7 +761,8 @@ export class LabScene extends Phaser.Scene {
 
   update(time:number,delta:number){
     if(!this.sprite)return;
-    const dt=this.inBattleView&&(this.battlePaused||document.hidden)?0:Math.min(delta,100);
+    const cameraDt=Math.min(delta,100);
+    const dt=this.inBattleView&&(this.battlePaused||document.hidden)?0:cameraDt;
     if(this.route.length){
       const target=referenceCellToScreen(this.route[0]),dx=target[0]-this.anchor.x,dy=target[1]-this.anchor.y,d=Math.hypot(dx,dy),step=P.movementPixelsPerSecond*dt/1000;
       if(d<=step){
@@ -650,7 +776,8 @@ export class LabScene extends Phaser.Scene {
         this.anchor.y+=dy/d*step;
       }
     }
-    if(!this.inBattleView&&this.cameraFollowEnabled)this.viewport?.follow(this.anchor,dt);
+    if(this.inBattleView)this.updateBattleCamera(cameraDt,time);
+    else if(this.cameraFollowEnabled)this.viewport?.follow(this.anchor,dt);
     if(this.timedAction>0){
       this.timedAction=Math.max(0,this.timedAction-dt);
       if(this.timedAction<=0)this.setAction('00');
@@ -706,6 +833,7 @@ export class LabScene extends Phaser.Scene {
       this.notice(this.state.phase==='won'?'训练胜利。点击“退出战斗”返回非战斗地图。':'训练失败。点击“退出战斗”返回非战斗地图。');
     }
     this.drawOverlay();
+    this.drawBattleMinimap();
     if(time-this.lastPublish>90){
       window.dispatchEvent(new CustomEvent('lapis-state',{detail:this.snapshot()}));
       this.lastPublish=time;
