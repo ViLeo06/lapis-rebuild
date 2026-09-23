@@ -319,13 +319,7 @@ test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({p
   const lowHp=Math.floor(beforeFixture.maxHp/2);
   await page.evaluate(({id,hp})=>window.lapisM4!.acceptanceSetEnemyHp!(id,hp),{id:healerId,hp:lowHp});
   const mpBefore=(await scene(page)).enemies.find(row=>row.id===healerId)!.mp;
-  const ranAbility=await page.evaluate(id=>{
-    const api=window.lapisM4 as any;
-    if(typeof api?.acceptanceRunEnemyAbility!=='function')return false;
-    api.acceptanceRunEnemyAbility(id,'self-heal');
-    return true;
-  },healerId);
-  expect(ranAbility,'Ashes acceptance requires deterministic production-AI self-heal trigger').toBe(true);
+  await page.evaluate(id=>window.lapisM4!.acceptancePrimeEnemyAction!(id),healerId);
   await expect.poll(async()=>(await scene(page)).enemies.find(row=>row.id===healerId)!.mp,{timeout:5000}).toBeLessThan(mpBefore);
   expect((await scene(page)).enemies.find(row=>row.id===healerId)!.hp).toBe(lowHp);
 });
