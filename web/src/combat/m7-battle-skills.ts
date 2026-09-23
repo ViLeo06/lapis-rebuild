@@ -72,7 +72,7 @@ export type M7BattleFeedbackEvent=BattleEvent&Readonly<{
 export type M7SkillUseResult=Readonly<{
   ok:boolean;
   message:string;
-  events:readonly BattleEvent[];
+  events:readonly M7BattleFeedbackEvent[];
   affectedEnemyIds:readonly string[];
   feedbackEvents?:readonly M7WizardFeedbackEvent[];
 }>;
@@ -145,7 +145,7 @@ function wizardFeedback(
     targetCell:Object.freeze([targetCell[0],targetCell[1]] as const),
     ...(typeof damageAmount==='number'?{damageAmount}:{}),
     eventTimeMs:m7BattleEventTimeMs(state),
-    provenance:kind==='POISON_INITIAL_DAMAGE'?'RECONSTRUCTION_POLICY':'RECONSTRUCTION_POLICY',
+    provenance:'RECONSTRUCTION_POLICY',
   });
 }
 
@@ -319,7 +319,7 @@ function useWizard(
     }
     const intelligence=state.combatPlayerStats?.magicAttack??0;
     const targets=affectedM7GridTargets(state.enemies,targetCell,geometry.areaCode,activeGroup);
-    const events:BattleEvent[]=[];
+    const events:M7BattleFeedbackEvent[]=[];
     const feedbackEvents:M7WizardFeedbackEvent[]=[];
     for(const enemy of targets){
       const wizard=applyM7WizardSkillStatus(enemy.m7Status.wizard,key,command.skillLevel,{intelligence});
@@ -408,10 +408,10 @@ export function useM7Skill(
   return useM7SkillTargeted(state,{targetId,targetCell},x,y,command);
 }
 
-export function tickM7BattleStatuses(state:BattleState,deltaMs:number):readonly BattleEvent[]{
+export function tickM7BattleStatuses(state:BattleState,deltaMs:number):readonly M7BattleFeedbackEvent[]{
   if(!Number.isFinite(deltaMs)||deltaMs<0)return Object.freeze([]);
   M7_BATTLE_EVENT_CLOCK_MS.set(state,m7BattleEventTimeMs(state)+deltaMs);
-  const events:BattleEvent[]=[];
+  const events:M7BattleFeedbackEvent[]=[];
   if(state.combatPlayerStats){
     const advanced=advanceM7Statuses(state.hp,state.combatPlayerStats.maxHp,state.playerM7Status.swordsman,deltaMs);
     if(advanced.currentHp<state.hp){
