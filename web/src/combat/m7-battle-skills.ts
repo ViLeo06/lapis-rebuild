@@ -214,27 +214,32 @@ function useSwordsman(
   applySwordsmanResult(state,paid);
   const attack=m7EffectivePhysicalAttack(state.combatPlayerStats.attack,state.playerM7Status.swordsman);
   const attacker=Object.freeze({...state.combatPlayerStats,attack});
-  const multiplier=plan.hitMultipliers[0]??1;
-  const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(
-    attacker,
-    enemy.combatStats,
-    {kind:'physical',multiplier,hits:Math.max(1,plan.hitMultipliers.length)},
-    ()=>randomUnit(state),
-  );
-  let damage=resolution.totalDamage;
-  const curse=consumeM7CursedSwordPhysicalWindow(enemy.m7Status.wizard,damage);
-  damage=curse.damage;
-  enemy.m7Status=Object.freeze({...enemy.m7Status,wizard:curse.state});
-  const before=enemy.hp;
-  enemy.hp=Math.max(0,enemy.hp-damage);
+  const hitMultipliers=plan.hitMultipliers.length?plan.hitMultipliers:Object.freeze([1]);
+  const events:M7BattleFeedbackEvent[]=[];
+  for(const multiplier of hitMultipliers){
+    if(enemy.hp<=0)break;
+    const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(
+      attacker,
+      enemy.combatStats,
+      {kind:'physical',multiplier,hits:1},
+      ()=>randomUnit(state),
+    );
+    let damage=resolution.totalDamage;
+    const curse=consumeM7CursedSwordPhysicalWindow(enemy.m7Status.wizard,damage);
+    damage=curse.damage;
+    enemy.m7Status=Object.freeze({...enemy.m7Status,wizard:curse.state});
+    const before=enemy.hp;
+    enemy.hp=Math.max(0,enemy.hp-damage);
+    const hitEvent=eventForEnemy(state,enemy,before);
+    if(hitEvent)events.push(hitEvent);
+  }
 
-  const targetStatus=applyM7SwordsmanTargetStatus(enemy.m7Status.swordsman,plan,randomUnit(state));
+  const targetStatus=applyM7SwordsmanTargetStatus(enemy.m7Status.swordsman,plan,randomUnit(state),enemy.id);
   enemy.m7Status=Object.freeze({...enemy.m7Status,swordsman:targetStatus.statuses});
-  const event=eventForEnemy(state,enemy,before);
   return Object.freeze({
     ok:true,
     message:`${command.displayName} Lv.${command.skillLevel} / RECONSTRUCTION_POLICY`,
-    events:event?Object.freeze([event]):Object.freeze([]),
+    events:Object.freeze(events),
     affectedEnemyIds:Object.freeze([enemy.id]),
   });
 }
