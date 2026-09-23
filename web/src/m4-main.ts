@@ -17,6 +17,8 @@ declare global{
       acceptanceSetEnemyHp?:(targetId:string,hp:number)=>void;
       acceptanceSetPlayerMp?:(mp:number)=>void;
       acceptancePrimeEnemyAction?:(targetId:string)=>void;
+      acceptanceAdvanceBattleTimeMs?:(deltaMs:number)=>void;
+      acceptanceSetPlayerVitals?:(hp:number,mp:number)=>void;
     };
   }
 }
@@ -53,6 +55,8 @@ window.addEventListener('lapis-ready',()=>{
       acceptanceSetEnemyHp:(targetId:string,hp:number)=>runtime.acceptanceSetEnemyHp(targetId,hp),
       acceptanceSetPlayerMp:(mp:number)=>runtime.acceptanceSetPlayerMp(mp),
       acceptancePrimeEnemyAction:(targetId:string)=>runtime.acceptancePrimeEnemyAction(targetId),
+      acceptanceAdvanceBattleTimeMs:(deltaMs:number)=>runtime.acceptanceAdvanceBattleTimeMs(deltaMs),
+      acceptanceSetPlayerVitals:(hp:number,mp:number)=>runtime.acceptanceSetPlayerVitals(hp,mp),
     }:{}),
   };
 });
