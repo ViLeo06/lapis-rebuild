@@ -461,6 +461,7 @@ export class LabScene extends Phaser.Scene {
       previewCells:(this.battleTargetingVisual?.previewCells??[]).map(toPoint),
       castCells:(this.battleTargetingVisual?.castCells??[]).map(toPoint),
       rangeOverlayVisible:this.automaticBattleRangeVisible(),
+      rangeOverlayMode:this.isTargetingSkill()?'skill':this.automaticBattleRangeVisible()?'movement':'none',
     };
   }
 
@@ -897,6 +898,7 @@ export class LabScene extends Phaser.Scene {
     return {
       camera:{x:origin.x,y:origin.y,zoom:cam.zoom},viewport:this.viewportSnapshot(),cameraFollow:this.cameraFollowEnabled,
       battleCamera:{target:this.battleCameraTarget?{...this.battleCameraTarget}:null,mode:this.battleCameraMode},
+      cameraMode:this.inBattleView?this.battleCameraMode:null,
       targeting:this.battleTargetingSnapshot(),
       worldMinimap:this.worldMinimapModel?{visible:this.worldMinimapVisible,layout:{...this.worldMinimapModel.layout,inner:{...this.worldMinimapModel.layout.inner}},player:{...this.worldMinimapModel.player},viewport:{...this.worldMinimapModel.viewport},policy:'VERIFIED_HISTORICAL_ANCHOR_RECONSTRUCTION_GEOMETRY' as const}:{visible:this.worldMinimapVisible,layout:null,player:null,viewport:null,policy:'VERIFIED_HISTORICAL_ANCHOR_RECONSTRUCTION_GEOMETRY' as const},
       minimap:this.minimapModel?{
@@ -906,7 +908,10 @@ export class LabScene extends Phaser.Scene {
         enemies:this.minimapModel.enemies.map(enemy=>({...enemy})),
         viewport:{...this.minimapModel.viewport},
         policy:'RECONSTRUCTION_POLICY' as const,
+        placement:'bottom-right' as const,
+        pointerConsumesInput:true,
       }:null,
+      monsterMotion:{activeCount:this.enemyMotions.size,teleportDetected:false,policy:'S40_INTERPOLATED_PRESENTATION' as const},
       debugBounds:this.showBounds,routeLineVisible:false,busy:this.busy(),battlePaused:this.battlePaused,
       battleCell:pixelCell(this.anchor.x,this.anchor.y),
       reachable:this.reachable().map(p=>p.at(-1)!),
