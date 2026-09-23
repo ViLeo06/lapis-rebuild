@@ -580,6 +580,12 @@ export class M4RuntimeIntegration{
     this.render(this.scene.snapshot());
   }
 
+  acceptanceStartTrainingBattle(id:number):void{
+    if(!navigator.webdriver)throw new Error('M7.1 acceptance training fixture is automation-only');
+    this.trainingManagerOpen=false;
+    this.startTrainingBattle(id);
+  }
+
   acceptanceSetEnemyHp(targetId:string,hp:number):void{
     if(!navigator.webdriver)throw new Error('M7 acceptance enemy fixture is automation-only');
     if(!this.scene.inBattleView)throw new Error('M7 acceptance enemy fixture requires active battle');
@@ -668,14 +674,23 @@ export class M4RuntimeIntegration{
   acceptanceGrantLevel(targetLevel:number):void{
     if(!navigator.webdriver)throw new Error('M6 acceptance reward fixture is automation-only');
     if(!Number.isInteger(targetLevel)||targetLevel<1||targetLevel>99)throw new Error('Invalid M6 acceptance target level');
-    const targetExp=totalExpForLevel(targetLevel);
-    const amount=Math.max(0,targetExp-this.rewards.progression.exp);
-    if(amount===0)return;
-    const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
     const oldLevel=this.rewards.progression.level;
-    const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
-    this.rewards=applied.state;
-    this.reconcileM7Skills(oldLevel);
+    if(targetLevel>65&&this.rewards.progression.policyId===M71_EXPERIENCE_POLICY.id){
+      this.rewards={...this.rewards,progression:{
+        level:targetLevel,
+        exp:totalExpForLevel(targetLevel,RECONSTRUCTION_PROGRESSION_POLICY.id),
+        policyId:RECONSTRUCTION_PROGRESSION_POLICY.id,
+      }};
+      this.reconcileM7Skills(oldLevel);
+    }else{
+      const targetExp=totalExpForLevel(targetLevel,this.rewards.progression.policyId);
+      const amount=Math.max(0,targetExp-this.rewards.progression.exp);
+      if(amount===0)return;
+      const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
+      const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
+      this.rewards=applied.state;
+      this.reconcileM7Skills(oldLevel);
+    }
     this.scene.gold=this.rewards.gold;
     this.applyClassProfile(false);
     this.setNotice(`M6 acceptance fixture：通过生产 reward/progression authority 到达 Lv.${this.rewards.progression.level}`);
@@ -720,7 +735,7 @@ export class M4RuntimeIntegration{
     const unlockAll=this.menuRoot.querySelector<HTMLInputElement>('[data-dev-unlock-all]')?.checked??false;
     try{
       const preset=buildM7DeveloperCharacterPreset(profession,level,unlockAll);
-      this.rewards={...this.rewards,progression:{...this.rewards.progression,level:preset.level,exp:totalExpForLevel(preset.level)}};
+      this.rewards={...this.rewards,progression:{...this.rewards.progression,level:preset.level,exp:totalExpForLevel(preset.level,this.rewards.progression.policyId)}};
       this.m7Skills=createM7IntegratedSkillState(String(preset.stageId),Math.min(65,preset.level));
       this.developerPresetActive=true;
       this.developerUnlockAllSkills=preset.unlockAllImplementedSkills;
