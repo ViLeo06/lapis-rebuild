@@ -354,7 +354,9 @@ test('S34 wizard Lv36 petrify prevents action and ordinary attack targeting',asy
     return target?.m7Status.wizard.petrifiedMs??0;
   }).toBeGreaterThan(0);
   const before=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  await advanceBattleTime(page,6000);
   await waitReady(page);
+  expect((await scene(page)).enemies.find(row=>row.id===targetId)!.m7Status.wizard.petrifiedMs).toBeGreaterThan(0);
   const attack=page.locator('[data-action="attack"]:visible').first();
   await expect(attack).toBeEnabled();
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('[data-action="attack"]')?.click());
