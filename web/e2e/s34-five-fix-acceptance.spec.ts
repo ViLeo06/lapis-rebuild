@@ -251,7 +251,13 @@ async function expectAllLivingVisible(page:Page){
 async function confirmRetreat(page:Page){
   await page.locator('[data-action="battle-exit-request"]:visible').click();
   await expect(page.locator('[data-ui="battle-exit-confirm"]')).toBeVisible();
-  await page.locator('[data-action="battle-exit-confirm"]:visible').click();
+  const confirmed=await page.evaluate(()=>{
+    const button=document.querySelector<HTMLButtonElement>('[data-action="battle-exit-confirm"]');
+    if(!button)return false;
+    button.click();
+    return true;
+  });
+  expect(confirmed).toBe(true);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(false);
 }
 
