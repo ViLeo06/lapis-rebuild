@@ -1049,13 +1049,30 @@ export class M4RuntimeIntegration{
     if(this.activeTrainingBattleId!==null){
       const preset=trainingBattleById(this.activeTrainingBattleId);
       const enemies=reconstructionEnemiesForTrainingBattle(preset.id);
-      const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
+      const combatReward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
         enemies.map(enemy=>({level:enemy.level,rank:enemy.rank})),
       );
       const oldLevel=this.rewards.progression.level;
-      const applied=applyBattleReward(this.rewards,'m7-training-battle-'+preset.id,'battle:m7-training:'+preset.id+':win',{gold:reward.gold,exp:reward.exp});
-      this.rewards=applied.state;this.reconcileM7Skills(oldLevel);this.scene.gold=this.rewards.gold;
-      this.setNotice('Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
+      const receiptPrefix='battle:m7-training:'+preset.id+':win:';
+      const runNumber=1+this.rewards.rewardReceipts.filter(id=>id.startsWith(receiptPrefix)).length;
+      const applied=applyBattleReward(
+        this.rewards,
+        'm7-training-battle-'+preset.id,
+        receiptPrefix+runNumber,
+        {gold:combatReward.gold,exp:preset.expReward},
+      );
+      this.rewards=applied.state;
+      this.reconcileM7Skills(oldLevel);
+      this.scene.gold=this.rewards.gold;
+      const levels=applied.events.filter(event=>event.type==='level_up').map(event=>'Lv.'+event.toLevel);
+      const skillPoints=applied.events.filter(event=>event.type==='skill_point').length;
+      this.setNotice(
+        'Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+
+        ' / 金币 +'+combatReward.gold+' / EXP +'+preset.expReward+
+        (levels.length?' / LEVEL UP '+levels.join(' → '):'')+
+        (skillPoints?' / Skill Point +'+skillPoints:'')+
+        ' / RECONSTRUCTION_POLICY'
+      );
       return;
     }
     if(this.m5World){
