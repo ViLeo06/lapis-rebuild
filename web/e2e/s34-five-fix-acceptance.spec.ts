@@ -106,15 +106,42 @@ function activeGroup(state:any):number|null{
 
 async function emptyPoisonCenter(state:any){
   const living=live(state);
-  for(const enemy of living){
-    for(const dx of [-64,0,64])for(const dy of [-32,0,32]){
-      const x=enemy.x+dx,y=enemy.y+dy;
-      if(living.some((row:any)=>Math.hypot(row.x-x,row.y-y)<12))continue;
-      const nearby=living.filter((row:any)=>Math.hypot(row.x-x,row.y-y)<=150);
-      if(nearby.length>=2)return{x,y};
-    }
+  const group=activeGroup(state);
+  const candidates=state.targeting?.castCells??[];
+  for(const center of candidates){
+    if(living.some((row:any)=>Math.hypot(row.x-center.x,row.y-center.y)<12))continue;
+    const cx=Math.round(center.x/32)-1,cy=Math.round(center.y/16)-1;
+    const nearby=living.filter((row:any)=>{
+      if(row.encounterGroup!==group||!Array.isArray(row.cell))return false;
+      const dx=Math.abs(row.cell[0]-cx),dy=Math.abs(row.cell[1]-cy);
+      return ((dx-dy)&1)===0&&Math.max(dx,dy)<=3;
+    });
+    if(nearby.length>=2)return{x:center.x,y:center.y};
   }
-  throw new Error('No empty poison center containing multiple enemies in acceptance roster');
+  throw new Error('No empty in-range poison center containing multiple active-group enemies');
+}
+
+async function moveToDifferentEncounterGroup(page:Page,initialGroup:number){
+  for(let attempt=0;attempt<8;attempt++){
+    let state:any=await extendedScene(page);
+    const current=activeGroup(state);
+    if(current!==null&&current!==initialGroup)return;
+    const later=live(state).find((row:any)=>row.encounterGroup!==initialGroup);
+    if(!later)throw new Error('Missing later encounter group');
+    await advanceBattleTime(page,10000);
+    state=await extendedScene(page);
+    const reachable=[...(state.reachable??[])].sort((a:any,b:any)=>
+      Math.max(Math.abs(a[0]-later.cell[0]),Math.abs(a[1]-later.cell[1]))-
+      Math.max(Math.abs(b[0]-later.cell[0]),Math.abs(b[1]-later.cell[1]))
+    );
+    if(!reachable.length)throw new Error('No reachable battle cell while approaching later encounter group');
+    const destination=reachable[0];
+    const before=JSON.stringify(state.battleCell);
+    await clickWorld(page,(destination[0]+1)*32,(destination[1]+1)*16);
+    await expect.poll(async()=>JSON.stringify((await scene(page)).battleCell),{timeout:10000}).not.toBe(before);
+    await expect.poll(async()=>(await scene(page)).routeLength,{timeout:10000}).toBe(0);
+  }
+  throw new Error('Could not activate a later encounter group within movement budget');
 }
 
 async function expectAllLivingVisible(page:Page){
@@ -155,10 +182,7 @@ test.describe('S34 five-fix final acceptance',()=>{
     await page.keyboard.press('A');
     await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??beforeA).toBeLessThan(beforeA);
 
-    state=await extendedScene(page);
-    const later=live(state).find((row:any)=>row.encounterGroup!==firstGroup);
-    expect(later).toBeTruthy();
-    await clickWorld(page,later.x-48,later.y+24);
+    await moveToDifferentEncounterGroup(page,firstGroup as number);
     await expect.poll(async()=>activeGroup(await extendedScene(page))).not.toBe(firstGroup);
     await expectAllLivingVisible(page);
 
