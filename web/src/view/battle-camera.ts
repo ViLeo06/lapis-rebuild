@@ -26,6 +26,12 @@ export function battleEntryZoom(viewport:Size,world:Rect):number{
   return Math.max(1,v.width/w.width,v.height/w.height);
 }
 
+export function manualCameraQuantizationStalled(before:Point,after:Point,desired:Point):boolean{
+  const moved=Math.hypot(after.x-before.x,after.y-before.y);
+  const remaining=Math.hypot(after.x-desired.x,after.y-desired.y);
+  return moved<0.25&&remaining>=2&&remaining<=32;
+}
+
 function alphaFor(lerp:number,deltaMs:number){
   const frameScale=Math.max(0,deltaMs)/16.6667;
   return 1-Math.pow(1-lerp,frameScale);
