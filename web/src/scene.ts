@@ -143,7 +143,7 @@ export class LabScene extends Phaser.Scene {
     this.fit();
     this.scale.on('resize',()=>this.viewport?.reclamp());
     this.input.on('pointermove',(p:Phaser.Input.Pointer)=>{
-      const coarse=this.coarsePointer();
+      const coarse=this.pointerIsCoarse(p);
       this.battleCameraPointer={x:p.x,y:p.y,inside:true,coarse};
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
       this.hover={x:Math.round(world.x),y:Math.round(world.y)};
@@ -161,7 +161,7 @@ export class LabScene extends Phaser.Scene {
       if(this.inBattleView&&this.handleBattleMinimapPointer(p.x,p.y))return;
       const world=this.cameras.main.getWorldPoint(p.x,p.y);
       if(this.inBattleView&&this.isTargetingSkill()){
-        const consumed=this.battleSkillTargetingAdapter?.onWorldPointer?.(world.x,world.y,this.coarsePointer())??false;
+        const consumed=this.battleSkillTargetingAdapter?.onWorldPointer?.(world.x,world.y,this.pointerIsCoarse(p))??false;
         if(consumed)return;
       }
       if(!this.inBattleView){
@@ -291,6 +291,11 @@ export class LabScene extends Phaser.Scene {
 
   private coarsePointer(){
     return typeof window.matchMedia==='function'&&window.matchMedia('(pointer: coarse)').matches;
+  }
+
+  private pointerIsCoarse(pointer:Phaser.Input.Pointer){
+    const event=pointer.event as PointerEvent|undefined;
+    return this.coarsePointer()||event?.pointerType==='touch';
   }
 
   private battleMinimapBottomInset(){
