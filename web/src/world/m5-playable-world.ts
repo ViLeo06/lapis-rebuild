@@ -7,6 +7,8 @@ import type {TrainingWorldContent} from './world-content.ts';
 import {createTrainingHousePolicy} from './s18-world-policy.ts';
 import type {TrainingHousePolicy} from './s18-world-policy.ts';
 import type {NpcVisualBinding} from '../npc/npc-visual-catalog.ts';
+import {createM7TrainingManager} from './m7-training-manager.ts';
+import type {M7TrainingManager} from './m7-training-manager.ts';
 import {S17_RECONSTRUCTION_TRAINING_BINDINGS} from '../content/monsters/monster-visual-catalog.ts';
 
 export const M5_FIELD_MAP_ID=1;
@@ -29,6 +31,7 @@ export type M5PlayableWorld={
   content:TrainingWorldContent;
   house:TrainingHousePolicy;
   guideVisualBinding:NpcVisualBinding;
+  trainingManager:M7TrainingManager;
   visuals:readonly M5WorldVisualPlacement[];
   doorCell:Cell;
   interiorEntry:Cell;
@@ -70,6 +73,8 @@ export function createM5PlayableWorld(pack:LoadedPack):M5PlayableWorld{
   const guide=nearestDistinct(field.collision,[22,24]);
   const door=reachableNear(field.collision,guide,[26,24],[guide]);
   const returnSpawn=reachableNear(field.collision,door,[24,24],[door]);
+  const managerCell=reachableNear(field.collision,guide,[guide[0]+4,guide[1]],[guide,door,returnSpawn]);
+  const trainingManager=createM7TrainingManager(M5_FIELD_MAP_ID,managerCell);
   const entry=nearestDistinct(interior.collision,[44,49]);
   const exit=reachableNear(interior.collision,entry,[44,52],[entry]);
   const encounter=reachableNear(interior.collision,entry,[52,49],[entry,exit]);
@@ -111,9 +116,10 @@ export function createM5PlayableWorld(pack:LoadedPack):M5PlayableWorld{
   if(monsterBindings.get('dummy-melee')!=='monster-visual-001'||monsterBindings.get('dummy-ranged')!=='monster-visual-004')throw new Error('Unexpected S17 training visual bindings');
 
   return{
-    content,house,guideVisualBinding,doorCell:door,interiorEntry:entry,interiorExit:exit,encounterCell:encounter,
+    content,house,guideVisualBinding,trainingManager,doorCell:door,interiorEntry:entry,interiorExit:exit,encounterCell:encounter,
     visuals:Object.freeze([
       {id:'training-guide',kind:'npc',mapId:M5_FIELD_MAP_ID,cell:guide,resourceId:M5_GUIDE_VISUAL_RESOURCE_ID,label:'训练引导员',provenance:'RECONSTRUCTION_POLICY'},
+      ...(pack.animations[String(trainingManager.visualResourceId)]?[{id:trainingManager.entity.id,kind:'npc' as const,mapId:M5_FIELD_MAP_ID,cell:managerCell,resourceId:trainingManager.visualResourceId,label:trainingManager.entity.displayName,provenance:'RECONSTRUCTION_POLICY' as const}]:[]),
       {id:'dummy-melee-preview',kind:'encounter',mapId:M5_INTERIOR_MAP_ID,cell:encounter,resourceId:4524,label:'训练怪物',provenance:'RECONSTRUCTION_POLICY'},
       {id:'dummy-ranged-preview',kind:'encounter',mapId:M5_INTERIOR_MAP_ID,cell:secondMonster,resourceId:4544,label:'训练怪物',provenance:'RECONSTRUCTION_POLICY'},
     ]),
