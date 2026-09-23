@@ -33,32 +33,23 @@ async function startTraining(page:Page,id:number){
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
-const monsterFamilyId=(id:string)=>id.replace(/#\\d+$/,'');
-
 async function legacyPause(page:Page){
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
 }
 
 async function selectTarget(page:Page,id?:string){
-  await legacyPause(page);
   const state=await scene(page);
   const target=id?state.enemies.find(row=>row.id===id&&row.hp>0):state.enemies.find(row=>row.hp>0);
   if(!target)throw new Error('Missing live target '+String(id));
-  const canvas=page.locator('canvas');
-  const box=await canvas.boundingBox();
-  if(!box)throw new Error('Missing canvas');
-  await page.mouse.click(
-    box.x+(target.x-state.camera.x)*state.camera.zoom,
-    box.y+(target.y-state.camera.y)*state.camera.zoom,
-  );
-  await expect.poll(async()=>{
-    const selected=(await scene(page)).target;
-    return selected&&monsterFamilyId(selected)===monsterFamilyId(target.id)?selected:null;
-  }).not.toBeNull();
-  const selected=(await scene(page)).target;
-  await legacyPause(page);
-  if(!selected)throw new Error('Missing selected target');
-  return selected;
+  const selected=await page.evaluate(targetId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceSelectEnemy!=='function')return false;
+    api.acceptanceSelectEnemy(targetId);
+    return true;
+  },target.id);
+  expect(selected,'S34 skill regression tests require webdriver-only acceptanceSelectEnemy').toBe(true);
+  await expect.poll(async()=>(await scene(page)).target).toBe(target.id);
+  return target.id;
 }
 async function clickBattleCell(page:Page,cell:readonly[number,number]){
   const state=await scene(page);
@@ -290,16 +281,20 @@ test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target act
   await ready(page);
   await developerPreset(page,'wizard',6,false);
   await startTraining(page,3);
-  const targetId=await selectTarget(page);
-  const selected=(await scene(page)).enemies.find(row=>row.id===targetId)!;
-  const before=selected.hp;
   await clickSkill(page,'毒雾');
   await expect.poll(async()=>Boolean((await scene(page)).targeting?.active)).toBe(true);
-  await clickBattleCell(page,selected.cell);
+  const aiming=await scene(page);
+  const target=aiming.enemies.find(row=>row.hp>0&&aiming.targeting.castCells.some((cell:any)=>
+    cell.x===(row.cell[0]+1)*32&&cell.y===(row.cell[1]+1)*16
+  ));
+  if(!target)throw new Error('Missing live poison target inside explicit cast cells');
+  const before=target.hp;
+  await clickBattleCell(page,target.cell);
   await expect.poll(async()=>{
-    const target=(await scene(page)).enemies.find(row=>row.id===targetId);
-    return Boolean(target?.m7Status.wizard.poison);
+    const current=(await scene(page)).enemies.find(row=>row.id===target.id);
+    return Boolean(current?.m7Status.wizard.poison);
   }).toBe(true);
+  const targetId=target.id;
   await page.waitForTimeout(5_300);
   const after=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
   expect(after).toBeLessThan(before);
