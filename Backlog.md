@@ -236,3 +236,52 @@
 - compatibility / reverse-engineering secondary source 不能自动升级为 retail fact。
 - battle scene 内容不等于 field→zone 触发映射；client authored stats 不等于 server formula。
 - 原版正文和大量版权资源不进入 Git，公开发布需单独授权/审查。
+
+## M7.1 S35–S41 — Gameplay / Progression / Skill Fidelity Completion — 工程已收口
+
+### S35 Skill Evidence Matrix
+- [x] 双职业前五技能共 60 行 Lv1–Lv6 原始参数矩阵完成，并区分 fixed-client raw field 与 secondary runtime interpretation。
+- [x] 新 Excel 资料只在可与 fixed-hash 2.2 数据交叉的字段上升级证据；灰烬、舍身、自然力量等冲突解释保留边界。
+- [x] PR #61 已并入 M7.1 集成线。
+
+### S36 Swordsman Skill Fidelity
+- [x] 剑士 7 技能 × 6 级 = 42 states 完成 fidelity 重构。
+- [x] 强防进入真实 DEF authority；爆发 ATK/MaxHP/DEF tradeoff、舍身周期 HP 代价、战斗命令 readiness、连砍逐击独立结算均接入 production battle。
+- [x] PR #58 已并入 M7.1 集成线。
+
+### S37 Wizard Skill Fidelity
+- [x] 巫师 7 技能 × 6 级 = 42 states 完成 fidelity 重构。
+- [x] 毒雾命中立即伤害 + 后续固定 DOT、升级 range/AOE；自然力量杖击吸 MP；灰烬禁疗；诅咒之眼石化；失明/诅咒之剑均有实际 gameplay effect 与事件反馈。
+- [x] PR #56 已并入 M7.1 集成线。
+
+### S38 EXP / Level / Reward / Skill Point
+- [x] 新建 M7.1 progression authority；训练胜利使用关卡 EXP reward，撤退/失败不发胜利 EXP。
+- [x] Level Up 与 Skill Point +1 接入 reward pipeline；SaveV2 / migration / 多级升级回归覆盖。
+- [x] PR #57 已并入 M7.1 集成线。
+
+### S39 World Training NPC / Main UX
+- [x] Settings 不再作为训练关卡主入口。
+- [x] 世界训练管理员复用原 15 场 registry；PC/Mobile/键盘 interaction authority 保持统一。
+- [x] 主场景 fullscreen 直接入口接入。
+- [x] PR #59 已并入 M7.1 集成线。
+
+### S40 Camera / Minimap / Range / Battle Presentation
+- [x] Range 改为 battle-state 自动呈现，无独立 Range toggle / Space 必要步骤。
+- [x] Battle camera FOLLOW/MANUAL 模式、battle minimap 右下、world minimap 左上、monster interpolation、target-anchored feedback、HP/MP/EXP/ATK/DEF HUD 完成。
+- [x] 原 PR #60 与 S39 在 3 个文件发生预期重叠；由 resolved PR #62 在 post-S39 tree 上完整移植并合入，#60 已关闭为 superseded。
+
+### S41 Integration / Acceptance
+- [x] S35–S40 authority 不重复实现；shared runtime glue 已接入 progression / training manager / combat modifier / HUD / status / feedback。
+- [x] final source head：`bc11331d60d2366371424081b8fd66f9a7d68794`。
+- [x] run `35930306019`：普通 Chromium/offline `86 passed / 9 skipped / 0 failed`。
+- [x] 同 run `S41_M7_1_FINAL=1`：`5 passed / 0 failed`。
+- [x] PR #64 合入统一 M7.1 集成分支，merge SHA `2a1fd25e7d460edb43bead67a4ba7535bc0305c0`。
+- [x] PR #63 合入 `main`，merge SHA `7de3ddcaffed74f3b7e8ee78843139220f21c4e8`。
+- [ ] M7.1 最终 standalone 人工试玩；本轮用户授权“检查、解决冲突并合并”记录为工程合并授权，不自动记作 `USER-ACCEPTED`。
+- [ ] 若需要重新声明 fixed-hash private-original browser acceptance，必须再跑可验证的 private-original job；本轮 PR-triggered final run 中该 job 为 skipped，禁止写成已通过。
+
+## M7.1 下一步
+
+- [ ] 从已合并 `main` 生成新的 M7.1 private standalone handoff。
+- [ ] 用户亲自试玩：训练管理员 → 15 场训练 → EXP/升级/技能点 → 双职业技能 → camera/minimap → 退出确认 → Save/Load。
+- [ ] 用户明确通过后追加 `USER-ACCEPTED` evidence；未通过则以当前 main 为新修复基线继续开独立 PR。
