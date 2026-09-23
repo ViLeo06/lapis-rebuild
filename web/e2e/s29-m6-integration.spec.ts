@@ -28,7 +28,8 @@ test('M6 player runtime promotes swordsman 100 through 190 via production reward
   await ready(page);
   expect((await runtime(page)).m6.stageId).toBe(100);
   const stages=[110,120,130,140,150,160,170,180,190];
-  for(let index=0;index<stages.length;index+=1)await promoteAt(page,(index+1)*10,stages[index]!);
+  const levels=[6,16,26,36,46,56,70,80,90];
+  for(let index=0;index<stages.length;index+=1)await promoteAt(page,levels[index]!,stages[index]!);
   const state=await runtime(page);
   expect(state.m6.stageId).toBe(190);
   expect(state.m6.promotionReceipts).toHaveLength(9);
@@ -57,7 +58,8 @@ test('M6 new wizard profile is isolated from swordsman progress and promotes 109
   expect(state.m6.promotionReceipts).toEqual([]);
 
   const stages=[119,129,139,149,159,169,179,189,199];
-  for(let index=0;index<stages.length;index+=1)await promoteAt(page,(index+1)*10,stages[index]!);
+  const levels=[6,16,26,36,46,56,70,80,90];
+  for(let index=0;index<stages.length;index+=1)await promoteAt(page,levels[index]!,stages[index]!);
   state=await runtime(page);
   expect(state.m6.stageId).toBe(199);
   expect(state.m6.promotionReceipts).toHaveLength(9);
@@ -72,7 +74,7 @@ test('M6 new wizard profile is isolated from swordsman progress and promotes 109
 
 test('M6 promotion preserves the accepted player skill contract and SaveV2 stage state',async({page})=>{
   await ready(page);
-  await page.evaluate(target=>window.lapisM4!.acceptanceGrantLevel!(target),20);
+  await page.evaluate(target=>window.lapisM4!.acceptanceGrantLevel!(target),16);
   await clickAction(page,'menu');
   await page.locator('[data-action="m6-promote"]:visible').first().click();
   await expect.poll(async()=>(await runtime(page)).m6.stageId).toBe(110);

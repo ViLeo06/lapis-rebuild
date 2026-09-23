@@ -1,10 +1,9 @@
 import type {LabScene} from './scene.ts';
 import type {Skill} from './battle.ts';
-import {actionReady,consumeAction} from './battle.ts';
+import {actionReady,consumeAction,reconcileBattlePhase,updateBattle} from './battle.ts';
 import {battleProfileForClass,magicReadinessCost} from './battle-profile.ts';
 import {nearestAnchor,referenceCellToScreen} from './coordinates.ts';
 import {playableClassById,isEquipmentCompatibleWithClass} from './content/classes/class-catalog.ts';
-import {skillById} from './content/skills/skill-catalog.ts';
 import rawSkills from '../../data/skills/mvp.json' with {type:'json'};
 import {BattlePresentation} from './presentation/battle-presentation.ts';
 import type {BattlePresentationBatch} from './presentation/battle-presentation.ts';
@@ -20,11 +19,12 @@ import type {JsonValue,SaveV2,SaveValidationContext} from './progression/save-sc
 import {applyM6Promotion} from './progression/m6-stage-promotion.ts';
 import type {M6StageProgressionState} from './progression/m6-stage-promotion.ts';
 import {createM6SaveExtension} from './progression/m6-save-extension.ts';
-import {equipM6Item} from './progression/m6-equipment.ts';
-import {migrateSaveToM6,serializeM6SaveV2} from './progression/m6-save-migration.ts';
-import type {M6SaveV2} from './progression/m6-save-migration.ts';
+import {equipM6Item,evaluateM6EquipmentEligibility} from './progression/m6-equipment.ts';
+import {migrateSaveToM7,serializeM7SaveV2} from './progression/m7-save-migration.ts';
+import type {M7SaveV2} from './progression/m7-save-migration.ts';
+import {createM7SaveExtension} from './progression/m7-save-extension.ts';
 import {
-  M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6PromotionRuleForCharacter,m6QuestChainForLegacyStage,
+  M6_CHARACTER_IDS,M6_RUNTIME_EQUIPMENT_RULES,M6_SAVE_CONTENT,createM6StageState,m6QuestChainForLegacyStage,
   m6SkillAvailableForCharacter,m6SkillIdsForCharacter,m6StageTrackForCharacter,
 } from './m6-runtime-content.ts';
 import {ReconstructionWorldAuthority} from './world/world-authority.ts';
@@ -48,8 +48,27 @@ import {createM5PlayableWorld} from './world/m5-playable-world.ts';
 import type {M5PlayableWorld} from './world/m5-playable-world.ts';
 import {SceneTransitionController} from './world/scene-transition.ts';
 import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-combat-balance.ts';
+import {applyInfiniteTrainingRecovery,InfiniteTrainingRecoveryPolicy} from './training/m7-recovery.ts';
+import {M7_TRAINING_BATTLES,reconstructionSetupForTrainingBattle,trainingBattleById} from './training/m7-training-camp.ts';
+import {integratedTrainingBattleById,reconstructionEnemiesForTrainingBattle} from './training/m7-integrated-training-catalog.ts';
+import {buildM7DeveloperCharacterPreset} from './training/m7-developer-preset.ts';
+import {createM7IntegratedSkillState,m7RuntimeSkillCommands,reconcileM7IntegratedSkillState} from './training/m7-skill-progression.ts';
+import type {M7IntegratedSkillState,M7RuntimeSkillCommand} from './training/m7-skill-progression.ts';
+import {useM7Skill,useM7SkillTargeted} from './combat/m7-battle-skills.ts';
+import {beginM7SkillTargeting,cancelM7SkillTargeting,confirmM7SkillTargeting,createM7SkillTargetingState,enumerateM7DiamondArea,hoverM7SkillTargeting,m7PixelToGridCell,m7PoisonGeometry,tapM7SkillTargeting,validateM7CastCell} from './combat/m7-grid-targeting.ts';
+import type {M7GridCell,M7SkillTargetingState} from './combat/m7-grid-targeting.ts';
+import {m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-stage-runtime.ts';
+import type {M7Profession} from './training/m7-level-axis.ts';
+import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
+import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
+import {battleSkillHotkeyLabel,resolveBattleHotkey} from './input/battle-hotkeys.ts';
+import type {BattleHotkeyCommand} from './input/battle-hotkeys.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
+type BattleInputSceneContract=LabScene&{
+  setBattleRangeOverlayVisible?:(visible:boolean)=>void;
+  cancelBattleTargeting?:()=>boolean;
+};
 const QUEST_STAGES:readonly QuestStage[]=['not_started','accepted','objective','ready_to_turn_in','complete'];
 const CLASS_RESOLVER:EquipmentCompatibilityResolver=(characterId,item)=>{
   try{return isEquipmentCompatibleWithClass(characterId,item.itemId,item.slot);}catch{return false;}
@@ -85,10 +104,10 @@ export function questHud(stage:QuestStage):Pick<FieldHudState,'questTitle'|'ques
   return{questTitle:'训练委托',questDetail:detail[stage]};
 }
 
-function runtimeSkill(skillId:number):Skill{
-  const row=rawSkills.find(entry=>entry.skill_id===skillId);
-  if(!row)throw new Error(`Missing runtime skill ${skillId}`);
-  return row as Skill;
+function visualSkillForCommand(command:M7RuntimeSkillCommand):Skill|null{
+  if(command.authoredSkillId===null)return null;
+  const row=rawSkills.find(entry=>entry.skill_id===command.authoredSkillId);
+  return row?row as Skill:null;
 }
 
 function cloneRewardState(state:RewardState):RewardState{
@@ -110,13 +129,23 @@ export class M4RuntimeIntegration{
   world:WorldRuntimeState;
   rewards:RewardState;
   m6Stage:M6StageProgressionState;
+  m7Skills:M7IntegratedSkillState;
   pendingEncounter:EncounterRequest|null=null;
   menuOpen=false;
   developerMode=false;
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
   private battleExitConfirm=false;
+  private battleRangeOverlayVisible=false;
+  private battleTargetingState:M7SkillTargetingState=createM7SkillTargetingState();
+  private battleTargetingCommandId:string|null=null;
   private suppressEncounterUntilLeave=false;
+  private selectedTrainingBattleId=1;
+  private activeTrainingBattleId:number|null=null;
+  private trainingLaunchPending=false;
+  private developerPresetActive=false;
+  private developerUnlockAllSkills=false;
+  private developerSkillPoints=0;
   private hudHtml='';
   private menuHtml='';
   private debugHtml='';
@@ -143,6 +172,7 @@ export class M4RuntimeIntegration{
     this.world=this.worldAuthority.initial(m5?.content.start??START_STATE);
     this.rewards=createM4RewardState(scene.gold);
     this.m6Stage=createM6StageState(scene.character);
+    this.m7Skills=createM7IntegratedSkillState(scene.character,1);
   }
 
   install():void{
@@ -152,6 +182,7 @@ export class M4RuntimeIntegration{
     this.mountRoots();
     this.installSceneAdapters();
     this.installInput();
+    this.installBattleTargetingAdapter();
     this.scene.setWorldInteractionHandler(entityId=>this.beginNpcInteraction(entityId,'pointer'));
     this.syncSceneInventory();
     const initial=this.m5World?.content.start??START_STATE;
@@ -190,7 +221,8 @@ export class M4RuntimeIntegration{
       developerMode:this.developerMode,
       lastAudio:this.lastAudio,
       playableRecovery:!!this.m5World,
-      m6:{stageId:this.m6Stage.stageId,family:this.m6Stage.family,promotionReceipts:[...this.m6Stage.promotionReceipts],nextStageId:m6PromotionRuleForCharacter(this.scene.character)?.toStageId??null,canPromote:(m6PromotionRuleForCharacter(this.scene.character)?.minimumLevel??Infinity)<=this.rewards.progression.level},
+      m6:{stageId:this.m6Stage.stageId,family:this.m6Stage.family,promotionReceipts:[...this.m6Stage.promotionReceipts],nextStageId:integratedPromotionRuleForCharacter(this.scene.character)?.toStageId??null,canPromote:(integratedPromotionRuleForCharacter(this.scene.character)?.minimumLevel??Infinity)<=this.rewards.progression.level},
+      m7Training:{battleCount:M7_TRAINING_BATTLES.length,selectedBattleId:this.selectedTrainingBattleId,activeBattleId:this.activeTrainingBattleId,recoveryPolicyId:InfiniteTrainingRecoveryPolicy.id,developerPresetActive:this.developerPresetActive,unlockAllImplementedSkills:this.developerMode&&this.developerUnlockAllSkills,developerSkillPoints:this.developerSkillPoints,skillLevelOverride:this.developerMode&&this.developerUnlockAllSkills?6:null},
       worldPlan:this.m5World?{doorCell:this.m5World.doorCell,interiorEntry:this.m5World.interiorEntry,interiorExit:this.m5World.interiorExit,encounterCell:this.m5World.encounterCell}:null,
     };
   }
@@ -240,12 +272,25 @@ export class M4RuntimeIntegration{
     };
 
     const originalEnter=this.scene.enterBattle.bind(this.scene);
-    this.scene.enterBattle=()=>{
+    this.scene.enterBattle=(entryOverride)=>{
+      this.clearBattleTargeting(false);
       this.activeDialogue=null;
       this.battleExitConfirm=false;
-      this.prepareReconstructionBattle();
-      originalEnter();
-      if(!this.scene.inBattleView)return;
+      const trainingBattleId=this.trainingLaunchPending?this.selectedTrainingBattleId:null;
+      this.prepareReconstructionBattle(trainingBattleId);
+      const requestedTrainingZone=trainingBattleId===null?null:trainingBattleById(trainingBattleId).battleZoneId;
+      const trainingEntry=requestedTrainingZone!==null&&this.scene.pack.maps[String(requestedTrainingZone)]?Object.freeze({
+        battleZoneId:requestedTrainingZone,
+        provenance:'RECONSTRUCTION_POLICY' as const,
+        authority:'offline-reconstruction' as const,
+      }):undefined;
+      originalEnter(entryOverride??trainingEntry);
+      this.trainingLaunchPending=false;
+      if(!this.scene.inBattleView){
+        if(trainingBattleId!==null)this.activeTrainingBattleId=null;
+        return;
+      }
+      this.activeTrainingBattleId=trainingBattleId;
       this.applyClassProfile(true);
       this.lastSnapshot=null;
       const batch=this.presentation.battleStart({zoneId:this.scene.state.battleZoneId??this.worldAuthority.content.battleZoneId});
@@ -254,8 +299,15 @@ export class M4RuntimeIntegration{
 
     const originalAttack=this.scene.attack.bind(this.scene);
     this.scene.attack=(skill:Skill|null)=>{
-      if(skill&&!m6SkillAvailableForCharacter(this.scene.character,skill.skill_id)){
+      if(skill&&!this.skillAllowedForRuntime(this.scene.character,skill.skill_id)){
         this.setNotice('当前职业不能使用该技能');return;
+      }
+      if(!skill){
+        const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
+        if(target&&!m7WizardOrdinaryAttackTargetable(target.m7Status.wizard)){
+          this.setNotice('石化目标不能被普通攻击');
+          return;
+        }
       }
       const before=this.scene.snapshot();
       originalAttack(skill);
@@ -296,14 +348,20 @@ export class M4RuntimeIntegration{
       else if(action==='zoom-reset'){this.scene.resetZoom();this.scene.focusPlayer();this.setNotice('视角已恢复 1:1 并居中角色');}
       else if(action==='interact')this.beginNpcInteraction(undefined,'pointer');
       else if(action==='attack')this.scene.attack(null);
-      else if(action==='skill')this.useSkill(Number(target.dataset.skillId));
+      else if(action==='skill')this.useSkill(target.dataset.skillId??'');
+      else if(action==='recovery-hp')this.trainingRecovery('hp');
+      else if(action==='recovery-mp')this.trainingRecovery('mp');
       else if(action==='rest')this.rest();
+      else if(action==='battle-range-toggle')this.toggleBattleRangeOverlay();
       else if(action==='battle-exit-request')this.requestBattleExit();
       else if(action==='battle-exit-cancel')this.cancelBattleExit();
       else if(action==='battle-exit-confirm')this.confirmBattleExit();
       else if(action==='return')this.returnFromBattle();
       else if(action==='class-swordsman')this.changeClass('100');
       else if(action==='class-wizard')this.changeClass('109');
+      else if(action==='training-start')this.startTrainingBattle(Number(target.dataset.trainingBattleId));
+      else if(action==='dev-preset-apply')this.applyDeveloperPreset();
+      else if(action==='dev-preset-quick')this.applyDeveloperPreset(Number(target.dataset.devLevel));
       else if(action==='m6-promote')this.promoteM6Stage();
     });
     document.addEventListener('change',event=>{
@@ -315,37 +373,291 @@ export class M4RuntimeIntegration{
     });
     window.addEventListener('keydown',event=>{
       if((event.target as HTMLElement).closest('input,select,button,textarea'))return;
-      if(event.key==='Escape'){
-        if(this.battleExitConfirm){this.cancelBattleExit();return;}
-        if(this.activeDialogue){this.activeDialogue=null;this.render(this.scene.snapshot());return;}
-        this.menuOpen=!this.menuOpen;this.render(this.scene.snapshot());return;
+      const battleCommand=resolveBattleHotkey(event.key,this.scene.inBattleView);
+      if(battleCommand){
+        event.preventDefault();
+        this.executeBattleHotkey(battleCommand);
+        return;
       }
+      if(event.key==='Escape'){this.handleEscape();return;}
       if(event.key==='f'||event.key==='F'){event.preventDefault();void this.scene.toggleFullscreen();return;}
       if(event.key==='+'||event.key==='='){event.preventDefault();this.scene.zoomIn();return;}
       if(event.key==='-'){event.preventDefault();this.scene.zoomOut();return;}
       if(event.key==='0'){event.preventDefault();this.scene.resetZoom();this.scene.focusPlayer();return;}
       if(!this.scene.inBattleView&&(event.key==='e'||event.key==='E')){event.preventDefault();this.beginNpcInteraction(undefined,'keyboard');return;}
-      if(this.scene.inBattleView&&['1','2','3'].includes(event.key)){
-        const skills=m6SkillIdsForCharacter(this.scene.character);
-        const skillId=skills[Number(event.key)-1];if(skillId)this.useSkill(skillId);
-      }
-      if(this.scene.inBattleView&&(event.key==='r'||event.key==='R'))this.rest();
+      // Hidden compatibility aliases only. H/M are intentionally absent from the battle HUD.
+      if(this.scene.inBattleView&&(event.key==='h'||event.key==='H')){event.preventDefault();this.trainingRecovery('hp');return;}
+      if(this.scene.inBattleView&&(event.key==='m'||event.key==='M')){event.preventDefault();this.trainingRecovery('mp');return;}
     });
+  }
+
+  private executeBattleHotkey(command:BattleHotkeyCommand):void{
+    if(!this.scene.inBattleView)return;
+    if(command.kind==='attack'){this.scene.attack(null);return;}
+    if(command.kind==='recovery'){this.trainingRecovery(command.resource);return;}
+    if(command.kind==='rest'){this.rest();return;}
+    if(command.kind==='skill'){
+      const skill=this.runtimeSkillCommands()[command.slot];
+      if(skill)this.useSkill(skill.id);
+      else this.setNotice(`技能槽 ${command.slot+1} 当前未配置`);
+      return;
+    }
+    if(command.kind==='toggle-range'){this.toggleBattleRangeOverlay();return;}
+    this.handleEscape();
+  }
+
+  private battleInputScene():BattleInputSceneContract{return this.scene as BattleInputSceneContract;}
+
+  private handleEscape():void{
+    if(this.scene.inBattleView&&this.battleInputScene().cancelBattleTargeting?.()){
+      this.setNotice('已取消当前技能瞄准 / 命令');
+      this.render(this.scene.snapshot());
+      return;
+    }
+    if(this.battleExitConfirm){this.cancelBattleExit();return;}
+    if(this.activeDialogue){this.activeDialogue=null;this.render(this.scene.snapshot());return;}
+    this.menuOpen=!this.menuOpen;
+    this.render(this.scene.snapshot());
+  }
+
+  private publishBattleRangeOverlay(visible:boolean,announce:boolean):void{
+    this.battleRangeOverlayVisible=visible;
+    this.battleInputScene().setBattleRangeOverlayVisible?.(visible);
+    window.dispatchEvent(new CustomEvent('lapis-battle-range-overlay',{detail:{visible}}));
+    if(announce){
+      this.setNotice(`战斗移动 / 攻击 / 施法范围：${visible?'显示':'隐藏'}`);
+      this.render(this.scene.snapshot());
+    }
+  }
+
+  private toggleBattleRangeOverlay():void{
+    if(!this.scene.inBattleView)return;
+    this.publishBattleRangeOverlay(!this.battleRangeOverlayVisible,true);
+  }
+
+
+  private installBattleTargetingAdapter():void{
+    this.scene.setBattleSkillTargetingAdapter({
+      isTargetingSkill:()=>this.battleTargetingState.phase==='aiming',
+      onWorldHover:(x,y,coarse)=>this.hoverBattleTargeting(x,y,coarse),
+      onWorldPointer:(x,y,coarse)=>this.handleBattleTargetPointer(x,y,coarse),
+      onEnemyPointer:enemyId=>{this.scene.selectedEnemy=enemyId;},
+      onCancel:()=>this.cancelBattleTargeting(),
+    });
+  }
+
+  private activeBattleTargetingCommand():M7RuntimeSkillCommand|null{
+    if(this.battleTargetingState.phase!=='aiming'||!this.battleTargetingCommandId)return null;
+    return this.runtimeSkillCommands().find(command=>command.id===this.battleTargetingCommandId)??null;
+  }
+
+  private targetCellOnCurrentBattleMap(cell:M7GridCell):boolean{
+    const collision=this.scene.currentMap().collision;
+    return Number.isInteger(cell[0])&&Number.isInteger(cell[1])&&cell[0]>=0&&cell[1]>=0&&cell[0]<collision.width&&cell[1]<collision.height;
+  }
+
+  private poisonCastCells(command:M7RuntimeSkillCommand):readonly M7GridCell[]{
+    const geometry=m7PoisonGeometry(command.skillLevel);
+    const caster=m7PixelToGridCell(this.scene.anchor.x,this.scene.anchor.y);
+    const collision=this.scene.currentMap().collision;
+    const cells:M7GridCell[]=[];
+    for(let x=0;x<collision.width;x++)for(let y=0;y<collision.height;y++){
+      const cell=Object.freeze([x,y]) as M7GridCell;
+      if(validateM7CastCell(caster,cell,geometry.castDistance).ok)cells.push(cell);
+    }
+    return Object.freeze(cells);
+  }
+
+  private syncBattleTargetingVisual():void{
+    const command=this.activeBattleTargetingCommand();
+    if(!command){
+      this.scene.setBattleTargetingVisualization(undefined);
+      return;
+    }
+    const geometry=m7PoisonGeometry(command.skillLevel);
+    const preview=this.battleTargetingState.previewCell;
+    const previewCells=preview
+      ?enumerateM7DiamondArea(preview,geometry.areaCode).filter(cell=>this.targetCellOnCurrentBattleMap(cell))
+      :Object.freeze([] as M7GridCell[]);
+    this.scene.setBattleTargetingVisualization({
+      castCells:this.poisonCastCells(command),
+      previewCenter:preview,
+      previewCells,
+    });
+  }
+
+  private beginBattleTargeting(command:M7RuntimeSkillCommand):void{
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active'){this.setNotice('请先进入战斗画面');return;}
+    if(!this.scene.canAct()){this.setNotice('行动未就绪，暂时不能进入技能瞄准');return;}
+    if(this.scene.state.mp<command.mpCost){this.setNotice('MP 不足');return;}
+    this.battleTargetingCommandId=command.id;
+    this.battleTargetingState=beginM7SkillTargeting(command.id);
+    this.syncBattleTargetingVisual();
+    this.setNotice(`${command.displayName} Lv.${command.skillLevel}：选择施法中心格；Esc/右键取消`);
+    this.render(this.scene.snapshot());
+  }
+
+  private hoverBattleTargeting(worldX:number,worldY:number,coarse:boolean):void{
+    if(coarse||this.battleTargetingState.phase!=='aiming')return;
+    const command=this.activeBattleTargetingCommand();if(!command)return;
+    const cell=m7PixelToGridCell(worldX,worldY);
+    const caster=m7PixelToGridCell(this.scene.anchor.x,this.scene.anchor.y);
+    if(!this.targetCellOnCurrentBattleMap(cell)||!validateM7CastCell(caster,cell,m7PoisonGeometry(command.skillLevel).castDistance).ok){
+      if(this.battleTargetingState.previewCell){
+        this.battleTargetingState=beginM7SkillTargeting(command.id);
+        this.syncBattleTargetingVisual();
+      }
+      return;
+    }
+    this.battleTargetingState=hoverM7SkillTargeting(this.battleTargetingState,cell);
+    this.syncBattleTargetingVisual();
+  }
+
+  private handleBattleTargetPointer(worldX:number,worldY:number,coarse:boolean):boolean{
+    if(this.battleTargetingState.phase!=='aiming')return false;
+    const command=this.activeBattleTargetingCommand();if(!command){this.clearBattleTargeting(false);return true;}
+    const cell=m7PixelToGridCell(worldX,worldY);
+    const caster=m7PixelToGridCell(this.scene.anchor.x,this.scene.anchor.y);
+    const geometry=m7PoisonGeometry(command.skillLevel);
+    if(!this.targetCellOnCurrentBattleMap(cell)||!validateM7CastCell(caster,cell,geometry.castDistance).ok){
+      this.setNotice(`目标格超出技能射程（${geometry.castDistance}格）`);
+      this.render(this.scene.snapshot());
+      return true;
+    }
+    this.battleTargetingState=coarse
+      ?tapM7SkillTargeting(this.battleTargetingState,cell)
+      :confirmM7SkillTargeting(this.battleTargetingState,cell);
+    this.syncBattleTargetingVisual();
+    if(this.battleTargetingState.phase==='confirmed'&&this.battleTargetingState.confirmedCell){
+      const confirmed=this.battleTargetingState.confirmedCell;
+      this.clearBattleTargeting(false);
+      try{this.executeSkillCommand(command,confirmed);}catch(error){this.setNotice(String(error));this.render(this.scene.snapshot());}
+    }else{
+      this.setNotice(`${command.displayName}：再次点击当前格确认施法`);
+      this.render(this.scene.snapshot());
+    }
+    return true;
+  }
+
+  private cancelBattleTargeting():boolean{
+    if(this.battleTargetingState.phase!=='aiming')return false;
+    this.battleTargetingState=cancelM7SkillTargeting(this.battleTargetingState);
+    this.battleTargetingCommandId=null;
+    this.scene.setBattleTargetingVisualization(undefined);
+    this.battleTargetingState=createM7SkillTargetingState();
+    return true;
+  }
+
+  private clearBattleTargeting(_announce=false):void{
+    this.battleTargetingState=createM7SkillTargetingState();
+    this.battleTargetingCommandId=null;
+    this.scene.setBattleTargetingVisualization(undefined);
   }
 
   private changeClass(id:'100'|'109'):void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再开始新职业档');return;}
     this.activeDialogue=null;
     this.pendingEncounter=null;
+    this.activeTrainingBattleId=null;
+    this.trainingLaunchPending=false;
+    this.developerPresetActive=false;
+    this.developerUnlockAllSkills=false;
+    this.developerSkillPoints=0;
     this.rewards=createM4RewardState(0);
     this.world=this.worldAuthority.initial(this.m5World?.content.start??START_STATE);
     this.m6Stage=createM6StageState(id);
+    this.m7Skills=createM7IntegratedSkillState(id,1);
     this.scene.setCharacter(id);
     this.m6Stage=createM6StageState(id);
     this.syncSceneInventory();
     this.applyWorldState(this.m5World?.content.start??START_STATE);
     this.menuOpen=false;
     this.setNotice(id==='100'?'已开始新的剑士职业档':'已开始新的巫师职业档');
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceSetEnemyHp(targetId:string,hp:number):void{
+    if(!navigator.webdriver)throw new Error('M7 acceptance enemy fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('M7 acceptance enemy fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    if(!Number.isFinite(hp)||hp<=0||hp>=enemy.maxHp)throw new Error('Invalid acceptance enemy HP');
+    enemy.hp=hp;
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceSetPlayerMp(mp:number):void{
+    if(!navigator.webdriver)throw new Error('M7 acceptance player MP fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('M7 acceptance player MP fixture requires active battle');
+    if(!Number.isFinite(mp)||mp<0)throw new Error('Invalid acceptance player MP');
+    this.scene.state.mp=Math.min(this.scene.state.maxMp,Math.floor(mp));
+    this.render(this.scene.snapshot());
+  }
+
+  acceptancePrimeEnemyAction(targetId:string):void{
+    if(!navigator.webdriver)throw new Error('M7 acceptance enemy action fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('M7 acceptance enemy action fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    enemy.action=this.scene.state.actionMax;
+  }
+
+  acceptanceRunEnemyAbility(targetId:string,abilityKind:string):void{
+    if(!navigator.webdriver)throw new Error('S34 acceptance enemy ability fixture is automation-only');
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active')throw new Error('S34 acceptance enemy ability fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    const ability=enemy.abilities.find(row=>row.kind===abilityKind);
+    if(!ability)throw new Error('Enemy '+targetId+' lacks acceptance ability '+abilityKind);
+    enemy.abilityCooldownMs[ability.abilityId]=0;
+    enemy.action=this.scene.state.actionMax;
+    const defense=legacyEquipmentBonus(this.scene.inventory,this.scene.character).defense;
+    updateBattle(
+      this.scene.state,
+      1,
+      enemy.x,
+      enemy.y,
+      defense,
+      {collision:this.scene.currentMap().collision,playerBusy:false,reserved:[]},
+    );
+    reconcileBattlePhase(this.scene.state);
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceSelectEnemy(targetId:string):void{
+    if(!navigator.webdriver)throw new Error('S34 acceptance target fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('S34 acceptance target fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    this.scene.selectedEnemy=enemy.id;
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceAdvanceBattleTimeMs(deltaMs:number):void{
+    if(!navigator.webdriver)throw new Error('S34 acceptance time fixture is automation-only');
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active')throw new Error('S34 acceptance time fixture requires active battle');
+    if(!Number.isFinite(deltaMs)||deltaMs<0||deltaMs>120000)throw new Error('Invalid S34 acceptance delta');
+    let remaining=deltaMs;
+    const defense=legacyEquipmentBonus(this.scene.inventory,this.scene.character).defense;
+    // Advance the production battle/status authority while deliberately keeping
+    // the acceptance-only virtual actor outside every encounter trigger radius.
+    // This avoids adding synthetic enemy attacks merely because test time is accelerated.
+    const quietX=this.scene.anchor.x+1_000_000,quietY=this.scene.anchor.y+1_000_000;
+    while(remaining>0){
+      const step=Math.min(250,remaining);
+      updateBattle(this.scene.state,step,quietX,quietY,defense,{collision:this.scene.currentMap().collision,playerBusy:false,reserved:[]});
+      remaining-=step;
+    }
+    reconcileBattlePhase(this.scene.state);
+    this.render(this.scene.snapshot());
+  }
+
+  acceptanceSetPlayerVitals(hp:number,mp:number):void{
+    if(!navigator.webdriver)throw new Error('S34 acceptance vitals fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('S34 acceptance vitals fixture requires active battle');
+    if(!Number.isFinite(hp)||!Number.isFinite(mp)||hp<=0||mp<0)throw new Error('Invalid S34 acceptance vitals');
+    this.scene.state.hp=Math.min(this.scene.state.maxHp,Math.floor(hp));
+    this.scene.state.mp=Math.min(this.scene.state.maxMp,Math.floor(mp));
     this.render(this.scene.snapshot());
   }
 
@@ -356,8 +668,10 @@ export class M4RuntimeIntegration{
     const amount=Math.max(0,targetExp-this.rewards.progression.exp);
     if(amount===0)return;
     const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
+    const oldLevel=this.rewards.progression.level;
     const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
     this.rewards=applied.state;
+    this.reconcileM7Skills(oldLevel);
     this.scene.gold=this.rewards.gold;
     this.applyClassProfile(false);
     this.setNotice(`M6 acceptance fixture：通过生产 reward/progression authority 到达 Lv.${this.rewards.progression.level}`);
@@ -366,7 +680,7 @@ export class M4RuntimeIntegration{
 
   private promoteM6Stage():void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再晋阶');return;}
-    const rule=m6PromotionRuleForCharacter(this.scene.character);
+    const rule=integratedPromotionRuleForCharacter(this.scene.character);
     if(!rule){this.setNotice('当前已经是本职业第十阶段');return;}
     const result=applyM6Promotion(
       m6StageTrackForCharacter(this.scene.character),
@@ -391,27 +705,156 @@ export class M4RuntimeIntegration{
     this.render(this.scene.snapshot());
   }
 
-  private useSkill(skillId:number):void{
+  private applyDeveloperPreset(levelOverride?:number):void{
+    if(!this.developerMode){this.setNotice('Developer Preset 仅在 Developer / Diagnostics 模式可用');return;}
+    if(this.scene.inBattleView){this.setNotice('请先结束战斗再应用 Developer Preset');return;}
+    const currentProfession=playableClassById(this.scene.character).family as M7Profession;
+    const selectedProfession=this.menuRoot.querySelector<HTMLSelectElement>('[data-dev-profession]')?.value;
+    const profession:M7Profession=selectedProfession==='swordsman'||selectedProfession==='wizard'?selectedProfession:currentProfession;
+    const inputLevel=Number(this.menuRoot.querySelector<HTMLInputElement>('[data-dev-level-input]')?.value);
+    const level=levelOverride??inputLevel;
+    const unlockAll=this.menuRoot.querySelector<HTMLInputElement>('[data-dev-unlock-all]')?.checked??false;
     try{
-      const definition=skillById(skillId);
-      if(!m6SkillAvailableForCharacter(this.scene.character,skillId))throw new Error('当前职业不能使用该技能');
-      if(this.scene.state.mp<definition.mpCost)throw new Error('MP 不足');
+      const preset=buildM7DeveloperCharacterPreset(profession,level,unlockAll);
+      this.rewards={...this.rewards,progression:{...this.rewards.progression,level:preset.level,exp:totalExpForLevel(preset.level)}};
+      this.m7Skills=createM7IntegratedSkillState(String(preset.stageId),Math.min(65,preset.level));
+      this.developerPresetActive=true;
+      this.developerUnlockAllSkills=preset.unlockAllImplementedSkills;
+      this.developerSkillPoints=preset.skillPoints;
+      this.scene.setCharacter(String(preset.stageId));
+      this.m6Stage=createM6StageState(preset.stageId);
+      this.equipDeveloperPreset();
+      this.applyClassProfile(true);
+      this.menuOpen=false;
+      this.setNotice('Developer Preset：'+profession+' Lv.'+preset.level+' / Stage '+preset.stage+' / B'+preset.stageId+(preset.unlockAllImplementedSkills?' / all implemented skills Lv6 override':'')+' / RECONSTRUCTION_POLICY');
+      this.render(this.scene.snapshot());
+    }catch(error){this.setNotice('Developer Preset 失败：'+String(error));}
+  }
+
+  private equipDeveloperPreset():void{
+    const definition=playableClassById(this.scene.character);
+    const context={characterId:this.scene.character,family:definition.family,stageId:Number(this.scene.character),level:this.rewards.progression.level};
+    let inventory=this.rewards.inventory;
+    for(const slot of ['weapon','armor'] as const){
+      const rule=M6_RUNTIME_EQUIPMENT_RULES.find(candidate=>
+        candidate.slot===slot&&
+        inventory.items.some(item=>item.itemId===candidate.itemId&&item.quantity>0)&&
+        evaluateM6EquipmentEligibility(candidate,context).allowed
+      );
+      if(rule)inventory=equipProgression(inventory,this.scene.character,slot,rule.itemId,CLASS_RESOLVER);
+    }
+    this.rewards={...this.rewards,inventory};
+    this.syncSceneInventory();
+  }
+
+  private m7Level():number{return Math.min(65,Math.max(1,this.rewards.progression.level));}
+
+  private reconcileM7Skills(oldLevel:number):void{
+    const previous=Math.min(65,Math.max(1,oldLevel));
+    const next=this.m7Level();
+    const family=playableClassById(this.scene.character).family;
+    if(this.m7Skills.family!==family||next<previous){
+      this.m7Skills=createM7IntegratedSkillState(this.scene.character,next);
+      return;
+    }
+    if(next>previous)this.m7Skills=reconcileM7IntegratedSkillState(this.m7Skills,this.scene.character,previous,next);
+  }
+
+  private runtimeSkillCommands():readonly M7RuntimeSkillCommand[]{
+    return m7RuntimeSkillCommands(
+      this.m7Skills,
+      this.scene.character,
+      this.m7Level(),
+      this.developerMode&&this.developerUnlockAllSkills,
+    );
+  }
+
+  private skillAllowedForRuntime(_characterId:string|number,skillId:number):boolean{
+    return this.runtimeSkillCommands().some(command=>command.authoredSkillId===skillId);
+  }
+
+  private executeSkillCommand(command:M7RuntimeSkillCommand,targetCell:M7GridCell|null=null):void{
+    const result=targetCell
+      ?useM7SkillTargeted(this.scene.state,{targetId:this.scene.selectedEnemy,targetCell},this.scene.anchor.x,this.scene.anchor.y,command)
+      :useM7Skill(this.scene.state,this.scene.selectedEnemy,this.scene.anchor.x,this.scene.anchor.y,command);
+    reconcileBattlePhase(this.scene.state);
+    this.setNotice(result.message);
+    if(!result.ok){this.render(this.scene.snapshot());return;}
+    const visual=visualSkillForCommand(command);
+    const magicResourceId=visual?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
+    const explicitOrigin=targetCell?(()=>{const [x,y]=referenceCellToScreen(targetCell);return{x,y};})():undefined;
+    this.scene.presentM7SkillAction(result.affectedEnemyIds,magicResourceId,command.target==='self',explicitOrigin);
+    const animation=this.scene.animation();
+    this.present(this.presentation.attack({rawTiming:animation.raw_timing,frameCount:animation.frames_per_direction}));
+    if(visual){
       const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
-      if(definition.targetType!=='self'&&!target)throw new Error('请选择存活目标');
-      if(target&&definition.targetType!=='self'){
-        const player=nearestAnchor(this.scene.anchor.x,this.scene.anchor.y);
-        const enemy=nearestAnchor(target.x,target.y);
-        const range=Math.max(Math.abs(player[0]-enemy[0]),Math.abs(player[1]-enemy[1]));
-        if(range>definition.range)throw new Error(`目标超出技能射程（${definition.range} 格）`);
+      const effectTarget=explicitOrigin??(target?{x:target.x,y:target.y}:null);
+      const resources=(visual.magic_pattern?.magic_resources??[]).flatMap(resource=>{
+        const effect=this.scene.pack.effects[String(resource.magic_resource_id)];
+        return effect?[{resourceId:resource.magic_resource_id,rawTiming:effect.raw_timing,frameCount:effect.frame_count,role:resource.role,rawStartTick:resource.start_tick}]:[];
+      });
+      if(resources.length)this.present(this.presentation.magicEffect({resources,context:{caster:{...this.scene.anchor},target:effectTarget}}));
+    }
+    this.render(this.scene.snapshot());
+  }
+
+  private useSkill(commandId:string|number):void{
+    try{
+      const command=this.runtimeSkillCommands().find(row=>row.id===String(commandId)||row.authoredSkillId===Number(commandId));
+      if(!command)throw new Error('当前职业/阶段不能使用该技能');
+      if(command.family==='wizard'&&command.skillKey==='poison-mist'){
+        this.beginBattleTargeting(command);
+        return;
       }
-      this.scene.attack(runtimeSkill(skillId));
-    }catch(error){this.setNotice(String(error));}
+      this.clearBattleTargeting(false);
+      this.executeSkillCommand(command);
+    }catch(error){this.setNotice(String(error));this.render(this.scene.snapshot());}
   }
 
   private rest():void{
     if(!this.scene.inBattleView||!actionReady(this.scene.state)){this.setNotice('当前不能休息：请等待行动槽就绪');return;}
     if(!consumeAction(this.scene.state,this.scene.state.restReadinessCost)){this.setNotice('休息指令未执行');return;}
     this.setNotice('休息：已按恢复出的 REST readiness cost 消耗行动槽；额外效果尚无原版证据。');
+  }
+
+  private trainingRecovery(kind:'hp'|'mp'):void{
+    if(!this.scene.canAct()){this.setNotice('当前不能恢复：请等待行动槽就绪并结束当前动作');return;}
+    const result=applyInfiniteTrainingRecovery(this.scene.state,kind);
+    if(!result.ok){
+      const label=kind==='hp'?'HP':'MP';
+      this.setNotice(result.reason==='already-full'?label+' 已满，未消耗 readiness':'当前不能执行 '+label+' Recovery');
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.setNotice((kind==='hp'?'HP':'MP')+' Recovery +'+result.restored+'；readiness -'+result.readinessSpent+' / '+result.provenance);
+    this.render(this.scene.snapshot());
+  }
+
+  private startTrainingBattle(id:number):void{
+    if(this.scene.inBattleView){this.setNotice('当前已在战斗中');return;}
+    if(this.scene.route.length){this.setNotice('请等待移动结束后再开始训练战');return;}
+    try{
+      const preset=trainingBattleById(id);
+      this.selectedTrainingBattleId=preset.id;
+      this.activeDialogue=null;
+      this.pendingEncounter=null;
+      this.menuOpen=false;
+      this.trainingLaunchPending=true;
+      this.scene.enterBattle();
+      if(!this.scene.inBattleView){
+        this.trainingLaunchPending=false;
+        this.activeTrainingBattleId=null;
+        this.setNotice('Training Battle #'+preset.id+' 未能启动');
+        this.render(this.scene.snapshot());
+        return;
+      }
+      const integrated=integratedTrainingBattleById(preset.id);
+      const actualZone=this.scene.state.battleZoneId;
+      const sceneNote=actualZone===preset.battleZoneId?'场景绑定已匹配':(!this.scene.pack.maps[String(preset.battleZoneId)]?'synthetic 缺 Zone '+preset.battleZoneId+'，已显式 fallback 至 '+String(actualZone):'场景绑定失败：expected '+preset.battleZoneId+', got '+String(actualZone));
+      const levels=integrated.enemies.map(enemy=>enemy.fixedLevel).join('/');
+      this.setNotice('Training Battle #'+preset.id+'：Fixed Enemy Lv.'+levels+' / '+sceneNote);
+      this.render(this.scene.snapshot());
+    }catch(error){this.trainingLaunchPending=false;this.setNotice(String(error));}
   }
 
   private requestBattleExit():void{
@@ -441,10 +884,13 @@ export class M4RuntimeIntegration{
   }
 
   private retreatFromBattle():void{
+    this.clearBattleTargeting(false);
     this.scene.leaveBattle();
     this.scene.gold=this.rewards.gold;
     this.world={...this.world,world:this.currentWorldState()};
     this.pendingEncounter=null;
+    this.activeTrainingBattleId=null;
+    this.trainingLaunchPending=false;
     this.lastSnapshot=null;
     this.suppressEncounterUntilLeave=true;
     if(this.spatial){
@@ -559,26 +1005,46 @@ export class M4RuntimeIntegration{
       this.world=resolution.state;
       returnState=resolution.returnTo??null;
       if(phase==='won')this.applyBattleSettlement();
+    }else if(phase==='won'&&this.activeTrainingBattleId!==null){
+      this.applyBattleSettlement();
     }
+    this.clearBattleTargeting(false);
     this.scene.leaveBattle();
     this.scene.gold=this.rewards.gold;
     if(returnState)this.applyWorldState(returnState);else this.world={...this.world,world:this.currentWorldState()};
     this.pendingEncounter=null;
+    this.activeTrainingBattleId=null;
+    this.trainingLaunchPending=false;
     this.lastSnapshot=null;
     this.render(this.scene.snapshot());
   }
 
   private applyBattleSettlement():void{
+    if(this.activeTrainingBattleId!==null){
+      const preset=trainingBattleById(this.activeTrainingBattleId);
+      const enemies=reconstructionEnemiesForTrainingBattle(preset.id);
+      const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
+        enemies.map(enemy=>({level:enemy.level,rank:enemy.rank})),
+      );
+      const oldLevel=this.rewards.progression.level;
+      const applied=applyBattleReward(this.rewards,'m7-training-battle-'+preset.id,'battle:m7-training:'+preset.id+':win',{gold:reward.gold,exp:reward.exp});
+      this.rewards=applied.state;this.reconcileM7Skills(oldLevel);this.scene.gold=this.rewards.gold;
+      this.setNotice('Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
+      return;
+    }
     if(this.m5World){
       const level=Math.max(1,this.rewards.progression.level);
       const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter([{level,rank:'normal'},{level,rank:'normal'}]);
+      const oldLevel=this.rewards.progression.level;
       const applied=applyBattleReward(this.rewards,'m5-training-house','battle:m5-training-house:win',{gold:reward.gold,exp:reward.exp});
-      this.rewards=applied.state;this.scene.gold=this.rewards.gold;
+      this.rewards=applied.state;this.reconcileM7Skills(oldLevel);this.scene.gold=this.rewards.gold;
       this.setNotice(`战斗胜利：金币 +${reward.gold}，EXP +${reward.exp}，当前 Lv.${this.rewards.progression.level} / RECONSTRUCTION_POLICY`);
       return;
     }
+    const oldLevel=this.rewards.progression.level;
     const applied=applyBattleReward(this.rewards,'s9-training-battle','battle:s9-training-run:win',{gold:10,exp:100});
     this.rewards=applied.state;
+    this.reconcileM7Skills(oldLevel);
     this.scene.gold=this.rewards.gold;
     if(applied.events.some(event=>event.type==='level_up'))this.setNotice(`战斗胜利：金币 +10，EXP +100，当前 Lv.${this.rewards.progression.level}`);
   }
@@ -586,8 +1052,10 @@ export class M4RuntimeIntegration{
   private applyQuestSettlement():void{
     const questId=this.worldAuthority.content.questId;
     const reward=this.m5World?{gold:7,exp:230,questFlags:['m5.training.complete']}:{gold:5,exp:200,questFlags:['m4.training.complete']};
+    const oldLevel=this.rewards.progression.level;
     const applied=applyQuestReward(this.rewards,questId,`quest:${questId}:turn-in`,reward);
     this.rewards=applied.state;
+    this.reconcileM7Skills(oldLevel);
     this.scene.gold=this.rewards.gold;
     this.setNotice(`任务完成：金币 +${reward.gold}，EXP +${reward.exp}，当前 Lv.${this.rewards.progression.level} / RECONSTRUCTION_POLICY`);
   }
@@ -601,11 +1069,20 @@ export class M4RuntimeIntegration{
     return DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.playerStats(this.scene.character,Math.max(1,this.rewards.progression.level),this.combatEquipment());
   }
 
-  private prepareReconstructionBattle():void{
+  private prepareReconstructionBattle(trainingBattleId:number|null=null):void{
+    const level=Math.max(1,this.rewards.progression.level);
+    if(trainingBattleId!==null){
+      const preset=trainingBattleById(trainingBattleId);
+      this.scene.setReconstructionBattleSetup({
+        ...reconstructionSetupForTrainingBattle(preset,this.scene.character,level,this.combatEquipment()),
+        enemies:reconstructionEnemiesForTrainingBattle(trainingBattleId),
+      });
+      return;
+    }
     if(!this.m5World){this.scene.setReconstructionBattleSetup(undefined);return;}
     this.scene.setReconstructionBattleSetup({
-      playerClassId:this.scene.character,level:Math.max(1,this.rewards.progression.level),equipment:this.combatEquipment(),
-      enemyLevel:Math.max(1,this.rewards.progression.level),enemyRank:'normal'
+      playerClassId:this.scene.character,level,equipment:this.combatEquipment(),
+      enemyLevel:level,enemyRank:'normal'
     });
   }
 
@@ -667,9 +1144,10 @@ export class M4RuntimeIntegration{
     return{pack:this.scene.pack.digest,characters:M6_CHARACTER_IDS,mapBounds};
   }
 
-  makeSave():SaveV2{
+  makeSave():M7SaveV2{
     if(this.scene.inBattleView)throw new Error('战斗中不能存档');
     if(this.scene.route.length)throw new Error('请等待移动结束后再存档');
+    if(this.developerPresetActive||this.developerUnlockAllSkills)throw new Error('Developer Preset / Debug Skill Override 不写入普通 SaveV2；请新建职业档或重新读取普通存档后再保存');
     const m6=createM6SaveExtension(this.scene.character,{
       stage:this.m6Stage,
       questChain:m6QuestChainForLegacyStage(this.world.quest.stage,this.rewards.questFlags),
@@ -679,7 +1157,8 @@ export class M4RuntimeIntegration{
       kind:SAVE_KIND,version:CURRENT_SAVE_VERSION,pack:this.scene.pack.digest,character:this.scene.character,mapId:this.scene.mapId,
       x:this.scene.anchor.x,y:this.scene.anchor.y,gold:this.rewards.gold,inventory:this.rewards.inventory,
       quest:{questId:this.world.quest.questId,stage:this.world.quest.stage} as JsonValue,
-      questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],m6,savedAt:new Date().toISOString(),
+      questFlags:{...this.rewards.questFlags},progression:{...this.rewards.progression},rewardReceipts:[...this.rewards.rewardReceipts],m6,
+      m7:createM7SaveExtension(this.scene.character,this.m7Level(),this.m7Skills,{hp:this.scene.state.hp,mp:this.scene.state.mp}),savedAt:new Date().toISOString(),
     };
   }
 
@@ -693,21 +1172,31 @@ export class M4RuntimeIntegration{
     catch(error){this.setNotice(`读档失败：${String(error)}`);}
   }
 
-  exportJson():string{return serializeM6SaveV2(this.makeSave() as M6SaveV2,this.saveContext(),M6_SAVE_CONTENT);}
+  exportJson():string{return serializeM7SaveV2(this.makeSave(),this.saveContext(),M6_SAVE_CONTENT);}
 
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
     this.activeDialogue=null;
-    const save=migrateSaveToM6(raw,this.saveContext(),M6_SAVE_CONTENT);
+    this.activeTrainingBattleId=null;
+    this.trainingLaunchPending=false;
+    this.developerPresetActive=false;
+    this.developerUnlockAllSkills=false;
+    this.developerSkillPoints=0;
+    const save=migrateSaveToM7(raw,this.saveContext(),M6_SAVE_CONTENT);
     const quest=parseM4Quest(save.quest,this.worldAuthority.content.questId);
     this.rewards={gold:save.gold,inventory:save.inventory,progression:save.progression,questFlags:save.questFlags,rewardReceipts:save.rewardReceipts};
     this.world={world:{mapId:save.mapId,...(()=>{const cell=nearestAnchor(save.x,save.y);return{x:cell[0],y:cell[1]};})()},quest};
     this.scene.setCharacter(save.character);
     this.m6Stage=save.m6.stage;
+    this.m7Skills=save.m7.skills;
     this.scene.setMap(save.mapId);
     this.scene.anchor={x:save.x,y:save.y};
     this.scene.route=[];
     this.applyClassProfile(false);
+    if(save.m7.vitals){
+      this.scene.state.hp=Math.min(this.scene.state.maxHp,save.m7.vitals.hp);
+      this.scene.state.mp=Math.min(this.scene.state.maxMp,save.m7.vitals.mp);
+    }
     this.syncSceneInventory();
     if(this.m5World){this.scene.setPlayerCameraFollow(true);this.scene.focusPlayer();const cell=nearestAnchor(save.x,save.y);this.spatial?.start({mapId:save.mapId,cell});}
     else this.scene.fit();
@@ -716,6 +1205,8 @@ export class M4RuntimeIntegration{
   }
 
   private onSnapshot(snapshot:Snapshot):void{
+    if(!snapshot.inBattleView&&this.battleTargetingState.phase==='aiming')this.clearBattleTargeting(false);
+    if(!snapshot.inBattleView&&this.battleRangeOverlayVisible)this.publishBattleRangeOverlay(false,false);
     if(this.lastSnapshot&&snapshot.inBattleView){
       if(snapshot.hp<this.lastSnapshot.hp){
         this.present(this.presentation.hit({targetId:'player',amount:this.lastSnapshot.hp-snapshot.hp,resultingHp:snapshot.hp,maxHp:this.scene.state.maxHp}));
@@ -820,26 +1311,47 @@ export class M4RuntimeIntegration{
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
-        skills:m6SkillIdsForCharacter(snapshot.character).map((id,index)=>{const skill=skillById(id);return{id,name:skill.displayName,mpCost:skill.mpCost,hotkey:String(index+1),disabled:snapshot.mp<skill.mpCost};}),
+        skills:this.runtimeSkillCommands().map((command,index)=>({id:command.authoredSkillId??command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:battleSkillHotkeyLabel(index),disabled:snapshot.mp<command.mpCost})),
       };
       hudHtml=renderBattleHud(player,battle);
     }else hudHtml=renderFieldHud(player,field);
     if(hudHtml!==this.hudHtml){
+      const commandScrollLeft=this.hudRoot.querySelector<HTMLElement>('.command-deck')?.scrollLeft??0;
+      const skillScrollLeft=this.hudRoot.querySelector<HTMLElement>('.skill-deck')?.scrollLeft??0;
+      const utilityScrollLeft=this.hudRoot.querySelector<HTMLElement>('.battle-utility-deck')?.scrollLeft??0;
       this.hudRoot.innerHTML=hudHtml;
+      const commandDeck=this.hudRoot.querySelector<HTMLElement>('.command-deck');
+      const skillDeck=this.hudRoot.querySelector<HTMLElement>('.skill-deck');
+      const utilityDeck=this.hudRoot.querySelector<HTMLElement>('.battle-utility-deck');
+      if(commandDeck)commandDeck.scrollLeft=commandScrollLeft;
+      if(skillDeck)skillDeck.scrollLeft=skillScrollLeft;
+      if(utilityDeck)utilityDeck.scrollLeft=utilityScrollLeft;
       this.hudHtml=hudHtml;
     }
 
-    const menuHtml=renderGameMenu({open:this.menuOpen,canSave:!snapshot.inBattleView,canLoad:!snapshot.inBattleView,devEnabled:this.developerMode});
-    if(menuHtml!==this.menuHtml){
+    const menuHtml=renderGameMenu({
+      open:this.menuOpen,
+      canSave:!snapshot.inBattleView&&!this.developerPresetActive&&!this.developerUnlockAllSkills,
+      canLoad:!snapshot.inBattleView,
+      devEnabled:this.developerMode,
+    });
+    const menuSignature=menuHtml+'|m7:'+this.selectedTrainingBattleId+':'+this.rewards.progression.level+':'+this.developerMode+':'+this.developerUnlockAllSkills+':'+snapshot.character;
+    if(menuSignature!==this.menuHtml){
       this.menuRoot.innerHTML=menuHtml;
       const grid=this.menuRoot.querySelector('.menu-grid');
       if(grid){
-        const promotion=m6PromotionRuleForCharacter(snapshot.character);
+        const promotion=integratedPromotionRuleForCharacter(snapshot.character);
         const promotionLabel=promotion?`晋阶至 ${playableClassById(promotion.toStageId).displayName}（Lv.${promotion.minimumLevel}）`:'已达第十阶段';
         const disabled=promotion&&this.rewards.progression.level>=(promotion.minimumLevel??1)?'':' disabled';
         grid.insertAdjacentHTML('beforeend',`<button type="button" data-action="m6-promote"${promotion?disabled:' disabled'}>${promotionLabel}</button><button type="button" data-action="class-swordsman">新建剑士档</button><button type="button" data-action="class-wizard">新建巫师档</button>`);
       }
-      this.menuHtml=menuHtml;
+      const panel=this.menuRoot.querySelector<HTMLElement>('.menu-panel');
+      if(panel&&!snapshot.inBattleView){
+        panel.classList.add('m7-menu-panel');
+        panel.insertAdjacentHTML('beforeend',renderM7TrainingCamp(this.rewards.progression.level,this.selectedTrainingBattleId));
+        if(this.developerMode)panel.insertAdjacentHTML('beforeend',renderM7DeveloperPreset(definition.family as M7Profession,this.rewards.progression.level,this.developerUnlockAllSkills));
+      }
+      this.menuHtml=menuSignature;
     }
     const diagnostics:DiagnosticsState={
       open:this.developerMode,mapSelector:String(snapshot.mapId).padStart(4,'0'),rawTiming:`${snapshot.timing} → ${snapshot.duration.toFixed(2)}ms`,

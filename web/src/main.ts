@@ -138,6 +138,8 @@ async function start(){
   window.addEventListener('keydown',e=>{
     if((e.target as HTMLElement).closest('input,select,button,textarea'))return;
     const dirs:Record<string,[number,number]>={w:[0,-1],a:[-1,0],s:[0,1],d:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+    // S34A: M4 battle owns A/S/D plus Q/W/E/R; keep legacy WASD movement field-only.
+    if(scene.inBattleView&&document.body.classList.contains('m4-active')&&['w','a','s','d'].includes(e.key.toLowerCase()))return;
     if(dirs[e.key]){e.preventDefault();scene.moveKey(...dirs[e.key]);}
   });
 

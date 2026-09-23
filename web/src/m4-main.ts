@@ -1,5 +1,6 @@
 import './ui/game-shell.css';
 import './m4-runtime.css';
+import './ui/m7-training.css';
 import {LabScene} from './scene.ts';
 import {installM4Runtime} from './m4-runtime-integration.ts';
 
@@ -13,6 +14,13 @@ declare global{
       exportJson:()=>string;
       restore:(raw:unknown)=>void;
       acceptanceGrantLevel?:(targetLevel:number)=>void;
+      acceptanceSetEnemyHp?:(targetId:string,hp:number)=>void;
+      acceptanceSetPlayerMp?:(mp:number)=>void;
+      acceptancePrimeEnemyAction?:(targetId:string)=>void;
+      acceptanceRunEnemyAbility?:(targetId:string,abilityKind:string)=>void;
+      acceptanceSelectEnemy?:(targetId:string)=>void;
+      acceptanceAdvanceBattleTimeMs?:(deltaMs:number)=>void;
+      acceptanceSetPlayerVitals?:(hp:number,mp:number)=>void;
     };
   }
 }
@@ -44,7 +52,16 @@ window.addEventListener('lapis-ready',()=>{
     load:()=>runtime.load(),
     exportJson:()=>runtime.exportJson(),
     restore:(raw:unknown)=>runtime.restore(raw),
-    ...(navigator.webdriver?{acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel)}:{}),
+    ...(navigator.webdriver?{
+      acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel),
+      acceptanceSetEnemyHp:(targetId:string,hp:number)=>runtime.acceptanceSetEnemyHp(targetId,hp),
+      acceptanceSetPlayerMp:(mp:number)=>runtime.acceptanceSetPlayerMp(mp),
+      acceptancePrimeEnemyAction:(targetId:string)=>runtime.acceptancePrimeEnemyAction(targetId),
+      acceptanceRunEnemyAbility:(targetId:string,abilityKind:string)=>runtime.acceptanceRunEnemyAbility(targetId,abilityKind),
+      acceptanceSelectEnemy:(targetId:string)=>runtime.acceptanceSelectEnemy(targetId),
+      acceptanceAdvanceBattleTimeMs:(deltaMs:number)=>runtime.acceptanceAdvanceBattleTimeMs(deltaMs),
+      acceptanceSetPlayerVitals:(hp:number,mp:number)=>runtime.acceptanceSetPlayerVitals(hp,mp),
+    }:{}),
   };
 });
 

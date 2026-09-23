@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.5｜更新：2026-09-21｜Web-first  
+> 版本：v3.6｜更新：2026-09-22｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -26,6 +26,7 @@
 - 2026-09-19 用户亲自试玩已给出 M5 体感门结论：**未通过**。NPC 虽可见，但世界 NPC 当前不是可点击交互目标；点击引导员会落入地图点击移动路径，无法自然触发对话/任务。HUD 也仍明显偏开发壳：状态栏过大、引导框和下方框位置不合理、遮挡偏重，且未优先复用已经搜集到的原版/同期界面证据。项目立即转入 **M5.1 User Playtest Repair**。
 - 2026-09-20 用户亲自试玩最终 S24 standalone HTML 后明确确认 **通过**。M5.1 已完成原版结构优先 HUD、NPC pointer/hitbox、显式对话/任务选择、手机触控、延迟追中相机与战斗主动撤退确认。最终验收运行时 head `97bd5063749a15e114ce85119015f9dcb8b7afc0`；run `35442734082` synthetic/private-original/Chromium/offline 成功，E2E `58 passed / 4 skipped / 0 failed`；artifact `10583854810`；最终单 HTML 11,214,215 bytes，SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。**M5 Playability Gate 通过，项目正式进入 M6 Dual-class Completion。**
 - 2026-09-21 M6 Dual-class Completion 已完成自动化与人工验收。S25/S26/S28 已汇入 S29；原 S27 分支无实现，后由 S29 补齐巫师十阶段。生产 runtime 现支持剑士 `100→190`、巫师 `109→199` 共 20 阶段，保留 M5.1 三技能基线、阶段晋阶、M6 SaveV2 extension、装备约束与双职业独立存档轨道。fixed-hash private runtime head `0a51f242a6357031f7f5b83c743fae7724c7e2f9` 的 private E2E 为 `61 passed / 4 skipped / 0 failed`；最终 M6 validation run `35562393435` success，新 30 分钟 soak `1,800,634 ms`、0 page error、0 external request。最终 private HTML 22,968,621 bytes，SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。用户已于 2026-09-21 人工试玩确认无问题，**M6 Gate 正式通过**。
+- 2026-09-22 M7 Combat Content Expansion 已完成 S30–S34 工程集成。当前生产 runtime 具备 19 个固定等级怪物 archetype、Lv1–65 七阶段怪物梯度、剑士/巫师各 7 技能 × 6 级、15 场固定 roster/不同 battle zone 训练战、无限 HP/MP Recovery、Developer Preset、手机端核心操作与 M7 SaveV2。可执行源 head `62566a549a2d1f6f2c15b1a4370329e4382ae94a` 的 run `35690650510` 为 parser 84/84、unit 269/269、Playwright 72 passed / 4 skipped / 0 failed；S17 evidence run `35690650505` success。工程收口时生成过 122,196,302 bytes、SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b` 的 private-original artifact，但该字节快照未持久化到 GitHub/Drive。当前可实际交付给用户的同源码/同 fixed-hash 资产重建包为 `lapis-m7-private-62566a5-handoff.html`，同为 122,196,302 bytes，SHA-256 `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f`，3,772/3,772 内嵌项校验通过。**M7 Engineering Gate 通过；Human Playability Gate 以当前可下载 handoff SHA 为准，PR #42 不得提前合并 main。**
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -173,16 +174,17 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-**M6 已关闭。下一里程碑仍处于方案讨论阶段，尚未立项、尚未分支开发。**
+**M7 工程集成已完成，当前唯一阶段门是用户对最终 private-original standalone HTML 的人工试玩。**
 
-当前讨论方向聚焦于把“十阶段职业框架”扩成真正可反复调试的战斗内容层，包括更多怪物与等级梯度、不同阶段职业技能补齐、训练营多 battle-scene/怪物组合选择，以及战斗内恢复 HP/MP 的动作。正式里程碑编号、任务拆分、数值政策和验收标准需在方案确认后再写入执行计划。
+在用户对当前可下载 handoff SHA-256 `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f` 明确验收前：
 
-在方案确认前：
+- PR #42 保持未合并；
+- 不把自动测试或 private pack 哈希完整性等同于用户体感通过；
+- 不启动新的大范围 shared-runtime 里程碑覆盖 M7 现场问题；
+- 若试玩发现缺陷，优先在 S34 分支修复并重新生成精确 SHA 的试玩包；
+- authored client data / recovered evidence / reconstruction policy 三层继续严格分离。
 
-- 不把讨论中的怪物等级、难度、技能解锁、恢复数值写成原版事实；
-- 不启动新的共享 runtime 大改；
-- 继续以 authored client data / recovered evidence / reconstruction policy 三层分离为基本原则；
-- 下一阶段应优先服务“不同阶段角色 + 不同难度怪物 + 完整技能”的调试与可玩性，而不是继续扩大空壳地图数量。
+用户验收通过后，再关闭 M7 Human Playability Gate，并讨论后续 Web 发布/更多内容扩展。
 
 ---
 
@@ -190,7 +192,7 @@ S4 已到达明确的 client evidence boundary：
 
 ### 1.1 实施路线
 
-**证据固化 → 资源转换 → Web 诊断 → Web 可玩切片 → 行为校准 → 核心系统 → 双职业完整化 → Web 发布 → 可选联网**
+**证据固化 → 资源转换 → Web 诊断 → Web 可玩切片 → 行为校准 → 核心系统 → 双职业完整化 → 战斗内容扩展 → Web 发布 → 可选联网**
 
 终端用户目标是打开现代桌面浏览器即可体验；不要求安装原 Windows 客户端、Godot、Node、Python 或 VM。私人单文件 HTML 是当前最快的人机联合验收载体。
 
@@ -269,9 +271,10 @@ S4 已到达明确的 client evidence boundary：
 | M4 行为校准/玩家壳 | readiness、AI、damage boundary、Quest/NPC、UI、双职业、SaveV2 | **S14 工程验收通过，但人工试玩确认仍不足以称“可玩”** |
 | M5 可玩性恢复 | viewport/camera、NPC visual、monster visual、scene transition、reconstruction balance | **工程/私有验收通过；2026-09-19 用户试玩暴露阻断，转 M5.1** |
 | M5.1 用户试玩修复 | 原版 UI 外壳、NPC pointer/hitbox、对话/任务交互、真实输入验收 | **通过：S20–S24 + 用户最终试玩** |
-| M6 双职业完整化 | 十阶段职业矩阵 | **进行中：S25–S29** |
-| M7 Web 发布 | 性能、兼容、访问控制、版权、回滚 | 未开始 |
-| M8 可选联网 | 单机稳定后的独立权威服务端 | 暂缓 |
+| M6 双职业完整化 | 十阶段职业矩阵 | **通过：S25–S29 + 用户试玩** |
+| M7 Combat Content Expansion | Lv1–65 怪物/七阶段技能/15 训练战/Recovery/Developer Preset | **工程通过；等待用户试玩** |
+| M8 Web 发布 | 性能、兼容、访问控制、版权、回滚 | 未开始 |
+| M9 可选联网 | 单机稳定后的独立权威服务端 | 暂缓 |
 
 门禁：
 
@@ -279,7 +282,8 @@ S4 已到达明确的 client evidence boundary：
 - **G3：通过。** field/battle/readiness/M4 runtime 与 M5 viewport/NPC/monster/scene transition 已整合并通过 fixed-hash 浏览器验收。
 - **G4：部分通过。** 大量 client behavior 已固定；旧服务器规则继续由 reconstruction policy 补齐。
 - **M5 Playability Gate：通过。** 2026-09-19 首轮人工试玩暴露的 NPC 点击与 HUD 阻断已由 M5.1 S20–S24 修复；2026-09-20 用户对最终 S24 standalone HTML 亲自试玩确认通过。工程证据与人工体感门均已闭合，后续缺陷进入普通 M6 backlog，不再阻塞 M6。
-- **G5：**双职业矩阵完成或批准例外；否则不称 V1。
+- **G5：通过。** M6 双职业十阶段矩阵与用户试玩已闭合。
+- **M7 Human Playability Gate：待通过。** 工程/自动化/private-original artifact 已完成；必须由用户试玩精确 SHA 后才能关闭。
 - **G6：**公开发布前完成访问控制、版权、构建检查并取得发布授权。
 
 ---
@@ -416,7 +420,34 @@ S20/S23 必须读取 `docs/research/external-web-research-20260918.md`。其中�
 
 证据原则继续沿用：原客户端 authored data 原样保存；未知 server condition、公式、成长或奖励规则必须集中到 `RECONSTRUCTION_POLICY`，不得包装成原版恢复。
 
-### 5.7 PR 合并规则
+### 5.7 M7 Combat Content Expansion — S30–S34 — 工程完成 / 人工门待验
+
+统一基线：`main@1d592d0e2194567c5d7d863e6a48250407dabeb3`。
+
+| Session | PR | 主任务 | 工程结果 |
+| --- | ---: | --- | --- |
+| S30 | #43 | Monster Catalog / Difficulty Matrix | 19 个固定等级怪物，七阶段覆盖，healer/elite/boss 等角色齐全 |
+| S31 | #45 | Swordsman Seven-stage Skills | 7 技能 × 6 级；舍身/爆发/强防/控制等统一 status runtime |
+| S32 | #46 | Wizard Seven-stage Skills | 7 技能 × 6 级；毒/吸 MP/禁疗/石化/失明/诅咒组合 |
+| S33 | #44 | Training / Recovery / Developer Preset | 15 场训练、HP/MP Recovery、Developer Preset、手机交互 |
+| S34 | #42 | Integration / Balance / Acceptance | fixed roster/zone、M7 SaveV2、shared core、E2E、private HTML |
+
+正式 M7 等级轴：`1–5 / 6–15 / 16–25 / 26–35 / 36–45 / 46–55 / 56–65`；转阶段点：`6 / 16 / 26 / 36 / 46 / 56`。M6 Stage 8–10 能力继续保留。
+
+最终工程证据：
+
+- executable source：`62566a549a2d1f6f2c15b1a4370329e4382ae94a`；
+- run `35690650510`：84 parser + 269 unit + 76 Playwright discovered；425 passed / 4 skipped / 0 failed；
+- S17 evidence run `35690650505`：success；
+- Drive 18-part fixed installer 静态重组 SHA 与批准基线完全一致；原客户端未执行；
+- private pack：3,771 indexed files / 89,656,141 bytes / 0 integrity failures；
+- final standalone：122,196,302 bytes；SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`。
+
+**边界：** exact retail damage/status formula、历史 per-encounter AI、敌方属性成长、authoritative field/event→encounter 仍是 server-boundary；M7 数值、训练绑定、Recovery 等在无直接证据处均保持 `RECONSTRUCTION_POLICY`。
+
+**当前门禁：** 工程通过不等于用户试玩通过。PR #42 保持未合并，等待用户对上述精确 SHA 的 standalone HTML 亲自验收。
+
+### 5.8 PR 合并规则
 
 - S1–S19 已关闭，不再往旧分支追加 M5.1 runtime 改动。
 - v3.3 计划先在 `codex/m5-1-playtest-repair-plan` 形成独立 PR；未经负责人明确批准不直接合并 main。
@@ -488,3 +519,4 @@ CI 不运行原安装器、`NeoDark.exe`、未知 DLL、兼容注入或 Frida �
 - **2026-09-19 v3.2：S15–S19 与统一 M5 runtime integration 收口。final run `35405864082` synthetic/private-original/Chromium/offline/30min soak 全通过；S19 升级为 balance v2 并对齐 live cadence；最终 M5 single HTML 固定为 11,190,078 bytes / SHA-256 `12cd5154...3d9140`。下一步转为 M5.1 用户真实试玩打磨，不再以自动测试代替体感验收。**
 
 - **2026-09-19 v3.3：用户真实试玩判定 M5 Playability Gate 未通过。确认 NPC visual 尚无 pointer hit target、点击会落入地图移动路径；HUD 仍偏开发壳且未按原版结构收敛。启动 M5.1 S20–S24：原版 UI 考古、HUD 恢复、NPC pointer/hitbox、对话/任务 runtime、真实玩家输入验收。同步纳入 2026-09-18 外部深调资料（村庄设施/训练场双入口/任务技能表/2.1 差分线索），并继续严格区分 fixed-hash 2.2 事实与同源历史候选。**
+- **2026-09-22 v3.6：M7 S30–S34 工程收口。19 怪物、双职业前七阶段 14 技能×6级、15 训练战、Recovery、Developer Preset、M7 SaveV2 和 mobile/exit 统一接线；run `35690650510` 与 S17 evidence run 全绿。固定哈希 Drive 分片静态生成 private-original standalone，SHA-256 `6ba49699...cc782b`。M7 Engineering Gate 通过，Human Playability Gate 等待用户试玩；PR #42 不合并 main。**

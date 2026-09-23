@@ -1,0 +1,280 @@
+{
+  "schema": 1,
+  "scope": "S30 M7 Lv1-65 difficulty matrix and S33 candidate handoff",
+  "policyId": "M7MonsterBalancePolicy",
+  "policyEvidence": "RECONSTRUCTION_POLICY",
+  "fixedMonsterStats": true,
+  "playerLevelScaling": false,
+  "bands": [
+    {
+      "band": "T1",
+      "minLevel": 1,
+      "maxLevel": 5,
+      "purpose": "Stage 1 fundamentals",
+      "normalMonsterIds": [
+        "m7-green-sword-trainee-l2"
+      ],
+      "hardMonsterIds": [
+        "m7-blue-polearm-skirmisher-l5"
+      ],
+      "eliteBossMonsterIds": []
+    },
+    {
+      "band": "T2",
+      "minLevel": 6,
+      "maxLevel": 15,
+      "purpose": "Stage 2 role differentiation",
+      "normalMonsterIds": [
+        "m7-green-armored-guard-l6",
+        "m7-cyan-spectral-ranged-l10"
+      ],
+      "hardMonsterIds": [
+        "m7-blue-polearm-venom-l15"
+      ],
+      "eliteBossMonsterIds": []
+    },
+    {
+      "band": "T3",
+      "minLevel": 16,
+      "maxLevel": 25,
+      "purpose": "Stage 3 control and burst checks",
+      "normalMonsterIds": [
+        "m7-cyan-spectral-hexer-l16"
+      ],
+      "hardMonsterIds": [
+        "m7-green-sword-duelist-l22",
+        "m7-green-armored-controller-l25"
+      ],
+      "eliteBossMonsterIds": []
+    },
+    {
+      "band": "T4",
+      "minLevel": 26,
+      "maxLevel": 35,
+      "purpose": "Stage 4 heal-block and control checks",
+      "normalMonsterIds": [
+        "m7-green-armored-renewer-l26"
+      ],
+      "hardMonsterIds": [
+        "m7-cyan-spectral-binder-l32",
+        "m7-blue-polearm-raider-l35"
+      ],
+      "eliteBossMonsterIds": []
+    },
+    {
+      "band": "T5",
+      "minLevel": 36,
+      "maxLevel": 45,
+      "purpose": "Stage 5 sustained buff/DOT checks",
+      "normalMonsterIds": [
+        "m7-green-armored-bulwark-l36"
+      ],
+      "hardMonsterIds": [
+        "m7-cyan-spectral-venom-caster-l42",
+        "m7-green-sword-berserker-l45"
+      ],
+      "eliteBossMonsterIds": []
+    },
+    {
+      "band": "T6",
+      "minLevel": 46,
+      "maxLevel": 55,
+      "purpose": "Stage 6 command/support and elite checks",
+      "normalMonsterIds": [
+        "m7-cyan-spectral-support-l46"
+      ],
+      "hardMonsterIds": [],
+      "eliteBossMonsterIds": [
+        "m7-green-armored-elite-l55"
+      ]
+    },
+    {
+      "band": "T7",
+      "minLevel": 56,
+      "maxLevel": 65,
+      "purpose": "Stage 7 control, elite and boss checks",
+      "normalMonsterIds": [
+        "m7-blue-polearm-vanguard-l56"
+      ],
+      "hardMonsterIds": [],
+      "eliteBossMonsterIds": [
+        "m7-cyan-spectral-elite-l60",
+        "m7-spectral-overseer-boss-l65"
+      ]
+    }
+  ],
+  "s33Milestones": [
+    {
+      "battle": 1,
+      "recommendedLevel": 2,
+      "trainingBand": "T1",
+      "candidateMonsterIds": [
+        "m7-green-sword-trainee-l2"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Basic melee/readiness tutorial",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 2,
+      "recommendedLevel": 5,
+      "trainingBand": "T1",
+      "candidateMonsterIds": [
+        "m7-blue-polearm-skirmisher-l5"
+      ],
+      "recommendedDifficulty": "Hard",
+      "trainingPurpose": "Stage 1 graduation: fast glass-cannon pressure",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 3,
+      "recommendedLevel": 6,
+      "trainingBand": "T2",
+      "candidateMonsterIds": [
+        "m7-green-armored-guard-l6"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 2 entry: high defense target",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 4,
+      "recommendedLevel": 10,
+      "trainingBand": "T2",
+      "candidateMonsterIds": [
+        "m7-cyan-spectral-ranged-l10",
+        "m7-green-armored-guard-l6"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Mixed melee/ranged target priority",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 5,
+      "recommendedLevel": 15,
+      "trainingBand": "T2",
+      "candidateMonsterIds": [
+        "m7-blue-polearm-venom-l15",
+        "m7-cyan-spectral-ranged-l10"
+      ],
+      "recommendedDifficulty": "Hard",
+      "trainingPurpose": "Stage 2 graduation: DOT plus ranged pressure",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 6,
+      "recommendedLevel": 16,
+      "trainingBand": "T3",
+      "candidateMonsterIds": [
+        "m7-cyan-spectral-hexer-l16"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 3 entry: magic defense check",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 7,
+      "recommendedLevel": 25,
+      "trainingBand": "T3",
+      "candidateMonsterIds": [
+        "m7-green-sword-duelist-l22",
+        "m7-green-armored-controller-l25"
+      ],
+      "recommendedDifficulty": "Hard",
+      "trainingPurpose": "Stage 3 graduation: burst versus control",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 8,
+      "recommendedLevel": 26,
+      "trainingBand": "T4",
+      "candidateMonsterIds": [
+        "m7-green-armored-renewer-l26"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 4 entry and Ash/healingBlocked acceptance target",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 9,
+      "recommendedLevel": 35,
+      "trainingBand": "T4",
+      "candidateMonsterIds": [
+        "m7-cyan-spectral-binder-l32",
+        "m7-blue-polearm-raider-l35"
+      ],
+      "recommendedDifficulty": "Hard",
+      "trainingPurpose": "Stage 4 graduation: ranged control plus fast pressure",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 10,
+      "recommendedLevel": 36,
+      "trainingBand": "T5",
+      "candidateMonsterIds": [
+        "m7-green-armored-bulwark-l36"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 5 entry: high-defense sustained target",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 11,
+      "recommendedLevel": 45,
+      "trainingBand": "T5",
+      "candidateMonsterIds": [
+        "m7-cyan-spectral-venom-caster-l42",
+        "m7-green-sword-berserker-l45"
+      ],
+      "recommendedDifficulty": "Hard",
+      "trainingPurpose": "Stage 5 graduation: DOT plus burst management",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 12,
+      "recommendedLevel": 46,
+      "trainingBand": "T6",
+      "candidateMonsterIds": [
+        "m7-cyan-spectral-support-l46"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 6 entry: magic/control support target",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 13,
+      "recommendedLevel": 55,
+      "trainingBand": "T6",
+      "candidateMonsterIds": [
+        "m7-green-armored-elite-l55",
+        "m7-cyan-spectral-support-l46"
+      ],
+      "recommendedDifficulty": "Elite/Boss",
+      "trainingPurpose": "Stage 6 graduation: elite tank plus support",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 14,
+      "recommendedLevel": 56,
+      "trainingBand": "T7",
+      "candidateMonsterIds": [
+        "m7-blue-polearm-vanguard-l56"
+      ],
+      "recommendedDifficulty": "Normal",
+      "trainingPurpose": "Stage 7 standard fight: fast melee pressure",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    },
+    {
+      "battle": 15,
+      "recommendedLevel": 65,
+      "trainingBand": "T7",
+      "candidateMonsterIds": [
+        "m7-spectral-overseer-boss-l65",
+        "m7-cyan-spectral-elite-l60"
+      ],
+      "recommendedDifficulty": "Elite/Boss",
+      "trainingPurpose": "Stage 7 boss/composite systems test",
+      "evidenceStatus": "RECONSTRUCTION_POLICY"
+    }
+  ]
+}

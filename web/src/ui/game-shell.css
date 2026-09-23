@@ -540,6 +540,7 @@
 .touch-hint{display:none;color:#b9aa85;font:8px/1 ui-monospace,monospace;white-space:nowrap}
 
 @media(max-width:560px){
+  .developer-diagnostics{top:58px;max-height:calc(100vh - 64px)}
   .top-command-strip{
     height:52px;
     padding:4px 5px;
@@ -580,4 +581,77 @@
   .command-deck .skill-deck{flex:0 0 auto;overflow:visible}
   .battle-command{min-width:88px;min-height:48px;padding:6px 8px}
   .skill-command{min-width:112px}
+}
+
+
+/* S34 playtest fix: protected ordinary attack + stable independently scrollable rows. */
+.command-deck{
+  display:grid;
+  grid-template-columns:96px minmax(0,1fr);
+  grid-template-rows:minmax(44px,auto) minmax(44px,auto);
+  gap:4px;
+  flex-wrap:unset;
+  align-content:stretch;
+  overflow:hidden;
+  max-height:none;
+}
+.command-deck>.primary-command{
+  grid-column:1;
+  grid-row:1 / 3;
+  width:100%;
+  min-width:0;
+  min-height:92px;
+  position:relative;
+  z-index:3;
+}
+.command-deck>.skill-deck{
+  grid-column:2;
+  grid-row:1;
+  display:flex;
+  gap:4px;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+  scrollbar-gutter:stable;
+}
+.command-deck>.battle-utility-deck{
+  grid-column:2;
+  grid-row:2;
+  display:flex;
+  gap:4px;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x;
+  scrollbar-gutter:stable;
+}
+.command-deck>.skill-deck>.battle-command,
+.command-deck>.battle-utility-deck>.battle-command{
+  flex:0 0 auto;
+}
+.command-deck>.battle-utility-deck>.quiet-command{margin-left:0}
+
+@media(max-width:700px){
+  .command-deck{
+    grid-template-columns:88px minmax(0,1fr);
+    grid-template-rows:48px 48px;
+  }
+  .command-deck>.primary-command{
+    min-height:100px;
+    position:sticky;
+    left:0;
+  }
+  .command-deck>.skill-deck,
+  .command-deck>.battle-utility-deck{
+    min-height:48px;
+  }
+  .command-deck>.skill-deck>.battle-command,
+  .command-deck>.battle-utility-deck>.battle-command{
+    min-height:48px;
+  }
 }
