@@ -780,9 +780,16 @@ export class LabScene extends Phaser.Scene {
     const range=skill&&skill.skill_id>=19000?P.battleSpellRangeCells:1;
     if(!buff&&target&&tileDistance(pixelCell(this.anchor.x,this.anchor.y),pixelCell(target.x,target.y))>range){this.notice(`目标超出格子射程（${range}格）`);return;}
     const staffOrdinaryHit=!skill&&Number(this.character)%10===9&&this.inventory.weapon!==null;
+    const beforeCasterMp=this.state.mp;
+    const beforeTargetMp=target?.mp??0;
     const result=useAttack(this.state,this.selectedEnemy,this.anchor.x,this.anchor.y,skill,equipmentBonus(this.inventory,this.character).attack,{staffOrdinaryHit});
     this.notice(result.message);
     if(result.ok){
+      if(staffOrdinaryHit&&target){
+        const drained=Math.max(0,beforeTargetMp-target.mp);
+        const gained=Math.max(0,this.state.mp-beforeCasterMp);
+        if(drained>0||gained>0)this.presentBattleFeedback({kind:'MP_DRAIN',target:'player',label:`吸收 MP +${gained}`,tone:'buff'});
+      }
       if(!buff&&target)this.direction=directionFor(target.x-this.anchor.x,target.y-this.anchor.y);
       this.setTransientAction('02');
       this.route=[];
