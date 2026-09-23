@@ -799,6 +799,43 @@ export class M4RuntimeIntegration{
     reconcileBattlePhase(this.scene.state);
     this.setNotice(result.message);
     if(!result.ok){this.render(this.scene.snapshot());return;}
+    for(const event of result.events){
+      this.scene.presentBattleFeedback({
+        kind:event.effect??'DAMAGE',
+        target:event.target,
+        amount:event.amount,
+        tone:event.source==='poison'?'poison':'damage',
+      });
+    }
+    const feedbackLabels:Record<string,Readonly<{label:string;tone:'buff'|'debuff'|'control'|'poison'}>>={
+      DARK_VEIL_APPLIED:{label:'黑暗之帐',tone:'debuff'},
+      NATURE_FORCE_APPLIED:{label:'自然力量',tone:'buff'},
+      HEALING_BLOCK_APPLIED:{label:'灰烬·禁疗',tone:'debuff'},
+      PETRIFY_APPLIED:{label:'诅咒之眼·石化',tone:'control'},
+      BLIND_APPLIED:{label:'失明',tone:'debuff'},
+      CURSE_WINDOW_APPLIED:{label:'诅咒之剑',tone:'debuff'},
+    };
+    for(const feedback of result.feedbackEvents??[]){
+      if(feedback.kind==='POISON_INITIAL_DAMAGE')continue;
+      const view=feedbackLabels[feedback.kind];
+      if(view)this.scene.presentBattleFeedback({kind:feedback.kind,target:feedback.targetId,label:view.label,tone:view.tone});
+    }
+    if(command.family==='swordsman'){
+      const swordLabels:Partial<Record<string,Readonly<{label:string;tone:'buff'|'control'}>>>={
+        '1301':{label:'强防',tone:'buff'},
+        '1401':{label:'爆发',tone:'buff'},
+        '1501':{label:'舍身',tone:'buff'},
+        'battle-command':{label:'战斗命令',tone:'buff'},
+      };
+      const view=swordLabels[String(command.skillKey)];
+      if(view&&command.target==='self')this.scene.presentBattleFeedback({kind:'BUFF_GAINED',target:'player',label:view.label,tone:view.tone});
+      for(const enemyId of result.affectedEnemyIds){
+        const enemy=this.scene.state.enemies.find(row=>row.id===enemyId);
+        if(enemy?.m7Status.swordsman.some(status=>status.kind==='stun')){
+          this.scene.presentBattleFeedback({kind:'STUN_APPLIED',target:enemyId,label:'眩晕',tone:'control'});
+        }
+      }
+    }
     const visual=visualSkillForCommand(command);
     const magicResourceId=visual?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
     const explicitOrigin=targetCell?(()=>{const [x,y]=referenceCellToScreen(targetCell);return{x,y};})():undefined;
@@ -1326,15 +1363,9 @@ export class M4RuntimeIntegration{
     if(!snapshot.inBattleView&&this.battleTargetingState.phase==='aiming')this.clearBattleTargeting(false);
     if(!snapshot.inBattleView&&this.battleRangeOverlayVisible)this.publishBattleRangeOverlay(false,false);
     if(this.lastSnapshot&&snapshot.inBattleView){
-      if(snapshot.hp<this.lastSnapshot.hp){
-        this.present(this.presentation.hit({targetId:'player',amount:this.lastSnapshot.hp-snapshot.hp,resultingHp:snapshot.hp,maxHp:this.scene.state.maxHp}));
-      }
       for(const enemy of snapshot.enemies){
         const previous=this.lastSnapshot.enemies.find(entry=>entry.id===enemy.id);
-        if(previous&&enemy.hp<previous.hp){
-          this.present(this.presentation.hit({targetId:enemy.id,amount:previous.hp-enemy.hp,resultingHp:enemy.hp,maxHp:this.scene.state.enemies.find(entry=>entry.id===enemy.id)?.maxHp??previous.hp}));
-          if(enemy.hp<=0&&previous.hp>0)this.present(this.presentation.deathOf('enemy',enemy.id));
-        }
+        if(previous&&enemy.hp<=0&&previous.hp>0)this.present(this.presentation.deathOf('enemy',enemy.id));
       }
       if(this.lastSnapshot.phase!==snapshot.phase&&(snapshot.phase==='won'||snapshot.phase==='lost')){
         this.present(this.presentation.terminal(snapshot.phase));
