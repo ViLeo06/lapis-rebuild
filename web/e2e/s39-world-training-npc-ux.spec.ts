@@ -10,7 +10,7 @@ function shell(playerLevel=26){
     {name:'S39 Tester',className:'巫师',portraitLabel:'巫',level:playerLevel,hp:110,hpMax:125,mp:160,mpMax:180,gold:0},
     {mapId:1,mapName:'布日古斯_外城',interactionPrompt:'与训练管理员交谈'},
   );
-  return '<!doctype html><html><head><meta charset="utf-8"><style>'+
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+
     'html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#182019}'+css+
     '</style></head><body><main class="game-stage" style="position:relative;width:100vw;height:100vh">'+
     hud+renderM7TrainingManagerDialog(playerLevel,8)+
@@ -23,8 +23,8 @@ test('S39 desktop field keeps direct fullscreen and renders the 15-battle manage
   await expect(page.locator('[data-ui="field-fullscreen"]')).toBeVisible();
   await expect(page.locator('[data-ui="m7-training-manager-dialog"]')).toBeVisible();
   await expect(page.locator('[data-action="training-start"]')).toHaveCount(15);
-  await expect(page.locator('[data-training-battle-id="8"]')).toContainText('Lv26');
-  await expect(page.locator('[data-training-battle-id="15"]')).toContainText('Boss');
+  await expect(page.locator('article[data-training-battle-id="8"]')).toContainText('Lv26');
+  await expect(page.locator('article[data-training-battle-id="15"]')).toContainText('Boss');
   const widths=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
   expect(widths.scroll).toBeLessThanOrEqual(widths.client);
   await page.screenshot({path:'test-results/s39-training-manager-desktop.png'});
