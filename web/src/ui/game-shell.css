@@ -655,3 +655,33 @@
     min-height:48px;
   }
 }
+
+
+/* S40 M7.1 battle presentation / world minimap contracts. */
+.hud-meter-exp .hud-meter-track>span{background:linear-gradient(90deg,#557347,#91ad6a)}
+.hud-meter-unknown .hud-meter-track>span{background:transparent}
+.battle-player{min-height:104px}
+.battle-stat-row{display:flex;gap:10px;margin-top:4px;padding-top:3px;border-top:1px solid #47483c;font:8px/1 ui-monospace,monospace;color:#bdb59e}
+.battle-stat-row b{color:#e1d5b5}
+.battle-state{min-height:78px}
+.battle-status-strip{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;max-height:38px;overflow:hidden}
+.battle-status-chip{display:inline-flex;align-items:center;gap:3px;min-height:17px;padding:2px 4px;border:1px solid #625d4b;background:rgba(10,15,13,.62);color:#d7d0bb;font:7px/1 ui-monospace,monospace}
+.battle-status-chip small{color:#a7a18f;font-size:6px}
+.battle-status-chip.tone-buff{border-color:#5c765e}
+.battle-status-chip.tone-debuff,.battle-status-chip.tone-poison{border-color:#76624f}
+.battle-status-chip.tone-control{border-color:#665d7b}
+.battle-status-empty{color:#817e70;font:7px/1.1 ui-monospace,monospace}
+.small-map-plate{width:160px;height:112px;background:rgba(9,14,12,.22);pointer-events:none}
+.small-map-plate .map-placeholder{margin-top:52px;color:#9d9885}
+@media(max-width:900px){
+  .small-map-plate{width:140px;height:100px}
+  .small-map-plate .map-placeholder{margin-top:40px}
+}
+@media(max-width:560px){
+  .small-map-plate{width:112px;height:84px}
+  .small-map-plate .map-placeholder{margin-top:26px}
+  .battle-player{display:grid;top:198px;right:5px;bottom:auto;width:190px;min-height:92px;grid-template-columns:1fr;padding:4px 5px}
+  .battle-player .portrait-frame{display:none}
+  .battle-player .hud-meter-line{font-size:7px}
+  .battle-stat-row{font-size:7px}
+}
