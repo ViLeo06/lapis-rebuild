@@ -940,7 +940,7 @@ export class M4RuntimeIntegration{
     this.render(this.scene.snapshot());
   }
 
-  private beginNpcInteraction(entityId:string|undefined,inputSource:NpcInteractionInputSource):void{
+  private beginNpcInteraction(entityId:string|undefined,inputSource:Exclude<NpcInteractionInputSource,'compatibility'>):void{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
