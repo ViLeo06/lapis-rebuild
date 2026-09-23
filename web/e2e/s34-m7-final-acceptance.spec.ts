@@ -182,7 +182,7 @@ test('S34A A hotkey uses ordinary-attack authority without legacy WASD double tr
   expect(after.target).toBe(targetId);
 });
 
-test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',async({page})=>{
+test('S34A recovery/rest, QWER + 1-6, automatic range and Esc share battle authorities',async({page})=>{
   test.setTimeout(90_000);
   await ready(page);
   await developerPreset(page,'wizard',56,true);
@@ -211,16 +211,11 @@ test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',as
   await expect(page.locator('#m4-runtime-notice')).toContainText('休息');
   await expect.poll(async()=>(await scene(page)).action).toBeLessThan(beforeRest.action);
 
-  await page.evaluate(()=>{
-    const target=window as Window&{__s34RangeEvents?:boolean[]};
-    target.__s34RangeEvents=[];
-    window.addEventListener('lapis-battle-range-overlay',event=>{
-      target.__s34RangeEvents!.push(Boolean((event as CustomEvent<{visible:boolean}>).detail.visible));
-    });
-  });
+  const automaticRange=await scene(page);
+  expect(automaticRange.targeting?.rangeOverlayVisible).toBe(true);
   await page.keyboard.press('Space');
-  await page.keyboard.press('Space');
-  expect(await page.evaluate(()=>(window as Window&{__s34RangeEvents?:boolean[]}).__s34RangeEvents)).toEqual([true,false]);
+  const afterLegacySpace=await scene(page);
+  expect(afterLegacySpace.targeting?.rangeOverlayVisible).toBe(true);
 
   // The HUD is intentionally regenerated as readiness changes; dispatch the
   // request on the current DOM node so actionability retries do not race that refresh.
