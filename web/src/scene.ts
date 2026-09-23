@@ -89,7 +89,7 @@ export class LabScene extends Phaser.Scene {
   private enemyVisualActors=new Map<string,VisualActor>();
   private overlay!: Phaser.GameObjects.Graphics;
   private guideLabel!:Phaser.GameObjects.Text;
-  private enemyLabels: Phaser.GameObjects.Text[]=[];
+  private enemyFallbackLabels=new Map<string,Phaser.GameObjects.Text>();
   private lastPublish=0;
   private timedAction=0;
   private effectUntil=0;
@@ -135,9 +135,6 @@ export class LabScene extends Phaser.Scene {
       fontFamily:'sans-serif',fontSize:'11px',color:'#f1d39a',backgroundColor:'#172322cc',align:'center',padding:{x:5,y:3}
     }).setOrigin(.5,1).setDepth(50);
     this.updateGuideLabel();
-    for(let i=0;i<2;i++)this.enemyLabels.push(this.add.text(0,0,'',{
-      fontFamily:'sans-serif',fontSize:'13px',color:'#ffe0a0',backgroundColor:'#182120'
-    }).setOrigin(.5,1).setDepth(50));
     this.setupViewport();
     this.ensureEnemyVisualActors();
     this.fit();
@@ -463,11 +460,28 @@ export class LabScene extends Phaser.Scene {
     for(const enemy of this.state.enemies){
       if(enemy.visualResourceId!==undefined)bindings.set(enemy.id,enemy.visualResourceId);
     }
-    for(const [id,resourceId] of bindings){
-      const resource=String(resourceId);
-      if(this.enemyVisualActors.has(id)||!this.pack.animations[resource])continue;
-      const actor=new VisualActor(this,this.pack,resource,0,0,0);actor.image.setDepth(12);actor.setVisible(false);
-      this.enemyVisualActors.set(id,actor);
+    for(const enemy of this.state.enemies){
+      const resourceId=bindings.get(enemy.id);
+      const resource=resourceId===undefined?null:String(resourceId);
+      if(resource&&this.pack.animations[resource]&&!this.enemyVisualActors.has(enemy.id)){
+        const actor=new VisualActor(this,this.pack,resource,0,0,0);actor.image.setDepth(12);actor.setVisible(false);
+        this.enemyVisualActors.set(enemy.id,actor);
+      }
+      if(this.enemyVisualActors.has(enemy.id)){
+        this.enemyFallbackLabels.get(enemy.id)?.destroy();
+        this.enemyFallbackLabels.delete(enemy.id);
+        continue;
+      }
+      if(!this.enemyFallbackLabels.has(enemy.id)){
+        const label=this.add.text(0,0,enemy.id,{
+          fontFamily:'sans-serif',fontSize:'11px',color:'#ffe0a0',backgroundColor:'#182120dd',padding:{x:4,y:2}
+        }).setOrigin(.5,1).setDepth(50).setVisible(false);
+        this.enemyFallbackLabels.set(enemy.id,label);
+      }
+    }
+    for(const [id,label] of this.enemyFallbackLabels){
+      if(this.state.enemies.some(enemy=>enemy.id===id))continue;
+      label.destroy();this.enemyFallbackLabels.delete(id);
     }
   }
 
@@ -478,8 +492,14 @@ export class LabScene extends Phaser.Scene {
     }
     for(const row of this.worldMarkers.values())row.label.setVisible(!this.inBattleView&&row.spec.mapId===this.mapId);
     for(const actor of this.enemyVisualActors.values())actor.setVisible(false);
+    for(const label of this.enemyFallbackLabels.values())label.setVisible(false);
     if(this.inBattleView){
-      for(const enemy of this.state.enemies)this.enemyVisualActors.get(enemy.id)?.setVisible(enemyVisibleInBattle(enemy));
+      for(const enemy of this.state.enemies){
+        const visible=enemyVisibleInBattle(enemy);
+        const actor=this.enemyVisualActors.get(enemy.id);
+        if(actor)actor.setVisible(visible);
+        else this.enemyFallbackLabels.get(enemy.id)?.setPosition(enemy.x,enemy.y-18).setVisible(visible);
+      }
     }
   }
 
@@ -804,7 +824,7 @@ export class LabScene extends Phaser.Scene {
         stunActions:this.state.playerStunActions,slowMs:this.state.playerSlowMs,
       },
       battleZoneId:this.state.battleZoneId,battleEntryProvenance:this.state.battleEntryProvenance,damagePolicy:{id:this.state.damagePolicyId,provenance:this.state.damagePolicyProvenance},
-      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,mp:enemy.mp,maxMp:enemy.maxMp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),encounterGroup:enemy.encounterGroup,visible:this.enemyVisualActors.get(enemy.id)?.image.visible??false,visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),traits:[...enemy.traits],m7Status:{swordsman:enemy.m7Status.swordsman.map(status=>({...status})),wizard:{...enemy.m7Status.wizard}},aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
+      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,mp:enemy.mp,maxMp:enemy.maxMp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),encounterGroup:enemy.encounterGroup,visible:this.enemyVisualActors.get(enemy.id)?.image.visible??this.enemyFallbackLabels.get(enemy.id)?.visible??false,visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),traits:[...enemy.traits],m7Status:{swordsman:enemy.m7Status.swordsman.map(status=>({...status})),wizard:{...enemy.m7Status.wizard}},aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
       worldVisuals:[...this.worldVisualActors.values()].map(row=>({id:row.spec.id,mapId:row.spec.mapId,resourceId:row.spec.resourceId,visible:row.actor.image.visible,cell:row.spec.cell})),
       worldPointerTargets:this.worldPointerTargets().map(target=>({id:target.id,kind:target.kind,visible:target.visible,bounds:{...target.bounds},depth:target.depth})),
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,duration:this.effectDuration,timingPolicy:'RETAIL_COMMON' as const,playing:this.effectPlaying}:null,
@@ -875,10 +895,14 @@ export class LabScene extends Phaser.Scene {
       if(replacement)this.selectedEnemy=replacement.id;
     }
     for(const enemy of this.state.enemies){
-      const actor=this.enemyVisualActors.get(enemy.id);if(!actor)continue;
       const visible=this.inBattleView&&enemyVisibleInBattle(enemy);
-      actor.setVisible(visible).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(visible?1:.25);
-      actor.update(dt);
+      const actor=this.enemyVisualActors.get(enemy.id);
+      if(actor){
+        actor.setVisible(visible).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(visible?1:.25);
+        actor.update(dt);
+      }else{
+        this.enemyFallbackLabels.get(enemy.id)?.setPosition(enemy.x,enemy.y-18).setVisible(visible).setAlpha(visible?1:.25);
+      }
     }
     if(before!==this.state.phase){
       this.route=[];
