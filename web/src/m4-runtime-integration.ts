@@ -356,7 +356,7 @@ export class M4RuntimeIntegration{
       else if(action==='recovery-hp')this.trainingRecovery('hp');
       else if(action==='recovery-mp')this.trainingRecovery('mp');
       else if(action==='rest')this.rest();
-      else if(action==='battle-range-toggle')this.toggleBattleRangeOverlay();
+      else if(action==='training-manager-close'){this.trainingManagerOpen=false;this.render(this.scene.snapshot());}
       else if(action==='battle-exit-request')this.requestBattleExit();
       else if(action==='battle-exit-cancel')this.cancelBattleExit();
       else if(action==='battle-exit-confirm')this.confirmBattleExit();
@@ -406,7 +406,6 @@ export class M4RuntimeIntegration{
       else this.setNotice(`技能槽 ${command.slot+1} 当前未配置`);
       return;
     }
-    if(command.kind==='toggle-range'){this.toggleBattleRangeOverlay();return;}
     this.handleEscape();
   }
 
