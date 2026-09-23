@@ -443,7 +443,45 @@ S20/S23 必须读取 `docs/research/external-web-research-20260918.md`。其中�
 
 **最终门禁：已关闭。** 2026-09-23 用户验收最终 S34 standalone SHA `862eceb4...e409` 并明确批准合并；PR #42 已合并 main，merge `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。
 
-### 5.8 PR 合并规则
+
+### 5.8 M7.1 Gameplay / Progression / Skill Fidelity Completion — S35–S41 — 工程已收口
+
+统一起点：`main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430`；统一集成分支：`codex/m7-1-gameplay-skill-integration`。
+
+| Session | PR / 分支 | 工程结果 |
+| --- | --- | --- |
+| S35 | #61 | 双职业前五技能 Lv1–Lv6 原始参数/evidence matrix 与 provenance 边界 |
+| S36 | #58 | 剑士七技能 fidelity：flat DEF、爆发、舍身、multi-hit、控制与状态 runtime |
+| S37 | #56 | 巫师七技能 fidelity：毒雾即时伤害+DOT、范围成长、禁疗、石化、吸 MP 等 |
+| S38 | #57 | M7.1 EXP / Level / Skill Point / 15 训练奖励 / SaveV2 |
+| S39 | #59 | 世界训练管理员、15 场训练入口、主场景 fullscreen UX |
+| S40 | #60 → resolved #62 | camera / battle+world minimap / auto range / monster interpolation / HUD presentation；与 S39 三处重叠由 #62 解决 |
+| S41 | #55 + final #64 | acceptance contract、shared runtime glue、冲突审计、最终集成 |
+| Final | #63 | M7.1 完整候选合入 `main` |
+
+关键集成结果：
+
+- 原独立 Range toggle / Space 依赖移除；movement / skill / AOE range 由 battle state 自动展示。
+- Battle camera 默认 `FOLLOW_PLAYER`，minimap/manual pan 进入 `MANUAL_VIEW`，下一次真实移动恢复 follow；边缘 clamp 保持。
+- 战斗小地图右下、世界小地图左上；怪物使用连续移动表现，不再以视觉瞬移替代移动。
+- Battle HUD 统一展示 HP / MP / EXP / ATK / DEF，并可见主要 buff/debuff/control 状态。
+- 15 场训练从世界训练管理员进入；Settings 不再作为主入口；胜利使用 S38 EXP reward，撤退不奖励 EXP。
+- 剑士/巫师共 14 个技能、84 个 skill-level states 均保留 domain authority；S41 只接 shared runtime，不创建第二套技能数值。
+- S40 与 S39 在 `field-hud.ts`、`game-shell.css`、S34 E2E 的冲突通过 resolved PR #62 合并；原 #60 关闭为 superseded，没有丢失任一侧功能。
+
+最终工程门：
+
+- final source head：`bc11331d60d2366371424081b8fd66f9a7d68794`；
+- final integration merge：PR #64 → `2a1fd25e7d460edb43bead67a4ba7535bc0305c0`；
+- final main merge：PR #63 → `7de3ddcaffed74f3b7e8ee78843139220f21c4e8`；
+- Web/parser run `35930306019`：parser、typecheck、Node unit、production build、standalone synthetic 全通过；普通 Chromium/offline `86 passed / 9 skipped / 0 failed`；
+- 同一 run 的 `S41_M7_1_FINAL=1`：`5 passed / 0 failed`。
+
+证据边界：本轮 PR-triggered final run 的 `private-original` job 为 skipped，因此**不宣称本轮重新完成 fixed-hash private-original browser run**。M7.1 的 fixed-client 参数证据来自 S35/既有固定哈希静态考古；最终新 runtime 的工程验收以上述 synthetic/offline Chromium + S41 final gate 为准。
+
+人工门：用户已明确授权本轮工程 PR 收口并合并；这不是对最终 M7.1 standalone 的人工试玩确认，故 Human Playability Gate 仍保持待验。
+
+### 5.9 PR 合并规则
 
 - S1–S19 已关闭，不再往旧分支追加 M5.1 runtime 改动。
 - v3.3 计划先在 `codex/m5-1-playtest-repair-plan` 形成独立 PR；未经负责人明确批准不直接合并 main。
