@@ -48,6 +48,7 @@ export type M7WizardStatusState=Readonly<{
 export type M7WizardTickResult=Readonly<{
   state:M7WizardStatusState;
   poisonDamage:number;
+  endedSkillKeys:readonly M7WizardSkillKey[];
 }>;
 
 export type M7WizardPoisonDamageProfile=Readonly<{
@@ -244,17 +245,21 @@ export function tickM7WizardStatus(
       ?Object.freeze({...current.cursedSword,remainingMs:Math.max(0,current.cursedSword.remainingMs-deltaMs)})
       :null
     :null;
+  const state:M7WizardStatusState=Object.freeze({
+    darkVeil:decayAccuracy(current.darkVeil,deltaMs),
+    poison,
+    natureForce,
+    healingBlockedMs:Math.max(0,current.healingBlockedMs-deltaMs),
+    petrifiedMs:Math.max(0,current.petrifiedMs-deltaMs),
+    blind:decayAccuracy(current.blind,deltaMs),
+    cursedSword,
+  });
+  const after=new Set(m7WizardActiveStatusKeys(state));
+  const endedSkillKeys=m7WizardActiveStatusKeys(current).filter(key=>!after.has(key));
   return Object.freeze({
-    state:Object.freeze({
-      darkVeil:decayAccuracy(current.darkVeil,deltaMs),
-      poison,
-      natureForce,
-      healingBlockedMs:Math.max(0,current.healingBlockedMs-deltaMs),
-      petrifiedMs:Math.max(0,current.petrifiedMs-deltaMs),
-      blind:decayAccuracy(current.blind,deltaMs),
-      cursedSword,
-    }),
+    state,
     poisonDamage,
+    endedSkillKeys:Object.freeze(endedSkillKeys),
   });
 }
 
