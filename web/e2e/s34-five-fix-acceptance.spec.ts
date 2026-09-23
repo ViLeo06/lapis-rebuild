@@ -265,7 +265,6 @@ test.describe('S34 five-fix final acceptance',()=>{
 
   test('desktop wizard flow covers input, encounter, poison, camera, minimap and confirmed exit',async({page})=>{
     test.setTimeout(120000);
-    test.setTimeout(120000);
     await ready(page);
     await wizardPreset(page);
     await startManyEnemyBattle(page);
