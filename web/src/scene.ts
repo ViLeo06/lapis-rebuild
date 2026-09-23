@@ -19,6 +19,11 @@ import {ViewportController,BrowserFullscreenPort} from './view/viewport-controll
 import {BattleCameraPolicy,battleEntryZoom} from './view/battle-camera.ts';
 import {buildBattleMinimapModel,minimapContains,minimapToWorld} from './view/battle-minimap.ts';
 import type {BattleMinimapModel} from './view/battle-minimap.ts';
+import {buildWorldMinimapModel} from './view/world-minimap.ts';
+import type {WorldMinimapModel} from './view/world-minimap.ts';
+import {advanceEnemyMotion,createEnemyMotion} from './view/enemy-motion.ts';
+import type {EnemyMotion} from './view/enemy-motion.ts';
+import {resolveBattleFeedbackAnchor} from './view/battle-feedback.ts';
 import {VisualActor} from './visual-actor.ts';
 import {inflatePointerBounds,pickWorldPointerTarget,unionPointerBounds} from './input/world-pointer-arbitration.ts';
 import type {WorldPointerBounds,WorldPointerTarget} from './input/world-pointer-arbitration.ts';
@@ -34,6 +39,25 @@ export type BattleSkillTargetingAdapter=Readonly<{
   onEnemyPointer?:(enemyId:string)=>void;
   onCancel?:()=>boolean;
 }>;
+export type BattleCameraMode='FOLLOW_PLAYER'|'MANUAL_VIEW';
+export type BattlePresentationTone='damage'|'poison'|'buff'|'debuff'|'control'|'system';
+export type BattlePresentationEvent=Readonly<{
+  kind:string;
+  target:'player'|string;
+  amount?:number;
+  label?:string;
+  tone?:BattlePresentationTone;
+  durationMs?:number;
+}>;
+type FloatingBattleFeedback={
+  target:'player'|string;
+  kind:string;
+  tone:BattlePresentationTone;
+  label:string;
+  ageMs:number;
+  durationMs:number;
+  text:Phaser.GameObjects.Text;
+};
 
 export class LabScene extends Phaser.Scene {
   pack: LoadedPack;
@@ -76,11 +100,14 @@ export class LabScene extends Phaser.Scene {
   private battleCamera=new BattleCameraPolicy();
   private battleCameraPointer={x:0,y:0,inside:false,coarse:false};
   private battleCameraTarget:{x:number;y:number}|null=null;
-  private battleCameraManualUntil=0;
-  private battleRangeOverlayVisible=false;
+  private battleCameraMode:BattleCameraMode='FOLLOW_PLAYER';
   private battleTargetingVisual:{castCells:readonly Cell[];previewCenter:Cell|null;previewCells:readonly Cell[]}|null=null;
   private minimapGraphics?:Phaser.GameObjects.Graphics;
   private minimapModel:BattleMinimapModel|null=null;
+  private worldMinimapVisible=true;
+  private worldMinimapModel:WorldMinimapModel|null=null;
+  private enemyMotions=new Map<string,EnemyMotion>();
+  private battleFeedback:FloatingBattleFeedback[]=[];
   private reconstructionBattleSetup?:ReconstructionBattleSetup;
   private worldVisualActors=new Map<string,{spec:WorldVisualSpec;actor:VisualActor;label:Phaser.GameObjects.Text}>();
   private worldInteractionHandler?: (entityId:string)=>void;
@@ -131,6 +158,7 @@ export class LabScene extends Phaser.Scene {
     }
     this.overlay=this.add.graphics().setDepth(40);
     this.minimapGraphics=this.add.graphics().setDepth(2000).setVisible(false);
+    this.input.keyboard?.on('keydown-F8',()=>{if(!this.inBattleView)this.toggleWorldMinimap();});
     this.guideLabel=this.add.text(0,0,'M3 引导员\nRECONSTRUCTION',{
       fontFamily:'sans-serif',fontSize:'11px',color:'#f1d39a',backgroundColor:'#172322cc',align:'center',padding:{x:5,y:3}
     }).setOrigin(.5,1).setDepth(50);
@@ -296,7 +324,7 @@ export class LabScene extends Phaser.Scene {
   }
 
   private battleMinimapBottomInset(){
-    return this.scale.width<=700?220:this.scale.width<=900?168:118;
+    return this.scale.width<=560?230:this.scale.width<=700?220:this.scale.width<=900?176:136;
   }
 
   private currentBattleMinimapModel(){
@@ -318,46 +346,36 @@ export class LabScene extends Phaser.Scene {
     if(!model||!minimapContains(model.layout,{x,y}))return false;
     const world=this.viewport?.snapshot().world;
     if(!world)return true;
+    this.battleCameraMode='MANUAL_VIEW';
     this.battleCameraTarget=minimapToWorld(model.layout,world,{x,y});
-    this.battleCameraManualUntil=this.time.now+1400;
     return true;
   }
 
-  private updateBattleCamera(deltaMs:number,time:number){
+  private updateBattleCamera(deltaMs:number){
     if(!this.inBattleView||!this.viewport)return;
     const snapshot=this.viewport.snapshot();
     if(this.battleCameraTarget){
-      const next=this.battleCamera.centerStep(snapshot.camera,this.battleCameraTarget,snapshot.viewport,snapshot.world,deltaMs);
+      const target=this.battleCameraTarget;
+      const next=this.battleCamera.centerStep(snapshot.camera,target,snapshot.viewport,snapshot.world,deltaMs);
       this.viewport.setScroll(next.x,next.y);
       const after=this.viewport.snapshot();
-      const desired=this.battleCamera.targetScroll(after.camera,this.battleCameraTarget,after.viewport,after.world);
-      if(Math.hypot(after.camera.scrollX-desired.x,after.camera.scrollY-desired.y)<2){
-        this.battleCameraTarget=null;
-        this.battleCameraManualUntil=time+800;
-      }
+      const desired=this.battleCamera.targetScroll(after.camera,target,after.viewport,after.world);
+      if(Math.hypot(after.camera.scrollX-desired.x,after.camera.scrollY-desired.y)<2)this.battleCameraTarget=null;
       return;
     }
     const model=this.currentBattleMinimapModel();
     const overMinimap=model?minimapContains(model.layout,{x:this.battleCameraPointer.x,y:this.battleCameraPointer.y}):false;
     const pointer=overMinimap?{...this.battleCameraPointer,inside:false}:this.battleCameraPointer;
-    const followPlayer=time>=this.battleCameraManualUntil;
-    const step=this.battleCamera.step(
-      snapshot.camera,
-      this.anchor,
-      snapshot.viewport,
-      snapshot.world,
-      deltaMs,
-      pointer,
-      followPlayer,
-      followPlayer&&this.route.length===0,
-    );
+    const followPlayer=this.battleCameraMode==='FOLLOW_PLAYER';
+    const step=this.battleCamera.step(snapshot.camera,this.anchor,snapshot.viewport,snapshot.world,deltaMs,pointer,followPlayer,followPlayer&&this.route.length===0);
     this.viewport.setScroll(step.scroll.x,step.scroll.y);
-    if(step.source==='edge')this.battleCameraManualUntil=time+900;
+    if(step.source==='edge')this.battleCameraMode='MANUAL_VIEW';
   }
 
   private drawBattleMinimap(){
     const g=this.minimapGraphics;
     if(!g)return;
+    this.worldMinimapModel=null;
     const model=this.currentBattleMinimapModel();
     this.minimapModel=model;
     g.clear();
@@ -365,20 +383,42 @@ export class LabScene extends Phaser.Scene {
     const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
     g.setVisible(true).setPosition(origin.x,origin.y).setScale(1/camera.zoom);
     const {layout}=model;
-    g.fillStyle(0x0d1718,.76);
-    g.fillRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
-    g.lineStyle(1,0xb5a47c,.72);
-    g.strokeRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
-    g.fillStyle(0x182322,.78);
-    g.fillRect(layout.inner.x,layout.inner.y,layout.inner.width,layout.inner.height);
-    g.lineStyle(1,0xd8c99d,.78);
-    g.strokeRect(model.viewport.x,model.viewport.y,model.viewport.width,model.viewport.height);
-    for(const enemy of model.enemies){
-      g.fillStyle(0x9b62b6,enemy.active?.95:.62);
-      g.fillCircle(enemy.x,enemy.y,enemy.active?3:2);
-    }
-    g.fillStyle(0x5ba8e8,1);
-    g.fillCircle(model.player.x,model.player.y,3);
+    g.fillStyle(0x0d1718,.72);g.fillRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
+    g.lineStyle(1,0xb5a47c,.72);g.strokeRoundedRect(layout.x,layout.y,layout.width,layout.height,4);
+    g.fillStyle(0x182322,.72);g.fillRect(layout.inner.x,layout.inner.y,layout.inner.width,layout.inner.height);
+    g.lineStyle(1,0xd8c99d,.78);g.strokeRect(model.viewport.x,model.viewport.y,model.viewport.width,model.viewport.height);
+    for(const enemy of model.enemies){g.fillStyle(0x9b62b6,enemy.active?.95:.58);g.fillCircle(enemy.x,enemy.y,enemy.active?3:2);}
+    g.fillStyle(0x5ba8e8,1);g.fillCircle(model.player.x,model.player.y,3);
+  }
+
+  private toggleWorldMinimap(){
+    this.worldMinimapVisible=!this.worldMinimapVisible;
+    if(!this.worldMinimapVisible){this.worldMinimapModel=null;this.minimapGraphics?.clear().setVisible(false);}
+    return this.worldMinimapVisible;
+  }
+
+  private currentWorldMinimapModel(){
+    if(this.inBattleView||!this.worldMinimapVisible||!this.viewport)return null;
+    const snapshot=this.viewport.snapshot();
+    return buildWorldMinimapModel(snapshot.viewport,snapshot.world,snapshot.camera,this.anchor);
+  }
+
+  private drawWorldMinimap(){
+    const g=this.minimapGraphics;
+    if(!g)return;
+    this.minimapModel=null;
+    const model=this.currentWorldMinimapModel();
+    this.worldMinimapModel=model;
+    g.clear();
+    if(!model){g.setVisible(false);return;}
+    const camera=this.cameras.main,origin=camera.getWorldPoint(0,0);
+    g.setVisible(true).setPosition(origin.x,origin.y).setScale(1/camera.zoom);
+    const {layout}=model;
+    g.fillStyle(0x0d1718,.38);g.fillRoundedRect(layout.x,layout.y,layout.width,layout.height,3);
+    g.lineStyle(1,0xb5a47c,.58);g.strokeRoundedRect(layout.x,layout.y,layout.width,layout.height,3);
+    g.fillStyle(0x17201d,.42);g.fillRect(layout.inner.x,layout.inner.y,layout.inner.width,layout.inner.height);
+    g.lineStyle(1,0xd8c99d,.68);g.strokeRect(model.viewport.x,model.viewport.y,model.viewport.width,model.viewport.height);
+    g.fillStyle(0x5ba8e8,1);g.fillCircle(model.player.x,model.player.y,3);
   }
 
   setWorldInteractionHandler(handler:((entityId:string)=>void)|undefined){this.worldInteractionHandler=handler;}
@@ -391,7 +431,9 @@ export class LabScene extends Phaser.Scene {
       previewCells:Object.freeze(visual.previewCells.map(cell=>Object.freeze([cell[0],cell[1]]) as Cell)),
     }:null;
   }
-  setBattleRangeOverlayVisible(visible:boolean){this.battleRangeOverlayVisible=Boolean(visible);}
+  // Compatibility only. M7.1 range visibility is derived from battle state.
+  setBattleRangeOverlayVisible(_visible:boolean){return this.automaticBattleRangeVisible();}
+  private automaticBattleRangeVisible(){return this.inBattleView&&this.canAct()&&!this.isTargetingSkill();}
   cancelBattleTargeting():boolean{
     if(!this.isTargetingSkill())return false;
     const cancelled=this.battleSkillTargetingAdapter?.onCancel?.()??false;
@@ -405,7 +447,7 @@ export class LabScene extends Phaser.Scene {
       previewCenter:this.battleTargetingVisual?.previewCenter?toPoint(this.battleTargetingVisual.previewCenter):null,
       previewCells:(this.battleTargetingVisual?.previewCells??[]).map(toPoint),
       castCells:(this.battleTargetingVisual?.castCells??[]).map(toPoint),
-      rangeOverlayVisible:this.battleRangeOverlayVisible,
+      rangeOverlayVisible:this.automaticBattleRangeVisible(),
     };
   }
 
@@ -482,6 +524,28 @@ export class LabScene extends Phaser.Scene {
     for(const [id,label] of this.enemyFallbackLabels){
       if(this.state.enemies.some(enemy=>enemy.id===id))continue;
       label.destroy();this.enemyFallbackLabels.delete(id);
+    }
+  }
+
+  private enemyMovementDurationMs(enemyId:string){
+    const actor=this.enemyVisualActors.get(enemyId);if(!actor?.has('01'))return 420;
+    const animation=actor.animation('01');return Phaser.Math.Clamp(sequenceDurationMs(animation.raw_timing,animation.frames_per_direction),280,640);
+  }
+  private advanceEnemyMotions(deltaMs:number){
+    for(const [id,motion] of [...this.enemyMotions]){
+      const enemy=this.state.enemies.find(row=>row.id===id&&row.hp>0);if(!enemy){this.enemyMotions.delete(id);continue;}
+      const step=advanceEnemyMotion(motion,deltaMs);enemy.x=step.position.x;enemy.y=step.position.y;
+      if(step.done){this.enemyMotions.delete(id);const actor=this.enemyVisualActors.get(id);if(actor?.slot==='01')actor.setAction('00');}
+      else this.enemyMotions.set(id,step.motion);
+    }
+  }
+  private captureEnemyMotions(before:ReadonlyMap<string,Readonly<{x:number;y:number}>>){
+    for(const enemy of this.state.enemies){
+      const from=before.get(enemy.id);if(!from||enemy.hp<=0||this.enemyMotions.has(enemy.id))continue;
+      const to={x:enemy.x,y:enemy.y};if(Math.hypot(to.x-from.x,to.y-from.y)<.5)continue;
+      enemy.x=from.x;enemy.y=from.y;
+      this.enemyMotions.set(enemy.id,createEnemyMotion(enemy.id,from,to,this.enemyMovementDurationMs(enemy.id)));
+      const actor=this.enemyVisualActors.get(enemy.id);if(actor?.has('01')){actor.setDirection(directionFor(to.x-from.x,to.y-from.y));actor.setAction('01');}
     }
   }
 
@@ -605,6 +669,7 @@ export class LabScene extends Phaser.Scene {
       if(!consumeAction(this.state)){this.notice('行动槽尚未蓄满');return;}
     }
     this.route=nextRoute;
+    if(this.inBattleView){this.battleCameraMode='FOLLOW_PLAYER';this.battleCameraTarget=null;}
     this.setAction('01');
     this.playing=true;
   }
@@ -648,9 +713,8 @@ export class LabScene extends Phaser.Scene {
     this.state=beginBattle(this.anchor.x,this.anchor.y,entry,this.reconstructionBattleSetup);
     layout.enemies.forEach((cell,i)=>{const enemy=this.state.enemies[i];if(!enemy)return;const xy=referenceCellToScreen(cell);enemy.x=xy[0];enemy.y=xy[1];});
     this.ensureEnemyVisualActors();
-    this.battleCameraTarget=null;
-    this.battleCameraManualUntil=this.time.now+700;
-    this.battleRangeOverlayVisible=false;
+    this.enemyMotions.clear();this.clearBattleFeedback();
+    this.battleCameraTarget=null;this.battleCameraMode='FOLLOW_PLAYER';
     this.battleTargetingVisual=null;
     this.fit();
     this.selectedEnemy=this.state.enemies.find(enemy=>enemy.hp>0)?.id??'dummy-melee';
@@ -671,11 +735,10 @@ export class LabScene extends Phaser.Scene {
     this.battleEntry=null;
     this.battleFocus=null;
     this.battlePaused=false;
-    this.battleCameraTarget=null;
-    this.battleCameraManualUntil=0;
-    this.battleRangeOverlayVisible=false;
+    this.battleCameraTarget=null;this.battleCameraMode='FOLLOW_PLAYER';
     this.battleTargetingVisual=null;
-    this.minimapModel=null;
+    this.enemyMotions.clear();this.clearBattleFeedback();
+    this.minimapModel=null;this.worldMinimapModel=null;
     this.minimapGraphics?.clear().setVisible(false);
     this.effectOrigin=null;
     this.state=initialState();
@@ -710,7 +773,10 @@ export class LabScene extends Phaser.Scene {
       this.setTransientAction('02');
       this.route=[];
       this.effectUntil=P.effectDurationMs;
-      if(result.event&&result.event.target!=='player')this.enemyVisualActors.get(result.event.target)?.playTransient('03');
+      if(result.event){
+        if(result.event.target!=='player')this.enemyVisualActors.get(result.event.target)?.playTransient('03');
+        this.presentBattleFeedback({kind:result.event.source==='poison'?'POISON_TICK':'DAMAGE',target:result.event.target,amount:result.event.amount,tone:result.event.source==='poison'?'poison':'damage'});
+      }
       const rid=skill?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
       if(rid&&this.pack.effects[String(rid)]){
         this.setEffect(rid);
@@ -737,6 +803,29 @@ export class LabScene extends Phaser.Scene {
       this.playEffect();
     }
   }
+
+  private battleFeedbackAnchor(target:'player'|string){return resolveBattleFeedbackAnchor(target,this.anchor,this.state.enemies);}
+
+  presentBattleFeedback(event:BattlePresentationEvent):boolean{
+    if(!this.inBattleView)return false;
+    const anchor=this.battleFeedbackAnchor(event.target);if(!anchor)return false;
+    const tone=event.tone??'system';
+    const label=event.label??(event.amount!==undefined?'-'+Math.max(0,Math.round(event.amount)):event.kind.replaceAll('_',' '));
+    const color:Record<BattlePresentationTone,string>={damage:'#f2d39a',poison:'#b7d77c',buff:'#a9d8b9',debuff:'#d8ad8e',control:'#c6b6e8',system:'#e4ddc6'};
+    const text=this.add.text(anchor.x,anchor.y,label,{fontFamily:'sans-serif',fontSize:'13px',fontStyle:'bold',color:color[tone],backgroundColor:'#101714bb',padding:{x:4,y:2}}).setOrigin(.5,1).setDepth(2100);
+    this.battleFeedback.push({target:event.target,kind:event.kind,tone,label,ageMs:0,durationMs:Math.max(350,event.durationMs??900),text});
+    return true;
+  }
+  private updateBattleFeedback(deltaMs:number){
+    const next:FloatingBattleFeedback[]=[];
+    for(const row of this.battleFeedback){
+      row.ageMs+=Math.max(0,deltaMs);const anchor=this.battleFeedbackAnchor(row.target);
+      if(!anchor||row.ageMs>=row.durationMs){row.text.destroy();continue;}
+      const progress=row.ageMs/row.durationMs;row.text.setPosition(anchor.x,anchor.y-progress*24).setAlpha(Math.max(0,1-progress));next.push(row);
+    }
+    this.battleFeedback=next;
+  }
+  private clearBattleFeedback(){for(const row of this.battleFeedback)row.text.destroy();this.battleFeedback=[];}
 
   equipItem(id:number|null,slot:'weapon'|'armor'){
     try{
@@ -794,8 +883,9 @@ export class LabScene extends Phaser.Scene {
     const cam=this.cameras.main,origin=cam.getWorldPoint(0,0);
     return {
       camera:{x:origin.x,y:origin.y,zoom:cam.zoom},viewport:this.viewportSnapshot(),cameraFollow:this.cameraFollowEnabled,
-      battleCamera:{target:this.battleCameraTarget?{...this.battleCameraTarget}:null,manualUntil:this.battleCameraManualUntil},
+      battleCamera:{target:this.battleCameraTarget?{...this.battleCameraTarget}:null,mode:this.battleCameraMode},
       targeting:this.battleTargetingSnapshot(),
+      worldMinimap:this.worldMinimapModel?{visible:this.worldMinimapVisible,layout:{...this.worldMinimapModel.layout,inner:{...this.worldMinimapModel.layout.inner}},player:{...this.worldMinimapModel.player},viewport:{...this.worldMinimapModel.viewport},policy:'VERIFIED_HISTORICAL_ANCHOR_RECONSTRUCTION_GEOMETRY' as const}:{visible:this.worldMinimapVisible,layout:null,player:null,viewport:null,policy:'VERIFIED_HISTORICAL_ANCHOR_RECONSTRUCTION_GEOMETRY' as const},
       minimap:this.minimapModel?{
         visible:this.inBattleView,
         layout:{...this.minimapModel.layout,inner:{...this.minimapModel.layout.inner}},
@@ -818,13 +908,15 @@ export class LabScene extends Phaser.Scene {
       tile:tile?{x:tileX,y:tileY,resource_id:tile.resource_id,path:tile.directory_path}:null,routeLength:this.route.length,
       cooldown:this.state.cooldown,action:this.state.action,actionMax:this.state.actionMax,actionReady:this.canAct(),moveLimit:this.battleMoveLimit(),
       phase:this.state.phase,hp:Math.ceil(this.state.hp),maxHp:this.state.maxHp,mp:this.state.mp,maxMp:this.state.maxMp,gold:this.gold,
+      presentationStats:this.state.combatPlayerStats?{atk:this.state.combatPlayerStats.attack,def:this.state.combatPlayerStats.defense,provenance:this.state.damagePolicyProvenance}:null,
+      battleFeedback:this.battleFeedback.map(row=>({target:row.target,kind:row.kind,tone:row.tone,label:row.label,ageMs:row.ageMs,durationMs:row.durationMs,anchor:this.battleFeedbackAnchor(row.target)})),
       m7Status:{
         player:{swordsman:this.state.playerM7Status.swordsman.map(status=>({...status})),wizard:{...this.state.playerM7Status.wizard}},
         poison:{damage:this.state.playerPoisonDamage,ticks:this.state.playerPoisonTicks,intervalMs:this.state.playerPoisonIntervalMs},
         stunActions:this.state.playerStunActions,slowMs:this.state.playerSlowMs,
       },
       battleZoneId:this.state.battleZoneId,battleEntryProvenance:this.state.battleEntryProvenance,damagePolicy:{id:this.state.damagePolicyId,provenance:this.state.damagePolicyProvenance},
-      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,mp:enemy.mp,maxMp:enemy.maxMp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),encounterGroup:enemy.encounterGroup,visible:this.enemyVisualActors.get(enemy.id)?.image.visible??this.enemyFallbackLabels.get(enemy.id)?.visible??false,visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),traits:[...enemy.traits],m7Status:{swordsman:enemy.m7Status.swordsman.map(status=>({...status})),wizard:{...enemy.m7Status.wizard}},aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
+      enemies:this.state.enemies.map(enemy=>({id:enemy.id,hp:Math.ceil(enemy.hp),maxHp:enemy.maxHp,mp:enemy.mp,maxMp:enemy.maxMp,x:enemy.x,y:enemy.y,action:enemy.action,cell:pixelCell(enemy.x,enemy.y),encounterGroup:enemy.encounterGroup,visible:this.enemyVisualActors.get(enemy.id)?.image.visible??this.enemyFallbackLabels.get(enemy.id)?.visible??false,visualResourceId:enemy.visualResourceId??(enemy.id==='dummy-melee'?4524:enemy.id==='dummy-ranged'?4544:null),visualSlot:this.enemyVisualActors.get(enemy.id)?.slot??null,motion:this.enemyMotions.get(enemy.id)?{...this.enemyMotions.get(enemy.id)!}:null,traits:[...enemy.traits],m7Status:{swordsman:enemy.m7Status.swordsman.map(status=>({...status})),wizard:{...enemy.m7Status.wizard}},aiBinding:{...enemy.aiBinding}})),target:this.selectedEnemy,
       worldVisuals:[...this.worldVisualActors.values()].map(row=>({id:row.spec.id,mapId:row.spec.mapId,resourceId:row.spec.resourceId,visible:row.actor.image.visible,cell:row.spec.cell})),
       worldPointerTargets:this.worldPointerTargets().map(target=>({id:target.id,kind:target.kind,visible:target.visible,bounds:{...target.bounds},depth:target.depth})),
       effect:e?{id:e.resource_id,cursor:this.effectCursor,frame:e.sequence[this.effectCursor],length:e.frame_count,rawTiming:e.raw_timing,duration:this.effectDuration,timingPolicy:'RETAIL_COMMON' as const,playing:this.effectPlaying}:null,
@@ -849,7 +941,7 @@ export class LabScene extends Phaser.Scene {
         this.anchor.y+=dy/d*step;
       }
     }
-    if(this.inBattleView)this.updateBattleCamera(cameraDt,time);
+    if(this.inBattleView)this.updateBattleCamera(cameraDt);
     else if(this.cameraFollowEnabled)this.viewport?.follow(this.anchor,dt);
     if(this.timedAction>0){
       this.timedAction=Math.max(0,this.timedAction-dt);
@@ -879,13 +971,17 @@ export class LabScene extends Phaser.Scene {
         this.effectSprite.setTexture(effectTextureKey(e.resource_id,ei)).setPosition(origin.x+eb.left,origin.y+eb.top);
       }
     }
+    this.advanceEnemyMotions(dt);
+    const enemyPositionsBefore=new Map(this.state.enemies.map(enemy=>[enemy.id,{x:enemy.x,y:enemy.y}] as const));
     const before=this.state.phase;
     const events=updateBattle(this.state,dt,this.anchor.x,this.anchor.y,equipmentBonus(this.inventory,this.character).defense,
       this.inBattleView?{collision:this.currentMap().collision,playerBusy:this.busy(),reserved:this.route}:undefined);
+    if(this.inBattleView)this.captureEnemyMotions(enemyPositionsBefore);
     if(events.some(event=>event.kind==='hp-loss'&&event.target==='player')&&this.state.phase==='active')this.setTransientAction('03');
     for(const event of events){
       if(event.target==='player'&&event.source)this.enemyVisualActors.get(event.source)?.playTransient('02');
       else if(event.target!=='player')this.enemyVisualActors.get(event.target)?.playTransient('03');
+      this.presentBattleFeedback({kind:event.source==='poison'?'POISON_TICK':'DAMAGE',target:event.target,amount:event.amount,tone:event.source==='poison'?'poison':'damage'});
     }
     for(const row of this.worldVisualActors.values())row.actor.update(dt);
     const activeGroup=activeEnemyEncounterGroup(this.state,this.anchor.x,this.anchor.y);
@@ -898,7 +994,8 @@ export class LabScene extends Phaser.Scene {
       const visible=this.inBattleView&&enemyVisibleInBattle(enemy);
       const actor=this.enemyVisualActors.get(enemy.id);
       if(actor){
-        actor.setVisible(visible).setAnchor(enemy.x,enemy.y).setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y)).setAlpha(visible?1:.25);
+        actor.setVisible(visible).setAnchor(enemy.x,enemy.y).setAlpha(visible?1:.25);
+        if(!this.enemyMotions.has(enemy.id))actor.setDirection(directionFor(this.anchor.x-enemy.x,this.anchor.y-enemy.y));
         actor.update(dt);
       }else{
         this.enemyFallbackLabels.get(enemy.id)?.setPosition(enemy.x,enemy.y-18).setVisible(visible).setAlpha(visible?1:.25);
@@ -909,8 +1006,9 @@ export class LabScene extends Phaser.Scene {
       this.updateGuideLabel();
       this.notice(this.state.phase==='won'?'训练胜利。点击“退出战斗”返回非战斗地图。':'训练失败。点击“退出战斗”返回非战斗地图。');
     }
+    this.updateBattleFeedback(dt);
     this.drawOverlay();
-    this.drawBattleMinimap();
+    if(this.inBattleView)this.drawBattleMinimap();else this.drawWorldMinimap();
     if(time-this.lastPublish>90){
       window.dispatchEvent(new CustomEvent('lapis-state',{detail:this.snapshot()}));
       this.lastPublish=time;
@@ -921,9 +1019,8 @@ export class LabScene extends Phaser.Scene {
     const g=this.overlay;
     g.clear();
     const m=this.currentMap().manifest.render;
-    // Movement/attack range is a user-toggle, while active skill targeting
-    // always exposes its cast cells and current AoE preview.
-    if(this.inBattleView&&this.battleRangeOverlayVisible&&!this.isTargetingSkill()){
+    // M7.1 range is battle-state presentation, not a user toggle.
+    if(this.automaticBattleRangeVisible()){
       for(const path of this.reachable()){const cell=path.at(-1)!,[x,y]=referenceCellToScreen(cell);
         g.fillStyle(0x7db5a5,.22);g.lineStyle(1,0xb8d4a1,.55);
         const points=[{x,y:y-16},{x:x+32,y},{x,y:y+16},{x:x-32,y}];
