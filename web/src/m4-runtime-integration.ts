@@ -1492,6 +1492,9 @@ export class M4RuntimeIntegration{
         </div>
       </section>`;
     }
+    if(this.trainingManagerOpen&&!this.scene.inBattleView){
+      return renderM7TrainingManagerDialog(this.rewards.progression.level,this.selectedTrainingBattleId,true);
+    }
     const session=this.activeDialogue;
     if(!session)return '';
     const view=session.view;
