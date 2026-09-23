@@ -1,3 +1,4 @@
+import {m71TrainingExpReward} from '../progression/m7-1-training-rewards.ts';
 import storyBattleScenes from '../../../manifests/story-battle-scenes.json' with {type:'json'};
 import type {EnemyRank,EquipmentCombatBonuses} from '../combat/reconstruction-combat-balance.ts';
 import type {ReconstructionBattleSetup} from '../battle.ts';
@@ -19,6 +20,8 @@ export type M7TrainingBattlePreset=Readonly<{
   candidateMonsterIds:readonly string[];
   difficultyBand:TrainingDifficultyBand;
   purpose:string;
+  expReward:number;
+  expRewardEvidence:'RECONSTRUCTION_POLICY';
   sceneEvidence:'VERIFIED-STATIC-ORIGINAL';
   trainingBindingEvidence:'RECONSTRUCTION_POLICY';
   monsterBindingEvidence:'RECONSTRUCTION_POLICY';
@@ -36,7 +39,7 @@ function scene(zoneId:number):string{
 const monsters=(...rows:Array<[TrainingMonsterRole,number]>):readonly TrainingMonsterContract[]=>
   Object.freeze(rows.map(([role,count])=>Object.freeze({role,count})));
 
-const raw:readonly Omit<M7TrainingBattlePreset,'stage'|'sceneTitle'|'sceneEvidence'|'trainingBindingEvidence'|'monsterBindingEvidence'>[]=[
+const raw:readonly Omit<M7TrainingBattlePreset,'stage'|'sceneTitle'|'expReward'|'expRewardEvidence'|'sceneEvidence'|'trainingBindingEvidence'|'monsterBindingEvidence'>[]=[
   {id:1,recommendedLevel:2,fixedEnemyLevel:2,battleZoneId:1,monsterContract:monsters(['melee',1]),candidateMonsterIds:Object.freeze(['m7-green-sword-trainee-l2']),difficultyBand:'Normal',purpose:'新手移动、选敌与普通攻击教学'},
   {id:2,recommendedLevel:5,fixedEnemyLevel:5,battleZoneId:3,monsterContract:monsters(['fast',1]),candidateMonsterIds:Object.freeze(['m7-blue-polearm-skirmisher-l5']),difficultyBand:'Normal',purpose:'Stage 1 毕业：快速高压目标'},
   {id:3,recommendedLevel:6,fixedEnemyLevel:6,battleZoneId:9,monsterContract:monsters(['tank',1]),candidateMonsterIds:Object.freeze(['m7-green-armored-guard-l6']),difficultyBand:'Normal',purpose:'Stage 2 入门：高防目标'},
@@ -60,6 +63,8 @@ export const M7_TRAINING_BATTLES:readonly M7TrainingBattlePreset[]=Object.freeze
     ...row,
     stage,
     sceneTitle:scene(row.battleZoneId),
+    expReward:m71TrainingExpReward(row.recommendedLevel,row.difficultyBand),
+    expRewardEvidence:'RECONSTRUCTION_POLICY' as const,
     sceneEvidence:'VERIFIED-STATIC-ORIGINAL' as const,
     trainingBindingEvidence:'RECONSTRUCTION_POLICY' as const,
     monsterBindingEvidence:'RECONSTRUCTION_POLICY' as const,
