@@ -1,6 +1,6 @@
 # Backlog
 
-> 2026-09-22 | Web-first | Plan v3.6 | M7 engineering gate passed | active: M7 user playtest
+> 2026-09-23 | Web-first | Plan v3.7 | M7 engineering + human playability gates passed | active: next milestone definition
 
 ## 已完成基线
 
@@ -205,7 +205,7 @@
 - [x] PR #44，集成 SHA `26ffefbcb8a764a062994293034dd2fb7752216b`。
 
 ### S34 Integration / Acceptance
-- [x] S30–S33 精确 head 集成，不合并 main。
+- [x] S30–S33 精确 head 先集成至 S34；最终由 PR #42 统一合并 main。
 - [x] production first-seven promotion axis 改为 6/16/26/36/46/56，同时保留 M6 Stage 8–10。
 - [x] shared battle core 使用 fixed concrete S30 roster + explicit battle zone。
 - [x] M7 status/skill runtime、healer/禁疗、DOT、stun、petrify、Sacrifice、Recovery、SaveV2 接入。
@@ -215,14 +215,18 @@
 - [x] private pack 3,771 indexed files / 89,656,141 bytes / 0 integrity failures。
 - [x] 历史工程 standalone：122,196,302 bytes；SHA-256 `6ba496998b507c7ab863cc219acbcf2e9e2508abca5cb98ebaaac97032cc782b`；该字节快照未持久化供下载。
 - [x] 当前用户 handoff standalone：`lapis-m7-private-62566a5-handoff.html`，122,196,302 bytes；SHA-256 `4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f`；3,772/3,772 内嵌项校验通过。
-- [ ] **用户亲自试玩当前 handoff 精确 SHA 并确认 M7 Human Playability Gate。**
-- [ ] 用户通过前不得 merge PR #42/main。
+- [x] S34 五项试玩修复最终 CI：run `35834469240` success；集成 head `80e7c4307156b18a31c3631542c304d3cf5969b8` 与 CI head `dd6a8383963df667c4013004a0667080ae2bd201` tree 一致（`1b44600e5d352649f766f054be63dd971614765a`）。
+- [x] 最终用户试玩版：`lapis-s34-final-playtest-20260923.html`，122,226,459 bytes；SHA-256 `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409`；private pack 3,771/3,771 size/SHA 校验通过，0 missing / 0 integrity failure。
+- [x] 遗留 PR #43–#46 文件级审计后确认已被 S34 吸收并关闭为 superseded；未重复 merge 旧 worker 分支。
+- [x] **用户于 2026-09-23 亲自试玩最终 S34 standalone SHA `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409` 并确认 M7 Human Playability Gate 通过。**
+- [x] PR #42 已在用户明确批准后合并 main；merge commit `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。
 
 ## 下一步
 
-- [ ] 用户试玩当前 M7 handoff standalone（SHA `4c337dd2...`）：职业/等级 → 15 场训练 → 技能 → Recovery → 不同怪物/场景 → 退出确认 → Save/Load。
-- [ ] 若用户发现问题，在 S34 分支修复并重新生成新 SHA；旧 SHA 不再作为最终候选。
-- [ ] 用户明确通过后再更新 `USER-ACCEPTED` evidence、关闭 M7 Gate，并决定后续 Web 发布/内容扩展。
+- [x] M7/S34 用户试玩、证据更新、遗留 PR 清理与 main 合并全部收口。
+- [ ] 与用户确认下一任务/里程碑后，再从 `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430` 新建功能分支。
+- [ ] 下一阶段启动时同步升级 Plan/Backlog，并明确新的人工验收门与证据边界。
+- [ ] 若出现 M7 回归，单独登记新缺陷并引用已验收 artifact SHA `862eceb4...e409` 与 merge `6094aae3...`，不改写历史验收。
 
 ## 边界
 

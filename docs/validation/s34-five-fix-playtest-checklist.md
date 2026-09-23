@@ -2,7 +2,15 @@
 
 Date: 2026-09-23  
 Scope: S34 five-fix integration only  
-Status: **NOT YET RUN — use after Workers 1–4 are integrated**
+Status: **USER ACCEPTED FOR MERGE — 2026-09-23**
+
+Accepted artifact: `lapis-s34-final-playtest-20260923.html`  
+SHA-256: `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409`  
+Integration head: `80e7c4307156b18a31c3631542c304d3cf5969b8`  
+Final CI: `35834469240` — success  
+Merged main: `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`
+
+> The user approved the final build as a whole for merge. The individual boxes below remain the detailed manual checklist/reference and are not retroactively marked as individually observed unless that exact observation was explicitly recorded.
 
 ## Desktop
 

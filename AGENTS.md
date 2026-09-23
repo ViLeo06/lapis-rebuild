@@ -91,7 +91,7 @@ Python 3.12 负责：安装包静态拆解、旧格式解析、资源转换、�
 - 不直接向 `main` 提交。
 - 功能分支开发，通过 PR 集成。
 - 未经负责人明确批准不合并 `main`。
-- 当前阶段：**M7 Combat Content Expansion 已通过工程/自动化门，等待用户对最终 private standalone 的人工试玩**。执行计划为 `Plan.md v3.6`；PR #42 在用户明确接受精确 HTML SHA 前不得合并 main，也不得用新的大范围 shared-runtime 工作覆盖待验缺陷。
+- 当前阶段：**M7 Combat Content Expansion 已完成工程与用户试玩验收并合并 main**。执行计划为 `Plan.md v3.7`；稳定基线为 `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。下一里程碑尚未启动，必须从该 main 新建功能分支；已关闭的 S30–S34 worker 分支仅作历史证据，不继续追加共享运行时改动。
 - 临时诊断/修复分支可使用 `codex/*`；验证后只做非 force 快进/正常 PR 集成。
 - 同一路径修改前读取最新 blob SHA，避免覆盖并发更新。
 - commit 保持小而清楚：`feat/fix/test/docs/refactor/chore`。

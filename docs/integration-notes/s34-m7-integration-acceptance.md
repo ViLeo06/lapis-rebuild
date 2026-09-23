@@ -7,9 +7,9 @@ Executable runtime source: `62566a549a2d1f6f2c15b1a4370329e4382ae94a`
 
 ## Status
 
-**S30–S33 integrated. Shared core integrated. Automated engineering gate passed. Final user playtest is still pending.**
+**S30–S33 integrated. Shared core integrated. S34 five-fix repair integrated. Automated engineering gate passed. User playtest passed. PR #42 merged to main.**
 
-S34 must remain unmerged until the user plays the exact final private standalone HTML.
+The merge gate was satisfied on 2026-09-23 after the user played and accepted the exact final S34 private standalone recorded below.
 
 ## Upstream intake
 
@@ -87,10 +87,39 @@ Current user handoff:
 
 The handoff is a byte-distinct regeneration from the same executable source and exact fixed-hash private assets; it is not mislabeled as the historical artifact. The original Windows client was never executed.
 
+## Final S34 five-fix closure
+
+Final integration lineage:
+
+- S34 head: `80e7c4307156b18a31c3631542c304d3cf5969b8`;
+- CI-validated head: `dd6a8383963df667c4013004a0667080ae2bd201`;
+- identical Git tree: `1b44600e5d352649f766f054be63dd971614765a`;
+- final GitHub Actions run: `35834469240` — **success**.
+
+Final accepted private standalone:
+
+- file: `lapis-s34-final-playtest-20260923.html`;
+- size: 122,226,459 bytes;
+- SHA-256: `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409`;
+- runtime shell SHA-256: `0a3a26e44884610fd6bb879634dde66f6bdb461603818885fce068c9946f81a0`;
+- private pack SHA-256: `b310803ff4897f23f96cda34cc1989254261f8703d7457c3cf85691812e67287`;
+- private indexed resources: 3,771 / 3,771 size/SHA verified;
+- missing/integrity failures: 0 / 0.
+
+User acceptance:
+
+- 2026-09-23: user explicitly approved the final build for merge.
+- PR #42 merged to `main`.
+- main merge commit: `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`.
+
+Legacy worker PRs #43–#46 were closed as superseded after file-level audit showed their content was already consumed by S34; they were not redundantly merged into main.
+
 ## Remaining evidence boundary
 
 The integration does not claim recovery of retired-server formulas or live payloads. Exact retail damage/status formulas, historical per-encounter AI, original enemy stat growth and authoritative field/event→encounter mapping remain server-boundary gaps. M7 tuning/bindings are reconstruction policy where not directly evidenced.
 
 ## Merge gate
 
-PR #42 remains draft and **must not merge to main before the user plays and accepts the current handoff SHA `4c337dd2...`**.
+**Satisfied and closed on 2026-09-23.**
+
+The exact accepted artifact is SHA `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409`. PR #42 was merged only after explicit user approval. Stable post-M7 baseline: `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430`.
