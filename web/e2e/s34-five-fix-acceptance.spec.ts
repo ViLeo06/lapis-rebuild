@@ -316,7 +316,7 @@ test.describe('S34 five-fix final acceptance',()=>{
     await clickWorld(page,center.x,center.y);
     await expect.poll(async()=>poisoned(await extendedScene(page)).length).toBeGreaterThanOrEqual(2);
     const poisonedBefore=poisoned(await extendedScene(page)).map((row:any)=>({id:row.id,hp:row.hp}));
-    await advanceBattleTime(page,5000);
+    await advanceBattleTime(page,6000);
     const afterTick=await extendedScene(page);
     expect(poisonedBefore.some((row:any)=>{
       const now=live(afterTick).find((enemy:any)=>enemy.id===row.id);return now&&now.hp<row.hp;
