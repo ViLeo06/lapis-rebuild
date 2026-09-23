@@ -108,16 +108,17 @@ test('S34D battle keeps normal scale, edge scrolls, and clamps inside a larger b
   if(!pan)throw new Error('Synthetic battle map has no scrollable camera axis');
   const beforeAxis=pan.axis==='x'?entered.camera.x:entered.camera.y;
   const client=await canvasPoint(page,pan.x,pan.y);
-  await page.locator('canvas').dispatchEvent('pointermove',{
-    clientX:client.x,clientY:client.y,pointerType:'mouse',buttons:0,
-  });
+  // Drive a real mouse move so Phaser's input plugin receives the same
+  // pointer path as production. Synthetic dispatchEvent can be dropped by
+  // Chromium/Phaser timing under parallel Playwright workers.
+  await page.mouse.move(client.x,client.y);
   const threshold=Math.min(4,pan.room*.25);
   await expect.poll(async()=>{
     const camera=(await scene(page)).camera;
     const current=pan.axis==='x'?camera.x:camera.y;
     return pan.sign*(current-beforeAxis)>threshold;
   },{timeout:4000}).toBe(true);
-  await page.locator('canvas').dispatchEvent('pointerout',{pointerType:'mouse'});
+  await page.mouse.move(0,0);
 
   const moved=await scene(page);
   const movedViewport=moved.viewport!;
