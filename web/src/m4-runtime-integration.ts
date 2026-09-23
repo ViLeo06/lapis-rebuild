@@ -12,7 +12,7 @@ import type {InventoryState} from './progression/inventory.ts';
 import {equipItem as equipProgression,reconcileEquipmentForCharacter} from './progression/equipment.ts';
 import type {EquipmentCompatibilityResolver} from './progression/equipment.ts';
 import {initialM71Progression,RECONSTRUCTION_PROGRESSION_POLICY,totalExpForLevel} from './progression/progression.ts';
-import {M71_EXPERIENCE_POLICY,m71AuthoredExperienceValue} from './progression/m7-1-experience-policy.ts';
+import {M71_EXPERIENCE_POLICY} from './progression/m7-1-experience-policy.ts';
 import {applyBattleReward,applyQuestReward} from './progression/rewards.ts';
 import type {RewardState} from './progression/rewards.ts';
 import {CURRENT_SAVE_VERSION,SAVE_KIND} from './progression/save-schema.ts';
@@ -69,7 +69,6 @@ import type {BattleHotkeyCommand} from './input/battle-hotkeys.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
 type BattleInputSceneContract=LabScene&{
-  setBattleRangeOverlayVisible?:(visible:boolean)=>void;
   cancelBattleTargeting?:()=>boolean;
 };
 const QUEST_STAGES:readonly QuestStage[]=['not_started','accepted','objective','ready_to_turn_in','complete'];
@@ -140,7 +139,6 @@ export class M4RuntimeIntegration{
   private activeDialogue:NpcDialogueSession|null=null;
   private trainingManagerOpen=false;
   private battleExitConfirm=false;
-  private battleRangeOverlayVisible=false;
   private battleTargetingState:M7SkillTargetingState=createM7SkillTargetingState();
   private battleTargetingCommandId:string|null=null;
   private suppressEncounterUntilLeave=false;
@@ -422,22 +420,6 @@ export class M4RuntimeIntegration{
     this.menuOpen=!this.menuOpen;
     this.render(this.scene.snapshot());
   }
-
-  private publishBattleRangeOverlay(visible:boolean,announce:boolean):void{
-    this.battleRangeOverlayVisible=visible;
-    this.battleInputScene().setBattleRangeOverlayVisible?.(visible);
-    window.dispatchEvent(new CustomEvent('lapis-battle-range-overlay',{detail:{visible}}));
-    if(announce){
-      this.setNotice(`战斗移动 / 攻击 / 施法范围：${visible?'显示':'隐藏'}`);
-      this.render(this.scene.snapshot());
-    }
-  }
-
-  private toggleBattleRangeOverlay():void{
-    if(!this.scene.inBattleView)return;
-    this.publishBattleRangeOverlay(!this.battleRangeOverlayVisible,true);
-  }
-
 
   private installBattleTargetingAdapter():void{
     this.scene.setBattleSkillTargetingAdapter({
@@ -1361,7 +1343,6 @@ export class M4RuntimeIntegration{
 
   private onSnapshot(snapshot:Snapshot):void{
     if(!snapshot.inBattleView&&this.battleTargetingState.phase==='aiming')this.clearBattleTargeting(false);
-    if(!snapshot.inBattleView&&this.battleRangeOverlayVisible)this.publishBattleRangeOverlay(false,false);
     if(this.lastSnapshot&&snapshot.inBattleView){
       for(const enemy of snapshot.enemies){
         const previous=this.lastSnapshot.enemies.find(entry=>entry.id===enemy.id);
