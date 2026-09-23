@@ -15,8 +15,8 @@ test('S34A battle hotkeys resolve to one command contract',()=>{
   for(let slot=0;slot<6;slot++)
     assert.deepEqual(resolveBattleHotkey(String(slot+1),true),{kind:'skill',slot});
   assert.equal(resolveBattleHotkey('7',true),null);
-  assert.deepEqual(resolveBattleHotkey(' ',true),{kind:'toggle-range'});
-  assert.deepEqual(resolveBattleHotkey('Space',true),{kind:'toggle-range'});
+  assert.equal(resolveBattleHotkey(' ',true),null);
+  assert.equal(resolveBattleHotkey('Space',true),null);
   assert.deepEqual(resolveBattleHotkey('Escape',true),{kind:'cancel'});
 });
 
