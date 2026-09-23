@@ -56,30 +56,36 @@ test('S40 movement range is automatic and HUD has no Range button',async({page})
 
 test('S40 manual minimap view persists until accepted player movement restores follow',async({page})=>{
   await ready(page);
-  await startTraining(page,15);
+  // Battle #1 is used here because its movement geometry is already proven
+  // actionable by the automatic-range test above; camera semantics do not
+  // depend on the 20-enemy roster from battle #15.
+  await startTraining(page,1);
   const entered=await scene(page),minimap=entered.minimap;
-  if(!minimap||!minimap.enemies.length)throw new Error('Missing battle minimap');
+  if(!minimap)throw new Error('Missing battle minimap');
   expect(entered.battleCamera.mode).toBe('FOLLOW_PLAYER');
-  const remote=minimap.enemies.reduce((best,current)=>{
-    const bd=Math.hypot(best.x-minimap.player.x,best.y-minimap.player.y),cd=Math.hypot(current.x-minimap.player.x,current.y-minimap.player.y);
-    return cd>bd?current:best;
-  },minimap.enemies[0]!);
-  const remotePoint=await canvasPoint(page,remote.x,remote.y);
+
+  const inner=minimap.layout.inner;
+  const panX=entered.camera.x>1?inner.x:inner.x+inner.width;
+  const remotePoint=await canvasPoint(page,panX,inner.y+inner.height*0.5);
   await page.mouse.click(remotePoint.x,remotePoint.y);
   await expect.poll(async()=>(await scene(page)).battleCamera.mode).toBe('MANUAL_VIEW');
-  await page.waitForTimeout(1800);
-  expect((await scene(page)).battleCamera.mode).toBe('MANUAL_VIEW');
+  await expect.poll(async()=>(await scene(page)).battleCamera.target).toBe(null);
+  const manualCamera=(await scene(page)).camera;
+  await page.waitForTimeout(1200);
+  const persisted=await scene(page);
+  expect(persisted.battleCamera.mode).toBe('MANUAL_VIEW');
+  expect(persisted.camera.x).toBeCloseTo(manualCamera.x,1);
 
-  const manual=await scene(page);
-  if(!manual.minimap)throw new Error('Missing minimap after manual pan');
-  const playerPoint=await canvasPoint(page,manual.minimap.player.x,manual.minimap.player.y);
+  if(!persisted.minimap)throw new Error('Missing minimap after manual pan');
+  const playerPoint=await canvasPoint(page,persisted.minimap.player.x,persisted.minimap.player.y);
   await page.mouse.click(playerPoint.x,playerPoint.y);
   await expect.poll(async()=>(await scene(page)).battleCamera.target).toBe(null);
+  await expect.poll(async()=>(await scene(page)).actionReady).toBe(true);
+  await expect.poll(async()=>(await scene(page)).reachable.length).toBeGreaterThan(0);
 
   const centered=await scene(page);
   expect(centered.battleCamera.mode).toBe('MANUAL_VIEW');
-  const cell=centered.reachable[0];
-  if(!cell)throw new Error('No actionable movement cell');
+  const cell=centered.reachable[0]!;
   await clickWorld(page,(cell[0]+1)*32,(cell[1]+1)*16);
   await expect.poll(async()=>(await scene(page)).battleCamera.mode).toBe('FOLLOW_PLAYER');
 });
