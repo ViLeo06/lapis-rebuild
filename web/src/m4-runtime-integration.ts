@@ -1112,6 +1112,65 @@ export class M4RuntimeIntegration{
     return DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.playerStats(this.scene.character,Math.max(1,this.rewards.progression.level),this.combatEquipment());
   }
 
+  private playerExpHud():Readonly<{exp:number;expMax:number}>{
+    const progression=this.rewards.progression;
+    const maxLevel=progression.policyId===M71_EXPERIENCE_POLICY.id?M71_EXPERIENCE_POLICY.maxLevel:RECONSTRUCTION_PROGRESSION_POLICY.maxLevel;
+    if(progression.level>=maxLevel)return Object.freeze({exp:1,expMax:1});
+    const start=totalExpForLevel(progression.level,progression.policyId);
+    const next=totalExpForLevel(progression.level+1,progression.policyId);
+    return Object.freeze({exp:Math.max(0,progression.exp-start),expMax:Math.max(1,next-start)});
+  }
+
+  private playerPresentationStats():Readonly<{atk:number;def:number}>{
+    const base=this.scene.inBattleView&&this.scene.state.combatPlayerStats
+      ?this.scene.state.combatPlayerStats
+      :this.playerCombatStats();
+    const statuses=this.scene.inBattleView?this.scene.state.playerM7Status.swordsman:Object.freeze([]);
+    const family=playableClassById(this.scene.character).family;
+    const atk=family==='wizard'?base.magicAttack:m7EffectivePhysicalAttack(base.attack,statuses);
+    const def=m7EffectiveDefense(base.defense,statuses);
+    return Object.freeze({atk,def});
+  }
+
+  private statusDuration(ms:number|null|undefined):string|undefined{
+    if(ms===null)return '本场';
+    if(ms===undefined||ms<=0)return undefined;
+    return Math.ceil(ms/1000)+'s';
+  }
+
+  private battleStatusViews():readonly BattleStatusView[]{
+    if(!this.scene.inBattleView)return Object.freeze([]);
+    const rows:BattleStatusView[]=[];
+    const add=(id:string,label:string,tone:BattleStatusView['tone'],ms?:number|null)=>{
+      rows.push(Object.freeze({id,label,tone,...(this.statusDuration(ms)?{durationText:this.statusDuration(ms)}:{})}));
+    };
+    for(const status of this.scene.state.playerM7Status.swordsman){
+      const labels:Record<string,string>={
+        '1301':'强防','1401':'爆发','1501':'舍身','battle-command':'战斗命令',
+        '1101':'眩晕','stun-strike':'眩晕',
+      };
+      const label=labels[status.sourceSkillKey]??status.sourceSkillKey;
+      add('player:'+status.id,label,status.kind==='stun'?'control':'buff',status.remainingMs);
+    }
+    const playerWizard=this.scene.state.playerM7Status.wizard;
+    if(playerWizard.natureForce)add('player:nature-force','自然力量','buff',playerWizard.natureForce.remainingMs);
+
+    const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
+    if(target){
+      for(const status of target.m7Status.swordsman){
+        if(status.kind==='stun')add('target:'+status.id,'眩晕','control',status.remainingMs);
+      }
+      const wizard=target.m7Status.wizard;
+      if(wizard.darkVeil)add('target:dark-veil','黑暗之帐','debuff',wizard.darkVeil.remainingMs);
+      if(wizard.poison)add('target:poison','毒雾','poison',wizard.poison.remainingMs);
+      if(wizard.healingBlockedMs>0)add('target:ashes','灰烬·禁疗','debuff',wizard.healingBlockedMs);
+      if(wizard.petrifiedMs>0)add('target:petrified','诅咒之眼·石化','control',wizard.petrifiedMs);
+      if(wizard.blind)add('target:blind','失明','debuff',wizard.blind.remainingMs);
+      if(wizard.cursedSword)add('target:cursed-sword','诅咒之剑','debuff',wizard.cursedSword.remainingMs);
+    }
+    return Object.freeze(rows);
+  }
+
   private prepareReconstructionBattle(trainingBattleId:number|null=null):void{
     const level=Math.max(1,this.rewards.progression.level);
     if(trainingBattleId!==null){
