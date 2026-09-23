@@ -42,17 +42,18 @@ test.describe('S41 M7.1 final acceptance skeleton',()=>{
     await ready(page);
     const state:any=await extendedScene(page);
     expect(state.inBattleView).toBe(false);
-    await expect(page.locator('[data-ui="world-minimap"]')).toBeVisible();
+    await expect(page.locator('[data-world-minimap="true"]')).toBeVisible();
     await expect(page.locator('[data-action="fullscreen"]:visible')).toBeVisible();
-    await expect(page.locator('[data-training-manager]:visible')).toBeVisible();
+    expect((state.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
     await expect(page.locator('[data-settings-training-selector]')).toHaveCount(0);
+    await expect(page.locator('[data-ui="m7-training-camp"]')).toHaveCount(0);
   });
 
   test('battle presentation exposes follow/manual camera, battle minimap and continuous monster motion observables',async({page})=>{
     await ready(page);
     await acceptanceStartTraining(page,6);
     const state:any=await extendedScene(page);
-    expect(state.cameraMode).toBe('FOLLOW_PLAYER');
+    expect(state.battleCamera?.mode).toBe('FOLLOW_PLAYER');
     expect(state.minimap?.placement).toBe('bottom-right');
     expect(state.minimap?.enemies?.length??0).toBe((state.enemies??[]).filter((row:any)=>row.hp>0).length);
     expect(state.monsterMotion?.teleportDetected??false).toBe(false);
@@ -78,7 +79,8 @@ test.describe('S41 M7.1 mobile/coarse-pointer final skeleton',()=>{
 
   test('mobile field exposes tappable training manager and battle minimap consumes touch',async({page})=>{
     await ready(page);
-    await expect(page.locator('[data-training-manager]:visible')).toBeVisible();
+    const field:any=await extendedScene(page);
+    expect((field.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
     await acceptanceStartTraining(page,1);
     const state:any=await extendedScene(page);
     expect(state.minimap?.placement).toBe('bottom-right');
