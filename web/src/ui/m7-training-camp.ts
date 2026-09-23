@@ -27,7 +27,7 @@ function renderTrainingRows(playerLevel:number,selectedBattleId:number):string{
  */
 export function renderM7TrainingCamp(playerLevel:number,selectedBattleId:number):string{
   return '<section class="m7-training-camp" data-ui="m7-training-camp" data-training-surface="legacy-settings">'+
-    '<header><div><b>Training Camp · 15 Battles</b><small>兼容入口：M7.1 集成后由世界训练管理员替代。</small></div><span>RECONSTRUCTION_POLICY</span></header>'+
+    '<header><div><b>Training Camp · 15 Battles</b><small>敌人等级固定；兼容入口：M7.1 集成后由世界训练管理员替代。</small></div><span>RECONSTRUCTION_POLICY</span></header>'+
     '<div class="m7-training-list">'+renderTrainingRows(playerLevel,selectedBattleId)+'</div>'+
   '</section>';
 }
