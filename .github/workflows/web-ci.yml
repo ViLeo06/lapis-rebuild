@@ -207,6 +207,7 @@ jobs:
         working-directory: web
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
+          S41_M7_1_FINAL: '1'
         # One CI retry absorbs transient Chromium screenshot/protocol failures;
         # deterministic assertion failures still fail both attempts.
         run: npm run test:e2e -- --retries=1
