@@ -204,13 +204,15 @@ test.describe('S34 five-fix final acceptance',()=>{
 
     await moveIntoBasicAttackRange(page,firstEnemy.id,'mouse');
     state=await extendedScene(page);
-    const beforeClick=live(state).find((row:any)=>row.id===firstEnemy.id)?.hp??firstEnemy.hp;
+    const beforeClickAction=state.action;
     await clickEnemy(page,firstEnemy.id);
-    await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??beforeClick).toBeLessThan(beforeClick);
+    await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeClickAction);
+    expect((await extendedScene(page)).target).toBe(firstEnemy.id);
     await advanceBattleTime(page,10000);
-    const beforeA=live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??0;
+    const beforeAAction=(await extendedScene(page)).action;
     await page.keyboard.press('A');
-    await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??beforeA).toBeLessThan(beforeA);
+    await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeAAction);
+    expect((await extendedScene(page)).target).toBe(firstEnemy.id);
 
     await moveToDifferentEncounterGroup(page,firstGroup as number);
     await expect.poll(async()=>activeGroup(await extendedScene(page))).not.toBe(firstGroup);
@@ -297,10 +299,11 @@ test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
     state=await extendedScene(page);
     const currentEnemy=live(state).find((row:any)=>row.id===enemy.id);
     if(!currentEnemy)throw new Error('Direct-attack target disappeared');
-    const before=currentEnemy.hp;
+    const beforeAction=state.action;
     const enemyPoint=await canvasPoint(page,currentEnemy.x,currentEnemy.y);
     await page.touchscreen.tap(enemyPoint.x,enemyPoint.y);
-    await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===enemy.id)?.hp??before).toBeLessThan(before);
+    await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeAction);
+    expect((await extendedScene(page)).target).toBe(enemy.id);
 
     await advanceBattleTime(page,10000);
     const poisonButton=page.locator('[data-action="skill"]:visible').filter({hasText:'毒雾'}).first();
