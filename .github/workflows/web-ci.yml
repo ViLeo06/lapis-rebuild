@@ -52,6 +52,13 @@ jobs:
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
         run: npm run test:e2e
+      - name: S41 M7.1 final acceptance
+        if: github.ref_name == 'codex/s41-m7-1-final-glue'
+        working-directory: web
+        env:
+          LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
+          S41_M7_1_FINAL: '1'
+        run: npm run test:e2e -- e2e/s41-m7-1-acceptance.spec.ts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
