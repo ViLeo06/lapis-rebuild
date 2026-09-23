@@ -602,6 +602,15 @@ export class M4RuntimeIntegration{
     enemy.action=this.scene.state.actionMax;
   }
 
+  acceptanceSelectEnemy(targetId:string):void{
+    if(!navigator.webdriver)throw new Error('S34 acceptance target fixture is automation-only');
+    if(!this.scene.inBattleView)throw new Error('S34 acceptance target fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    this.scene.selectedEnemy=enemy.id;
+    this.render(this.scene.snapshot());
+  }
+
   acceptanceAdvanceBattleTimeMs(deltaMs:number):void{
     if(!navigator.webdriver)throw new Error('S34 acceptance time fixture is automation-only');
     if(!this.scene.inBattleView||this.scene.state.phase!=='active')throw new Error('S34 acceptance time fixture requires active battle');
