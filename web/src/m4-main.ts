@@ -13,6 +13,7 @@ declare global{
       load:()=>Promise<void>;
       exportJson:()=>string;
       restore:(raw:unknown)=>void;
+      acceptanceStartTrainingBattle?:(id:number)=>void;
       acceptanceGrantLevel?:(targetLevel:number)=>void;
       acceptanceSetEnemyHp?:(targetId:string,hp:number)=>void;
       acceptanceSetPlayerMp?:(mp:number)=>void;
@@ -53,6 +54,7 @@ window.addEventListener('lapis-ready',()=>{
     exportJson:()=>runtime.exportJson(),
     restore:(raw:unknown)=>runtime.restore(raw),
     ...(navigator.webdriver?{
+      acceptanceStartTrainingBattle:(id:number)=>runtime.acceptanceStartTrainingBattle(id),
       acceptanceGrantLevel:(targetLevel:number)=>runtime.acceptanceGrantLevel(targetLevel),
       acceptanceSetEnemyHp:(targetId:string,hp:number)=>runtime.acceptanceSetEnemyHp(targetId,hp),
       acceptanceSetPlayerMp:(mp:number)=>runtime.acceptanceSetPlayerMp(mp),
