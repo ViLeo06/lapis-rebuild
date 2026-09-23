@@ -87,11 +87,17 @@ function battleGridDistance(a:readonly[number,number],b:readonly[number,number])
 async function moveIntoBasicAttackRange(page:Page,targetId:string,input:'mouse'|'touch'){
   for(let attempt=0;attempt<10;attempt++){
     let state:any=await extendedScene(page);
+    if(state.phase!=='active')throw new Error('Battle ended before direct-attack acceptance');
+    await setPlayerVitals(page,state.maxHp,state.mp);
+    state=await extendedScene(page);
     const target=live(state).find((row:any)=>row.id===targetId);
     if(!target)throw new Error('Target died before direct-attack acceptance');
     const distance=battleGridDistance(target.cell,state.battleCell);
     if(distance<=1){
       if(!state.actionReady)await advanceBattleTime(page,10000);
+      await expect.poll(async()=>Boolean((await extendedScene(page)).actionReady),{timeout:5000}).toBe(true);
+      const readyState:any=await extendedScene(page);
+      await setPlayerVitals(page,readyState.maxHp,readyState.mp);
       return;
     }
     if(!state.actionReady)await advanceBattleTime(page,10000);
@@ -109,6 +115,9 @@ async function moveIntoBasicAttackRange(page:Page,targetId:string,input:'mouse'|
     else await page.mouse.click(point.x,point.y);
     await expect.poll(async()=>JSON.stringify((await scene(page)).battleCell),{timeout:10000}).not.toBe(before);
     await expect.poll(async()=>(await scene(page)).routeLength,{timeout:10000}).toBe(0);
+    const afterMove:any=await extendedScene(page);
+    if(afterMove.phase!=='active')throw new Error('Battle ended during direct-attack approach');
+    await setPlayerVitals(page,afterMove.maxHp,afterMove.mp);
   }
   throw new Error('Could not reach direct-attack range');
 }
