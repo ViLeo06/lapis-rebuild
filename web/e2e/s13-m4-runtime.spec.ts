@@ -78,6 +78,6 @@ test('S13 M4 save export uses v2 schema',async({page})=>{
   const save=JSON.parse(json);
   expect(save.kind).toBe('lapis-rebuild-save');
   expect(save.version).toBe(2);
-  expect(save.progression.policyId).toBe('m4-linear-100x-level-v1');
+  expect(save.progression.policyId).toBe('m7-1-levelabl-experience-v1');
   expect(save.quest.questId).toBe((await m4(page)).playableRecovery?'m5-training-house':'s9-training-run');
 });
