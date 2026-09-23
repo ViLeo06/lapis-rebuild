@@ -100,9 +100,10 @@ test('S34C Scene uses one Phaser pointer path for desktop/mobile and preserves t
 
 test('S34C Scene keeps recovered and fallback enemy visuals alive-only, never activeGroup-only',()=>{
   const source=readFileSync(new URL('../src/scene.ts',import.meta.url),'utf8');
-  assert.match(source,/setVisible\(enemyVisibleInBattle\(enemy\)\)/);
+  assert.match(source,/const visible=enemyVisibleInBattle\(enemy\);[\s\S]*?if\(actor\)actor\.setVisible\(visible\);[\s\S]*?enemyFallbackLabels\.get\(enemy\.id\)[\s\S]*?setVisible\(visible\)/);
   assert.match(source,/const visible=this\.inBattleView&&enemyVisibleInBattle\(enemy\)/);
   assert.match(source,/if\(e\.hp<=0\)return;[\s\S]*?if\(!this\.enemyVisualActors\.has\(e\.id\)\)/);
+  assert.match(source,/visible:this\.enemyVisualActors\.get\(enemy\.id\)\?\.image\.visible\?\?this\.enemyFallbackLabels\.get\(enemy\.id\)\?\.visible\?\?false/);
   assert.doesNotMatch(source,/setVisible\(enemy\.hp>0&&enemy\.encounterGroup===activeGroup\)/);
   assert.doesNotMatch(source,/const visible=this\.inBattleView&&enemy\.hp>0&&enemy\.encounterGroup===activeGroup/);
 });
