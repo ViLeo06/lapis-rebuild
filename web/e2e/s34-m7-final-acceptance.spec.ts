@@ -33,32 +33,23 @@ async function startTraining(page:Page,id:number){
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
-const monsterFamilyId=(id:string)=>id.replace(/#\\d+$/,'');
-
 async function legacyPause(page:Page){
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
 }
 
 async function selectTarget(page:Page,id?:string){
-  await legacyPause(page);
   const state=await scene(page);
   const target=id?state.enemies.find(row=>row.id===id&&row.hp>0):state.enemies.find(row=>row.hp>0);
   if(!target)throw new Error('Missing live target '+String(id));
-  const canvas=page.locator('canvas');
-  const box=await canvas.boundingBox();
-  if(!box)throw new Error('Missing canvas');
-  await page.mouse.click(
-    box.x+(target.x-state.camera.x)*state.camera.zoom,
-    box.y+(target.y-state.camera.y)*state.camera.zoom,
-  );
-  await expect.poll(async()=>{
-    const selected=(await scene(page)).target;
-    return selected&&monsterFamilyId(selected)===monsterFamilyId(target.id)?selected:null;
-  }).not.toBeNull();
-  const selected=(await scene(page)).target;
-  await legacyPause(page);
-  if(!selected)throw new Error('Missing selected target');
-  return selected;
+  const selected=await page.evaluate(targetId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceSelectEnemy!=='function')return false;
+    api.acceptanceSelectEnemy(targetId);
+    return true;
+  },target.id);
+  expect(selected,'S34 skill regression tests require webdriver-only acceptanceSelectEnemy').toBe(true);
+  await expect.poll(async()=>(await scene(page)).target).toBe(target.id);
+  return target.id;
 }
 async function clickBattleCell(page:Page,cell:readonly[number,number]){
   const state=await scene(page);
@@ -290,13 +281,20 @@ test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target act
   await ready(page);
   await developerPreset(page,'wizard',6,false);
   await startTraining(page,3);
-  const targetId=await selectTarget(page);
-  const before=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
   await clickSkill(page,'毒雾');
+  await expect.poll(async()=>Boolean((await scene(page)).targeting?.active)).toBe(true);
+  const aiming=await scene(page);
+  const target=aiming.enemies.find(row=>row.hp>0&&aiming.targeting.castCells.some((cell:any)=>
+    cell.x===(row.cell[0]+1)*32&&cell.y===(row.cell[1]+1)*16
+  ));
+  if(!target)throw new Error('Missing live poison target inside explicit cast cells');
+  const before=target.hp;
+  await clickBattleCell(page,target.cell);
   await expect.poll(async()=>{
-    const target=(await scene(page)).enemies.find(row=>row.id===targetId);
-    return Boolean(target?.m7Status.wizard.poison);
+    const current=(await scene(page)).enemies.find(row=>row.id===target.id);
+    return Boolean(current?.m7Status.wizard.poison);
   }).toBe(true);
+  const targetId=target.id;
   await page.waitForTimeout(5_300);
   const after=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
   expect(after).toBeLessThan(before);
@@ -306,7 +304,11 @@ test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({p
   await ready(page);
   await developerPreset(page,'wizard',26,false);
   await startTraining(page,8);
-  const healerId=await selectTarget(page,'m7-green-armored-renewer-l26');
+  const initial:any=await scene(page);
+  const activeIds=new Set((initial.minimap?.enemies??[]).filter((row:any)=>row.active).map((row:any)=>row.id));
+  const healer=initial.enemies.find((row:any)=>row.hp>0&&row.traits?.includes('healer')&&activeIds.has(row.id));
+  if(!healer)throw new Error('Missing active-group healer for Ashes acceptance');
+  const healerId=await selectTarget(page,healer.id);
   await clickSkill(page,'灰烬');
   await expect.poll(async()=>{
     const healer=(await scene(page)).enemies.find(row=>row.id===healerId);
@@ -317,7 +319,13 @@ test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({p
   const lowHp=Math.floor(beforeFixture.maxHp/2);
   await page.evaluate(({id,hp})=>window.lapisM4!.acceptanceSetEnemyHp!(id,hp),{id:healerId,hp:lowHp});
   const mpBefore=(await scene(page)).enemies.find(row=>row.id===healerId)!.mp;
-  await page.evaluate(id=>window.lapisM4!.acceptancePrimeEnemyAction!(id),healerId);
+  const ranAbility=await page.evaluate(id=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceRunEnemyAbility!=='function')return false;
+    api.acceptanceRunEnemyAbility(id,'self-heal');
+    return true;
+  },healerId);
+  expect(ranAbility,'Ashes acceptance requires deterministic production-AI self-heal trigger').toBe(true);
   await expect.poll(async()=>(await scene(page)).enemies.find(row=>row.id===healerId)!.mp,{timeout:5000}).toBeLessThan(mpBefore);
   expect((await scene(page)).enemies.find(row=>row.id===healerId)!.hp).toBe(lowHp);
 });
@@ -386,8 +394,7 @@ test.describe('S34 mobile seven-skill touch contract',()=>{
     for(const action of ['recovery-hp','recovery-mp','battle-exit-request']){
       const button=page.locator(`[data-action="${action}"]:visible`).first();
       await expect(button).toBeVisible();
-      const box=await button.boundingBox();
-      expect(box?.height??0).toBeGreaterThanOrEqual(44);
+      await expect.poll(async()=>(await button.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);
     }
     const lastSkill=skills.nth(6);
     await expect.poll(async()=>(await lastSkill.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);

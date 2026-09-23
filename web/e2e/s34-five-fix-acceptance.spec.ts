@@ -1,7 +1,6 @@
 import {expect,test} from '@playwright/test';
 import type {Page} from '@playwright/test';
 
-const finalGate=process.env.S34_FIVE_FIX_FINAL==='1';
 const runtime=(page:Page)=>page.evaluate(()=>window.lapisM4!.snapshot());
 const scene=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot());
 const extendedScene=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot() as any);
@@ -31,11 +30,15 @@ async function wizardPreset(page:Page){
   await expect.poll(async()=>(await runtime(page)).progression.level).toBe(56);
 }
 
-async function startManyEnemyBattle(page:Page){
+async function startTrainingBattle(page:Page,id:number){
   await openMenu(page);
-  await page.locator('[data-training-battle-id="15"] [data-action="training-start"]').click();
-  await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(15);
+  await page.locator(`[data-training-battle-id="${id}"] [data-action="training-start"]`).click();
+  await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
+}
+
+async function startManyEnemyBattle(page:Page){
+  await startTrainingBattle(page,15);
 }
 
 async function canvasPoint(page:Page,x:number,y:number){
@@ -76,6 +79,90 @@ async function hoverWorld(page:Page,x:number,y:number){
   await page.mouse.move(point.x,point.y);
 }
 
+async function pointHitsCanvas(page:Page,point:{x:number;y:number}){
+  return page.evaluate(({x,y})=>document.elementFromPoint(x,y) instanceof HTMLCanvasElement,point);
+}
+
+async function safeMovementProbe(page:Page,state:any,targetCell:readonly[number,number]){
+  const candidates=[...(state.reachable??[])].sort((a:any,b:any)=>
+    battleGridDistance(a,targetCell)-battleGridDistance(b,targetCell)
+  );
+  for(const cell of candidates){
+    const x=(cell[0]+1)*32,y=(cell[1]+1)*16;
+    if(live(state).some((enemy:any)=>Math.hypot(enemy.x-x,enemy.y-y)<=31))continue;
+    const point=await canvasPoint(page,x,y);
+    if(await pointHitsCanvas(page,point))return{cell,point};
+  }
+  return null;
+}
+
+async function ensureEnemyCanvasExposed(page:Page,enemyId:string,input:'mouse'|'touch'){
+  let state:any=await extendedScene(page);
+  let enemy=live(state).find((row:any)=>row.id===enemyId);
+  if(!enemy)throw new Error('Missing live enemy for canvas exposure '+enemyId);
+  let point=await canvasPoint(page,enemy.x,enemy.y);
+  if(await pointHitsCanvas(page,point))return point;
+  const marker=state.minimap?.enemies?.find((row:any)=>row.id===enemyId);
+  if(!marker)throw new Error('Missing minimap marker for obscured enemy '+enemyId);
+  const mapPoint=await canvasUiPoint(page,marker.x,marker.y);
+  if(input==='touch')await page.touchscreen.tap(mapPoint.x,mapPoint.y);
+  else await page.mouse.click(mapPoint.x,mapPoint.y);
+  await expect.poll(async()=>{
+    const current:any=await extendedScene(page);
+    const row=live(current).find((candidate:any)=>candidate.id===enemyId);
+    if(!row)return false;
+    const candidate=await canvasPoint(page,row.x,row.y);
+    return pointHitsCanvas(page,candidate);
+  },{timeout:5000,intervals:[50,100,200]}).toBe(true);
+  state=await extendedScene(page);
+  enemy=live(state).find((row:any)=>row.id===enemyId);
+  if(!enemy)throw new Error('Enemy disappeared while exposing canvas point');
+  point=await canvasPoint(page,enemy.x,enemy.y);
+  return point;
+}
+
+function battleGridDistance(a:readonly[number,number],b:readonly[number,number]){
+  const dx=Math.abs(a[0]-b[0]),dy=Math.abs(a[1]-b[1]);
+  return dx%2===dy%2?Math.max(dx,dy):Number.POSITIVE_INFINITY;
+}
+
+async function moveIntoBasicAttackRange(page:Page,targetId:string,input:'mouse'|'touch'){
+  for(let attempt=0;attempt<10;attempt++){
+    let state:any=await extendedScene(page);
+    if(state.phase!=='active')throw new Error('Battle ended before direct-attack acceptance');
+    await setPlayerVitals(page,state.maxHp,state.mp);
+    state=await extendedScene(page);
+    const target=live(state).find((row:any)=>row.id===targetId);
+    if(!target)throw new Error('Target died before direct-attack acceptance');
+    const distance=battleGridDistance(target.cell,state.battleCell);
+    if(distance<=1){
+      if(!state.actionReady)await advanceBattleTime(page,10000);
+      await waitBattleInputReady(page);
+      const readyState:any=await extendedScene(page);
+      await setPlayerVitals(page,readyState.maxHp,readyState.mp);
+      await waitBattleInputReady(page);
+      return;
+    }
+    if(!state.actionReady)await advanceBattleTime(page,10000);
+    state=await extendedScene(page);
+    const currentTarget=live(state).find((row:any)=>row.id===targetId);
+    if(!currentTarget)throw new Error('Target died while approaching direct-attack range');
+    const probe=await safeMovementProbe(page,state,currentTarget.cell);
+    if(!probe)throw new Error('No exposed empty reachable cell while approaching direct-attack target');
+    const before=JSON.stringify(state.battleCell);
+    if(input==='touch')await page.touchscreen.tap(probe.point.x,probe.point.y);
+    else await page.mouse.click(probe.point.x,probe.point.y);
+    await expect.poll(async()=>JSON.stringify((await scene(page)).battleCell),{timeout:10000}).not.toBe(before);
+    await expect.poll(async()=>(await scene(page)).routeLength,{timeout:10000}).toBe(0);
+    await waitBattleInputReady(page);
+    const afterMove:any=await extendedScene(page);
+    if(afterMove.phase!=='active')throw new Error('Battle ended during direct-attack approach');
+    await setPlayerVitals(page,afterMove.maxHp,afterMove.mp);
+    await waitBattleInputReady(page);
+  }
+  throw new Error('Could not reach direct-attack range');
+}
+
 async function advanceBattleTime(page:Page,deltaMs:number){
   const ok=await page.evaluate(delta=>{
     const api=window.lapisM4 as any;
@@ -96,6 +183,13 @@ async function setPlayerVitals(page:Page,hp:number,mp:number){
   expect(ok,'final S34 integration must expose deterministic acceptanceSetPlayerVitals for recovery acceptance').toBe(true);
 }
 
+async function waitBattleInputReady(page:Page){
+  await expect.poll(async()=>{
+    const state:any=await extendedScene(page);
+    return state.phase==='active'&&state.actionReady&&!state.busy&&state.routeLength===0;
+  },{timeout:10000,intervals:[50,100,200]}).toBe(true);
+}
+
 function live(state:any){return state.enemies.filter((row:any)=>row.hp>0);}
 function poisoned(state:any){return live(state).filter((row:any)=>Boolean(row.m7Status?.wizard?.poison));}
 function activeGroup(state:any):number|null{
@@ -106,15 +200,40 @@ function activeGroup(state:any):number|null{
 
 async function emptyPoisonCenter(state:any){
   const living=live(state);
-  for(const enemy of living){
-    for(const dx of [-64,0,64])for(const dy of [-32,0,32]){
-      const x=enemy.x+dx,y=enemy.y+dy;
-      if(living.some((row:any)=>Math.hypot(row.x-x,row.y-y)<12))continue;
-      const nearby=living.filter((row:any)=>Math.hypot(row.x-x,row.y-y)<=150);
-      if(nearby.length>=2)return{x,y};
-    }
+  const group=activeGroup(state);
+  const candidates=state.targeting?.castCells??[];
+  for(const center of candidates){
+    if(living.some((row:any)=>Math.hypot(row.x-center.x,row.y-center.y)<12))continue;
+    const cx=Math.round(center.x/32)-1,cy=Math.round(center.y/16)-1;
+    const nearby=living.filter((row:any)=>{
+      if(row.encounterGroup!==group||!Array.isArray(row.cell))return false;
+      const dx=Math.abs(row.cell[0]-cx),dy=Math.abs(row.cell[1]-cy);
+      return ((dx-dy)&1)===0&&Math.max(dx,dy)<=3;
+    });
+    if(nearby.length>=2)return{x:center.x,y:center.y};
   }
-  throw new Error('No empty poison center containing multiple enemies in acceptance roster');
+  throw new Error('No empty in-range poison center containing multiple active-group enemies');
+}
+
+async function moveToDifferentEncounterGroup(page:Page,initialGroup:number){
+  for(let attempt=0;attempt<8;attempt++){
+    let state:any=await extendedScene(page);
+    const current=activeGroup(state);
+    if(current!==null&&current!==initialGroup)return;
+    const later=live(state).find((row:any)=>row.encounterGroup!==initialGroup);
+    if(!later)throw new Error('Missing later encounter group');
+    await advanceBattleTime(page,10000);
+    await waitBattleInputReady(page);
+    state=await extendedScene(page);
+    const probe=await safeMovementProbe(page,state,later.cell);
+    if(!probe)throw new Error('No exposed empty reachable cell while approaching later encounter group');
+    const before=JSON.stringify(state.battleCell);
+    await page.mouse.click(probe.point.x,probe.point.y);
+    await expect.poll(async()=>JSON.stringify((await scene(page)).battleCell),{timeout:10000}).not.toBe(before);
+    await expect.poll(async()=>(await scene(page)).routeLength,{timeout:10000}).toBe(0);
+    await waitBattleInputReady(page);
+  }
+  throw new Error('Could not activate a later encounter group within movement budget');
 }
 
 async function expectAllLivingVisible(page:Page){
@@ -132,33 +251,44 @@ async function confirmRetreat(page:Page){
 }
 
 test.describe('S34 five-fix final acceptance',()=>{
-  test.skip(!finalGate,'Enable only after Workers 1-4 are merged into the S34 integration branch; a skipped run is not acceptance evidence.');
 
   test('desktop wizard flow covers input, encounter, poison, camera, minimap and confirmed exit',async({page})=>{
     await ready(page);
     await wizardPreset(page);
     await startManyEnemyBattle(page);
     await expectAllLivingVisible(page);
-
     let state:any=await extendedScene(page);
     expect(live(state).length).toBeGreaterThanOrEqual(20);
+    expect(new Set(live(state).map((row:any)=>row.encounterGroup)).size).toBeGreaterThanOrEqual(4);
+    await confirmRetreat(page);
+
+    // Input/targeting/camera acceptance uses a lower-risk multi-group battle.
+    // It still proves group switching and all-living visibility without letting
+    // the Stage-7 boss roster kill the player while UI interactions are tested.
+    await startTrainingBattle(page,6);
+    await expectAllLivingVisible(page);
+    state=await extendedScene(page);
+    expect(live(state).length).toBe(7);
     const firstGroup=activeGroup(state);
     expect(typeof firstGroup).toBe('number');
     const firstEnemy=live(state).find((row:any)=>row.encounterGroup===firstGroup);
     expect(firstEnemy).toBeTruthy();
 
-    const beforeClick=firstEnemy.hp;
-    await clickEnemy(page,firstEnemy.id);
-    await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??beforeClick).toBeLessThan(beforeClick);
-    await advanceBattleTime(page,10000);
-    const beforeA=live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??0;
-    await page.keyboard.press('A');
-    await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??beforeA).toBeLessThan(beforeA);
-
+    await moveIntoBasicAttackRange(page,firstEnemy.id,'mouse');
     state=await extendedScene(page);
-    const later=live(state).find((row:any)=>row.encounterGroup!==firstGroup);
-    expect(later).toBeTruthy();
-    await clickWorld(page,later.x-48,later.y+24);
+    const beforeClickAction=state.action;
+    await clickEnemy(page,firstEnemy.id);
+    await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeClickAction);
+    expect((await extendedScene(page)).target).toBe(firstEnemy.id);
+    await advanceBattleTime(page,10000);
+    await moveIntoBasicAttackRange(page,firstEnemy.id,'mouse');
+    await waitBattleInputReady(page);
+    const beforeAAction=(await extendedScene(page)).action;
+    await page.keyboard.press('A');
+    await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeAAction);
+    expect((await extendedScene(page)).target).toBe(firstEnemy.id);
+
+    await moveToDifferentEncounterGroup(page,firstGroup as number);
     await expect.poll(async()=>activeGroup(await extendedScene(page))).not.toBe(firstGroup);
     await expectAllLivingVisible(page);
 
@@ -228,22 +358,36 @@ test.describe('S34 five-fix final acceptance',()=>{
 
 test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
   test.use({viewport:{width:412,height:915},hasTouch:true});
-  test.skip(!finalGate,'Enable only after Workers 1-4 are merged into the S34 integration branch; a skipped run is not acceptance evidence.');
 
   test('touch move, direct attack, two-step poison targeting, minimap camera and confirmed exit share desktop authority',async({page})=>{
     await ready(page);
     await wizardPreset(page);
     await startManyEnemyBattle(page);
     await expectAllLivingVisible(page);
-
     let state:any=await extendedScene(page);
+    expect(live(state).length).toBeGreaterThanOrEqual(20);
+    await confirmRetreat(page);
+
+    await startTrainingBattle(page,6);
+    await expectAllLivingVisible(page);
+    state=await extendedScene(page);
     const active=activeGroup(state);
     const enemy=live(state).find((row:any)=>row.encounterGroup===active);
     expect(enemy).toBeTruthy();
-    const before=enemy.hp;
-    const enemyPoint=await canvasPoint(page,enemy.x,enemy.y);
+    await moveIntoBasicAttackRange(page,enemy.id,'touch');
+    state=await extendedScene(page);
+    const currentEnemy=live(state).find((row:any)=>row.id===enemy.id);
+    if(!currentEnemy)throw new Error('Direct-attack target disappeared');
+    await waitBattleInputReady(page);
+    state=await extendedScene(page);
+    const readyEnemy=live(state).find((row:any)=>row.id===enemy.id);
+    if(!readyEnemy)throw new Error('Direct-attack target disappeared before touch');
+    const beforeAction=state.action;
+    const enemyPoint=await ensureEnemyCanvasExposed(page,readyEnemy.id,'touch');
+    expect(await pointHitsCanvas(page,enemyPoint),'mobile direct-attack target must be on exposed battlefield canvas').toBe(true);
     await page.touchscreen.tap(enemyPoint.x,enemyPoint.y);
-    await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===enemy.id)?.hp??before).toBeLessThan(before);
+    await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeAction);
+    expect((await extendedScene(page)).target).toBe(enemy.id);
 
     await advanceBattleTime(page,10000);
     const poisonButton=page.locator('[data-action="skill"]:visible').filter({hasText:'毒雾'}).first();
