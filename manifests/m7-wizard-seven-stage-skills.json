@@ -69,14 +69,14 @@
       "unlockLevel": 6,
       "target": "enemy-area",
       "authoredLv1": {"name":"毒雾(Lv1)","mpCost":20,"distance":4,"area":1,"attackType":16,"effectA":-15,"effectB":20,"effectC":8,"tick":12,"magicPatternId":182,"explanation":"用毒使其中毒."},
-      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-HISTORICAL","intScaling":"VERIFIED-HISTORICAL","numericBalance":"RECONSTRUCTION_POLICY"},
+      "evidence": {"identity":"VERIFIED-STATIC-ORIGINAL","highLevelBehavior":"VERIFIED-HISTORICAL","intScaling":"VERIFIED-HISTORICAL","gridGeometry":"VERIFIED-STATIC-ORIGINAL","castDistanceByLevel":"VERIFIED-STATIC-ORIGINAL","numericBalance":"RECONSTRUCTION_POLICY"},
       "levels": [
-        {"level":1,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":4,"intScale":0.12,"rangeCells":4,"areaCells":1},
-        {"level":2,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":5,"intScale":0.14,"rangeCells":4,"areaCells":5},
-        {"level":3,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":6,"intScale":0.16,"rangeCells":5,"areaCells":9},
-        {"level":4,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":7,"intScale":0.18,"rangeCells":5,"areaCells":13},
-        {"level":5,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":8,"intScale":0.20,"rangeCells":6,"areaCells":17},
-        {"level":6,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":10,"intScale":0.225,"rangeCells":6,"areaCells":25}
+        {"level":1,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":4,"intScale":0.12,"rangeCells":4,"areaCode":1,"areaCells":5},
+        {"level":2,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":5,"intScale":0.14,"rangeCells":4,"areaCode":1,"areaCells":5},
+        {"level":3,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":6,"intScale":0.16,"rangeCells":5,"areaCode":2,"areaCells":13},
+        {"level":4,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":7,"intScale":0.18,"rangeCells":5,"areaCode":2,"areaCells":13},
+        {"level":5,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":8,"intScale":0.20,"rangeCells":6,"areaCode":2,"areaCells":13},
+        {"level":6,"mpCost":20,"readinessCost":10,"durationMs":30000,"tickIntervalMs":5000,"ticks":6,"baseDamage":10,"intScale":0.225,"rangeCells":6,"areaCode":3,"areaCells":25}
       ]
     },
     {
