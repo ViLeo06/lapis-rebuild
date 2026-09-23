@@ -60,6 +60,10 @@ test('S40 manual minimap view persists until accepted player movement restores f
   // actionable by the automatic-range test above; camera semantics do not
   // depend on the 20-enemy roster from battle #15.
   await startTraining(page,1);
+  // Freeze combat while testing camera persistence so enemy DPS cannot turn
+  // a camera assertion into a progression/defeat race.
+  await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
+  await expect.poll(async()=>(await scene(page)).battlePaused).toBe(true);
   const entered=await scene(page),minimap=entered.minimap;
   if(!minimap)throw new Error('Missing battle minimap');
   expect(entered.battleCamera.mode).toBe('FOLLOW_PLAYER');
@@ -80,6 +84,9 @@ test('S40 manual minimap view persists until accepted player movement restores f
   const playerPoint=await canvasPoint(page,persisted.minimap.player.x,persisted.minimap.player.y);
   await page.mouse.click(playerPoint.x,playerPoint.y);
   await expect.poll(async()=>(await scene(page)).battleCamera.target).toBe(null);
+
+  await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
+  await expect.poll(async()=>(await scene(page)).battlePaused).toBe(false);
   await expect.poll(async()=>(await scene(page)).actionReady).toBe(true);
   await expect.poll(async()=>(await scene(page)).reachable.length).toBeGreaterThan(0);
 

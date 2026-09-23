@@ -356,11 +356,21 @@ export class LabScene extends Phaser.Scene {
     const snapshot=this.viewport.snapshot();
     if(this.battleCameraTarget){
       const target=this.battleCameraTarget;
+      const desired=this.battleCamera.targetScroll(snapshot.camera,target,snapshot.viewport,snapshot.world);
+      const remaining=Math.hypot(snapshot.camera.scrollX-desired.x,snapshot.camera.scrollY-desired.y);
+      // Phaser camera centering can quantize to half pixels. Once the smooth
+      // lerp is inside a tiny final window, snap the last few pixels so a
+      // manual target cannot stall forever on a sub-pixel step.
+      if(remaining<=8){
+        this.viewport.setScroll(desired.x,desired.y);
+        this.battleCameraTarget=null;
+        return;
+      }
       const next=this.battleCamera.centerStep(snapshot.camera,target,snapshot.viewport,snapshot.world,deltaMs);
       this.viewport.setScroll(next.x,next.y);
       const after=this.viewport.snapshot();
-      const desired=this.battleCamera.targetScroll(after.camera,target,after.viewport,after.world);
-      if(Math.hypot(after.camera.scrollX-desired.x,after.camera.scrollY-desired.y)<2)this.battleCameraTarget=null;
+      const afterDesired=this.battleCamera.targetScroll(after.camera,target,after.viewport,after.world);
+      if(Math.hypot(after.camera.scrollX-afterDesired.x,after.camera.scrollY-afterDesired.y)<2)this.battleCameraTarget=null;
       return;
     }
     const model=this.currentBattleMinimapModel();
