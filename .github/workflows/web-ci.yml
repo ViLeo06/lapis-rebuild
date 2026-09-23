@@ -53,7 +53,7 @@ jobs:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
         run: npm run test:e2e
       - name: S41 M7.1 final acceptance
-        if: github.ref_name == 'codex/s41-m7-1-final-glue'
+        if: github.ref_name == 'codex/s41-m7-1-final-glue' || github.head_ref == 'codex/s41-m7-1-final-glue'
         working-directory: web
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
