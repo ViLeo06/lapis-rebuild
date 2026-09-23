@@ -968,7 +968,7 @@ export class LabScene extends Phaser.Scene {
       g.lineBetween(this.anchor.x-7,this.anchor.y,this.anchor.x+7,this.anchor.y);
       g.lineBetween(this.anchor.x,this.anchor.y-7,this.anchor.x,this.anchor.y+7);
     }
-    this.enemyLabels.forEach(t=>t.setVisible(false));
+    for(const label of this.enemyFallbackLabels.values())label.setVisible(false);
     if(this.inBattleView){
       this.state.enemies.forEach((e,j)=>{
         if(e.hp<=0)return;
@@ -984,7 +984,7 @@ export class LabScene extends Phaser.Scene {
         g.fillRect(e.x-24,e.y-66,48,5);
         g.fillStyle(0xe39168);
         g.fillRect(e.x-24,e.y-66,48*e.hp/e.maxHp,5);
-        this.enemyLabels[j]?.setText(`${e.role==='melee'?'近战':'远程'} ${Math.ceil(e.hp)}`).setPosition(e.x,e.y-70).setVisible(true);
+        if(!this.enemyVisualActors.has(e.id))this.enemyFallbackLabels.get(e.id)?.setText(`${e.role==='melee'?'近战':'远程'} ${Math.ceil(e.hp)}`).setPosition(e.x,e.y-70).setVisible(true);
       });
     }
     if(this.inBattleView&&this.effectUntil>0){
