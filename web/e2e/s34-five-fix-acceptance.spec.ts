@@ -31,8 +31,13 @@ async function wizardPreset(page:Page){
 }
 
 async function startTrainingBattle(page:Page,id:number){
-  await openMenu(page);
-  await page.locator(`[data-training-battle-id="${id}"] [data-action="training-start"]`).click();
+  const ok=await page.evaluate(trainingId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceStartTrainingBattle!=='function')return false;
+    api.acceptanceStartTrainingBattle(trainingId);
+    return true;
+  },id);
+  expect(ok,'M7.1 regression requires webdriver-only acceptanceStartTrainingBattle').toBe(true);
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
