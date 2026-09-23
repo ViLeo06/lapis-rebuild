@@ -303,7 +303,6 @@ test.describe('S34 five-fix final acceptance',()=>{
     expect(resourcesAfterCancel.action).toBe(resourcesBeforeCancel.action);
     expect(resourcesAfterCancel.inBattleView).toBe(true);
 
-    await page.keyboard.press('Space');
     await expect.poll(async()=>Boolean((await extendedScene(page)).targeting?.rangeOverlayVisible)).toBe(true);
     await page.keyboard.press('2');
     const targetState=await extendedScene(page);
