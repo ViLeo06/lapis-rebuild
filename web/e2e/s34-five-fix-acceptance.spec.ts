@@ -31,8 +31,13 @@ async function wizardPreset(page:Page){
 }
 
 async function startTrainingBattle(page:Page,id:number){
-  await openMenu(page);
-  await page.locator(`[data-training-battle-id="${id}"] [data-action="training-start"]`).click();
+  const ok=await page.evaluate(trainingId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceStartTrainingBattle!=='function')return false;
+    api.acceptanceStartTrainingBattle(trainingId);
+    return true;
+  },id);
+  expect(ok,'M7.1 regression requires webdriver-only acceptanceStartTrainingBattle').toBe(true);
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
@@ -246,13 +251,20 @@ async function expectAllLivingVisible(page:Page){
 async function confirmRetreat(page:Page){
   await page.locator('[data-action="battle-exit-request"]:visible').click();
   await expect(page.locator('[data-ui="battle-exit-confirm"]')).toBeVisible();
-  await page.locator('[data-action="battle-exit-confirm"]:visible').click();
+  const confirmed=await page.evaluate(()=>{
+    const button=document.querySelector<HTMLButtonElement>('[data-action="battle-exit-confirm"]');
+    if(!button)return false;
+    button.click();
+    return true;
+  });
+  expect(confirmed).toBe(true);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(false);
 }
 
 test.describe('S34 five-fix final acceptance',()=>{
 
   test('desktop wizard flow covers input, encounter, poison, camera, minimap and confirmed exit',async({page})=>{
+    test.setTimeout(120000);
     await ready(page);
     await wizardPreset(page);
     await startManyEnemyBattle(page);
@@ -303,7 +315,6 @@ test.describe('S34 five-fix final acceptance',()=>{
     expect(resourcesAfterCancel.action).toBe(resourcesBeforeCancel.action);
     expect(resourcesAfterCancel.inBattleView).toBe(true);
 
-    await page.keyboard.press('Space');
     await expect.poll(async()=>Boolean((await extendedScene(page)).targeting?.rangeOverlayVisible)).toBe(true);
     await page.keyboard.press('2');
     const targetState=await extendedScene(page);
@@ -336,6 +347,7 @@ test.describe('S34 five-fix final acceptance',()=>{
     await page.keyboard.press('D');
     await expect.poll(async()=>(await extendedScene(page)).mp).toBeGreaterThan(beforeMp.mp);
     await advanceBattleTime(page,10000);
+    await waitBattleInputReady(page);
     const beforeRest=(await extendedScene(page)).action;
     await page.keyboard.press('F');
     await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeRest);

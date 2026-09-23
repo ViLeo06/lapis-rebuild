@@ -3,7 +3,6 @@ export type BattleHotkeyCommand=
   |{kind:'recovery';resource:'hp'|'mp'}
   |{kind:'rest'}
   |{kind:'skill';slot:number}
-  |{kind:'toggle-range'}
   |{kind:'cancel'};
 
 const QWER_SKILL_SLOTS=Object.freeze({q:0,w:1,e:2,r:3} as const);
@@ -18,7 +17,6 @@ export function resolveBattleHotkey(key:string,inBattle:boolean):BattleHotkeyCom
   if(normalized==='f')return{kind:'rest'};
   if(normalized in QWER_SKILL_SLOTS)return{kind:'skill',slot:QWER_SKILL_SLOTS[normalized as keyof typeof QWER_SKILL_SLOTS]};
   if(/^[1-6]$/.test(normalized))return{kind:'skill',slot:Number(normalized)-1};
-  if(normalized===' '||normalized==='Space'||normalized==='Spacebar')return{kind:'toggle-range'};
   if(normalized==='Escape')return{kind:'cancel'};
   return null;
 }

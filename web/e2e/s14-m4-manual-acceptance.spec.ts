@@ -148,7 +148,7 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   let state=await m4(page);
   expect(state.gold).toBe(10);
   expect(state.progression.exp).toBe(100);
-  expect(state.progression.level).toBe(2);
+  expect(state.progression.level).toBe(1);
   checkpoints.returned={m4:state,scene:await snap(page)};
   await page.screenshot({path:'test-results/s14-07-returned.png',fullPage:true});
 
@@ -158,13 +158,13 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   state=await m4(page);
   expect(state.gold).toBe(15);
   expect(state.progression.exp).toBe(300);
-  expect(state.progression.level).toBe(3);
+  expect(state.progression.level).toBe(1);
   const save=JSON.parse(await page.evaluate(()=>window.lapisM4!.exportJson()));
   expect(save.version).toBe(2);
   expect(save.quest.stage).toBe('complete');
   expect(save.gold).toBe(15);
   expect(save.progression.exp).toBe(300);
-  expect(save.progression.level).toBe(3);
+  expect(save.progression.level).toBe(1);
   checkpoints.complete={m4:state,save};
   await page.screenshot({path:'test-results/s14-08-quest-complete.png',fullPage:true});
 

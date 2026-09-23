@@ -19,8 +19,13 @@ async function openMenu(page:Page){
 }
 
 async function startTraining(page:Page,id=15){
-  await openMenu(page);
-  await page.locator(`[data-training-battle-id="${id}"] [data-action="training-start"]`).click();
+  const ok=await page.evaluate(trainingId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceStartTrainingBattle!=='function')return false;
+    api.acceptanceStartTrainingBattle(trainingId);
+    return true;
+  },id);
+  expect(ok,'M7.1 regression requires webdriver-only acceptanceStartTrainingBattle').toBe(true);
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
   await expect.poll(async()=>Boolean((await scene(page)).minimap?.visible)).toBe(true);
@@ -103,16 +108,17 @@ test('S34D battle keeps normal scale, edge scrolls, and clamps inside a larger b
   if(!pan)throw new Error('Synthetic battle map has no scrollable camera axis');
   const beforeAxis=pan.axis==='x'?entered.camera.x:entered.camera.y;
   const client=await canvasPoint(page,pan.x,pan.y);
-  await page.locator('canvas').dispatchEvent('pointermove',{
-    clientX:client.x,clientY:client.y,pointerType:'mouse',buttons:0,
-  });
+  // Drive a real mouse move so Phaser's input plugin receives the same
+  // pointer path as production. Synthetic dispatchEvent can be dropped by
+  // Chromium/Phaser timing under parallel Playwright workers.
+  await page.mouse.move(client.x,client.y);
   const threshold=Math.min(4,pan.room*.25);
   await expect.poll(async()=>{
     const camera=(await scene(page)).camera;
     const current=pan.axis==='x'?camera.x:camera.y;
     return pan.sign*(current-beforeAxis)>threshold;
   },{timeout:4000}).toBe(true);
-  await page.locator('canvas').dispatchEvent('pointerout',{pointerType:'mouse'});
+  await page.mouse.move(0,0);
 
   const moved=await scene(page);
   const movedViewport=moved.viewport!;

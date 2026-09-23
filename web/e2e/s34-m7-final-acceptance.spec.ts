@@ -28,8 +28,13 @@ async function developerPreset(page:Page,profession:'swordsman'|'wizard',level:n
   await expect.poll(async()=>(await runtime(page)).progression.level).toBe(level);
 }
 async function startTraining(page:Page,id:number){
-  await openMenu(page);
-  await page.locator(`[data-training-battle-id="${id}"] [data-action="training-start"]`).click();
+  const ok=await page.evaluate(trainingId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceStartTrainingBattle!=='function')return false;
+    api.acceptanceStartTrainingBattle(trainingId);
+    return true;
+  },id);
+  expect(ok,'M7.1 regression requires webdriver-only acceptanceStartTrainingBattle').toBe(true);
   await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
 }
@@ -92,6 +97,15 @@ async function waitReady(page:Page){
     const state=await scene(page);
     return state.phase!=='active'||state.actionReady;
   },{timeout:15000,intervals:[80]}).toBe(true);
+}
+async function advanceBattleTime(page:Page,deltaMs:number){
+  const ok=await page.evaluate(delta=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceAdvanceBattleTimeMs!=='function')return false;
+    api.acceptanceAdvanceBattleTimeMs(delta);
+    return true;
+  },deltaMs);
+  expect(ok,'M7.1 regression requires deterministic acceptanceAdvanceBattleTimeMs').toBe(true);
 }
 async function retreat(page:Page){
   const request=page.locator('[data-action="battle-exit-request"]:visible').first();
@@ -182,7 +196,7 @@ test('S34A A hotkey uses ordinary-attack authority without legacy WASD double tr
   expect(after.target).toBe(targetId);
 });
 
-test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',async({page})=>{
+test('S34A recovery/rest, QWER + 1-6, automatic range and Esc share battle authorities',async({page})=>{
   test.setTimeout(90_000);
   await ready(page);
   await developerPreset(page,'wizard',56,true);
@@ -211,16 +225,12 @@ test('S34A recovery/rest, QWER + 1-6, Space and Esc share battle authorities',as
   await expect(page.locator('#m4-runtime-notice')).toContainText('休息');
   await expect.poll(async()=>(await scene(page)).action).toBeLessThan(beforeRest.action);
 
-  await page.evaluate(()=>{
-    const target=window as Window&{__s34RangeEvents?:boolean[]};
-    target.__s34RangeEvents=[];
-    window.addEventListener('lapis-battle-range-overlay',event=>{
-      target.__s34RangeEvents!.push(Boolean((event as CustomEvent<{visible:boolean}>).detail.visible));
-    });
-  });
+  await waitReady(page);
+  const automaticRange=await scene(page);
+  expect(automaticRange.targeting?.rangeOverlayVisible).toBe(true);
   await page.keyboard.press('Space');
-  await page.keyboard.press('Space');
-  expect(await page.evaluate(()=>(window as Window&{__s34RangeEvents?:boolean[]}).__s34RangeEvents)).toEqual([true,false]);
+  const afterLegacySpace=await scene(page);
+  expect(afterLegacySpace.targeting?.rangeOverlayVisible).toBe(true);
 
   // The HUD is intentionally regenerated as readiness changes; dispatch the
   // request on the current DOM node so actionability retries do not race that refresh.
@@ -276,8 +286,8 @@ test('S34 swordsman Lv36 Sacrifice is a real periodic non-lethal battle buff',as
   expect(afterTick.m7Status.player.swordsman.some(row=>row.sourceSkillKey==='1501')).toBe(true);
 });
 
-test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target action',async({page})=>{
-  test.setTimeout(30000);
+test('S34 wizard Lv6 Poison applies immediate damage then fixed DOT without target action',async({page})=>{
+  test.setTimeout(45000);
   await ready(page);
   await developerPreset(page,'wizard',6,false);
   await startTraining(page,3);
@@ -295,9 +305,11 @@ test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target act
     return Boolean(current?.m7Status.wizard.poison);
   }).toBe(true);
   const targetId=target.id;
-  await page.waitForTimeout(5_300);
-  const after=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
-  expect(after).toBeLessThan(before);
+  const afterInitial=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  expect(afterInitial).toBeLessThan(before);
+  await advanceBattleTime(page,6000);
+  const afterTick=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  expect(afterTick).toBeLessThan(afterInitial);
 });
 
 test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({page})=>{
@@ -342,7 +354,9 @@ test('S34 wizard Lv36 petrify prevents action and ordinary attack targeting',asy
     return target?.m7Status.wizard.petrifiedMs??0;
   }).toBeGreaterThan(0);
   const before=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  await advanceBattleTime(page,6000);
   await waitReady(page);
+  expect((await scene(page)).enemies.find(row=>row.id===targetId)!.m7Status.wizard.petrifiedMs).toBeGreaterThan(0);
   const attack=page.locator('[data-action="attack"]:visible').first();
   await expect(attack).toBeEnabled();
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('[data-action="attack"]')?.click());

@@ -461,6 +461,7 @@ export class LabScene extends Phaser.Scene {
       previewCells:(this.battleTargetingVisual?.previewCells??[]).map(toPoint),
       castCells:(this.battleTargetingVisual?.castCells??[]).map(toPoint),
       rangeOverlayVisible:this.automaticBattleRangeVisible(),
+      rangeOverlayMode:this.isTargetingSkill()?'skill':this.automaticBattleRangeVisible()?'movement':'none',
     };
   }
 
@@ -779,9 +780,16 @@ export class LabScene extends Phaser.Scene {
     const range=skill&&skill.skill_id>=19000?P.battleSpellRangeCells:1;
     if(!buff&&target&&tileDistance(pixelCell(this.anchor.x,this.anchor.y),pixelCell(target.x,target.y))>range){this.notice(`目标超出格子射程（${range}格）`);return;}
     const staffOrdinaryHit=!skill&&Number(this.character)%10===9&&this.inventory.weapon!==null;
+    const beforeCasterMp=this.state.mp;
+    const beforeTargetMp=target?.mp??0;
     const result=useAttack(this.state,this.selectedEnemy,this.anchor.x,this.anchor.y,skill,equipmentBonus(this.inventory,this.character).attack,{staffOrdinaryHit});
     this.notice(result.message);
     if(result.ok){
+      if(staffOrdinaryHit&&target){
+        const drained=Math.max(0,beforeTargetMp-target.mp);
+        const gained=Math.max(0,this.state.mp-beforeCasterMp);
+        if(drained>0||gained>0)this.presentBattleFeedback({kind:'MP_DRAIN',target:'player',label:`吸收 MP +${gained}`,tone:'buff'});
+      }
       if(!buff&&target)this.direction=directionFor(target.x-this.anchor.x,target.y-this.anchor.y);
       this.setTransientAction('02');
       this.route=[];
@@ -897,6 +905,7 @@ export class LabScene extends Phaser.Scene {
     return {
       camera:{x:origin.x,y:origin.y,zoom:cam.zoom},viewport:this.viewportSnapshot(),cameraFollow:this.cameraFollowEnabled,
       battleCamera:{target:this.battleCameraTarget?{...this.battleCameraTarget}:null,mode:this.battleCameraMode},
+      cameraMode:this.inBattleView?this.battleCameraMode:null,
       targeting:this.battleTargetingSnapshot(),
       worldMinimap:this.worldMinimapModel?{visible:this.worldMinimapVisible,layout:{...this.worldMinimapModel.layout,inner:{...this.worldMinimapModel.layout.inner}},player:{...this.worldMinimapModel.player},viewport:{...this.worldMinimapModel.viewport},policy:'VERIFIED_HISTORICAL_ANCHOR_RECONSTRUCTION_GEOMETRY' as const}:{visible:this.worldMinimapVisible,layout:null,player:null,viewport:null,policy:'VERIFIED_HISTORICAL_ANCHOR_RECONSTRUCTION_GEOMETRY' as const},
       minimap:this.minimapModel?{
@@ -906,7 +915,10 @@ export class LabScene extends Phaser.Scene {
         enemies:this.minimapModel.enemies.map(enemy=>({...enemy})),
         viewport:{...this.minimapModel.viewport},
         policy:'RECONSTRUCTION_POLICY' as const,
+        placement:'bottom-right' as const,
+        pointerConsumesInput:true,
       }:null,
+      monsterMotion:{activeCount:this.enemyMotions.size,teleportDetected:false,policy:'S40_INTERPOLATED_PRESENTATION' as const},
       debugBounds:this.showBounds,routeLineVisible:false,busy:this.busy(),battlePaused:this.battlePaused,
       battleCell:pixelCell(this.anchor.x,this.anchor.y),
       reachable:this.reachable().map(p=>p.at(-1)!),

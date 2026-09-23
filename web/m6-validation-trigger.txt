@@ -5,3 +5,4 @@ Soak path: visible player menu -> new profession -> production reward/progressio
 Final validation head follows this trigger. Private Chromium may retry once for transient protocol/screenshot failures.
 Final CI cleanup trigger after verified M6 soak; runtime/content unchanged.
 S34 2026-09-22 five-issue user-playtest repair private-smoke trigger: attack/scroll/recovery/staged waves/poison.
+M7.1 2026-09-24 final integration private-smoke trigger: S35-S41 gameplay/progression/skill/presentation closeout.
