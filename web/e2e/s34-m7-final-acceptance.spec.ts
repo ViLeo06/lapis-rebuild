@@ -98,6 +98,15 @@ async function waitReady(page:Page){
     return state.phase!=='active'||state.actionReady;
   },{timeout:15000,intervals:[80]}).toBe(true);
 }
+async function advanceBattleTime(page:Page,deltaMs:number){
+  const ok=await page.evaluate(delta=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceAdvanceBattleTimeMs!=='function')return false;
+    api.acceptanceAdvanceBattleTimeMs(delta);
+    return true;
+  },deltaMs);
+  expect(ok,'M7.1 regression requires deterministic acceptanceAdvanceBattleTimeMs').toBe(true);
+}
 async function retreat(page:Page){
   const request=page.locator('[data-action="battle-exit-request"]:visible').first();
   await expect(request).toBeVisible();
@@ -216,6 +225,7 @@ test('S34A recovery/rest, QWER + 1-6, automatic range and Esc share battle autho
   await expect(page.locator('#m4-runtime-notice')).toContainText('休息');
   await expect.poll(async()=>(await scene(page)).action).toBeLessThan(beforeRest.action);
 
+  await waitReady(page);
   const automaticRange=await scene(page);
   expect(automaticRange.targeting?.rangeOverlayVisible).toBe(true);
   await page.keyboard.press('Space');
@@ -276,8 +286,8 @@ test('S34 swordsman Lv36 Sacrifice is a real periodic non-lethal battle buff',as
   expect(afterTick.m7Status.player.swordsman.some(row=>row.sourceSkillKey==='1501')).toBe(true);
 });
 
-test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target action',async({page})=>{
-  test.setTimeout(30000);
+test('S34 wizard Lv6 Poison applies immediate damage then fixed DOT without target action',async({page})=>{
+  test.setTimeout(45000);
   await ready(page);
   await developerPreset(page,'wizard',6,false);
   await startTraining(page,3);
@@ -295,9 +305,11 @@ test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target act
     return Boolean(current?.m7Status.wizard.poison);
   }).toBe(true);
   const targetId=target.id;
-  await page.waitForTimeout(5_300);
-  const after=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
-  expect(after).toBeLessThan(before);
+  const afterInitial=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  expect(afterInitial).toBeLessThan(before);
+  await advanceBattleTime(page,6000);
+  const afterTick=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  expect(afterTick).toBeLessThan(afterInitial);
 });
 
 test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({page})=>{
