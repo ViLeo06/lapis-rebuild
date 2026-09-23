@@ -75,6 +75,36 @@ async function hoverWorld(page:Page,x:number,y:number){
   await page.mouse.move(point.x,point.y);
 }
 
+async function moveIntoBasicAttackRange(page:Page,targetId:string,input:'mouse'|'touch'){
+  for(let attempt=0;attempt<10;attempt++){
+    let state:any=await extendedScene(page);
+    const target=live(state).find((row:any)=>row.id===targetId);
+    if(!target)throw new Error('Target died before direct-attack acceptance');
+    const distance=Math.max(Math.abs(target.cell[0]-state.battleCell[0]),Math.abs(target.cell[1]-state.battleCell[1]));
+    if(distance<=1){
+      if(!state.actionReady)await advanceBattleTime(page,10000);
+      return;
+    }
+    if(!state.actionReady)await advanceBattleTime(page,10000);
+    state=await extendedScene(page);
+    const currentTarget=live(state).find((row:any)=>row.id===targetId);
+    if(!currentTarget)throw new Error('Target died while approaching direct-attack range');
+    const reachable=[...(state.reachable??[])].sort((a:any,b:any)=>
+      Math.max(Math.abs(a[0]-currentTarget.cell[0]),Math.abs(a[1]-currentTarget.cell[1]))-
+      Math.max(Math.abs(b[0]-currentTarget.cell[0]),Math.abs(b[1]-currentTarget.cell[1]))
+    );
+    if(!reachable.length)throw new Error('No reachable battle cell while approaching direct-attack target');
+    const destination=reachable[0];
+    const before=JSON.stringify(state.battleCell);
+    const point=await canvasPoint(page,(destination[0]+1)*32,(destination[1]+1)*16);
+    if(input==='touch')await page.touchscreen.tap(point.x,point.y);
+    else await page.mouse.click(point.x,point.y);
+    await expect.poll(async()=>JSON.stringify((await scene(page)).battleCell),{timeout:10000}).not.toBe(before);
+    await expect.poll(async()=>(await scene(page)).routeLength,{timeout:10000}).toBe(0);
+  }
+  throw new Error('Could not reach direct-attack range');
+}
+
 async function advanceBattleTime(page:Page,deltaMs:number){
   const ok=await page.evaluate(delta=>{
     const api=window.lapisM4 as any;
@@ -172,7 +202,9 @@ test.describe('S34 five-fix final acceptance',()=>{
     const firstEnemy=live(state).find((row:any)=>row.encounterGroup===firstGroup);
     expect(firstEnemy).toBeTruthy();
 
-    const beforeClick=firstEnemy.hp;
+    await moveIntoBasicAttackRange(page,firstEnemy.id,'mouse');
+    state=await extendedScene(page);
+    const beforeClick=live(state).find((row:any)=>row.id===firstEnemy.id)?.hp??firstEnemy.hp;
     await clickEnemy(page,firstEnemy.id);
     await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===firstEnemy.id)?.hp??beforeClick).toBeLessThan(beforeClick);
     await advanceBattleTime(page,10000);
@@ -261,8 +293,12 @@ test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
     const active=activeGroup(state);
     const enemy=live(state).find((row:any)=>row.encounterGroup===active);
     expect(enemy).toBeTruthy();
-    const before=enemy.hp;
-    const enemyPoint=await canvasPoint(page,enemy.x,enemy.y);
+    await moveIntoBasicAttackRange(page,enemy.id,'touch');
+    state=await extendedScene(page);
+    const currentEnemy=live(state).find((row:any)=>row.id===enemy.id);
+    if(!currentEnemy)throw new Error('Direct-attack target disappeared');
+    const before=currentEnemy.hp;
+    const enemyPoint=await canvasPoint(page,currentEnemy.x,currentEnemy.y);
     await page.touchscreen.tap(enemyPoint.x,enemyPoint.y);
     await expect.poll(async()=>live(await extendedScene(page)).find((row:any)=>row.id===enemy.id)?.hp??before).toBeLessThan(before);
 
