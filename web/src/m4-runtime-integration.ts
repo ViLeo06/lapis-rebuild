@@ -908,7 +908,9 @@ export class M4RuntimeIntegration{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
-    const entities=this.m5World?[this.m5World.content.guide.entity]:WORLD_ENTITIES.filter(entity=>entity.kind==='npc');
+    const entities=this.m5World
+      ?[this.m5World.trainingManager.entity,this.m5World.content.guide.entity]
+      :WORLD_ENTITIES.filter(entity=>entity.kind==='npc');
     const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
     if(!entity){
       if(!this.m5World&&!entityId){
@@ -916,10 +918,29 @@ export class M4RuntimeIntegration{
         if(objective){this.interactWorld(objective.id);return;}
       }
       this.activeDialogue=null;
+      this.trainingManagerOpen=false;
       this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互 NPC');
       this.render(this.scene.snapshot());
       return;
     }
+    if(this.m5World&&entity.id===this.m5World.trainingManager.entity.id){
+      const manager=resolveM7TrainingManagerInteraction(this.m5World.trainingManager,actor,{
+        entityId:entity.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,inputSource,provenance:'RECONSTRUCTION_POLICY',
+      });
+      this.activeDialogue=null;
+      if(!manager.accepted){
+        this.trainingManagerOpen=false;
+        this.setNotice(manager.message);
+        this.render(this.scene.snapshot());
+        return;
+      }
+      this.trainingManagerOpen=true;
+      this.menuOpen=false;
+      this.setNotice('训练管理员：请选择训练关卡。');
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.trainingManagerOpen=false;
     const resolved=this.worldAuthority.beginNpcInteraction(this.world,{
       entityId:entity.id,
       mapId:actor.mapId,
@@ -972,7 +993,7 @@ export class M4RuntimeIntegration{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
-    const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
+    const entities=this.m5World?[this.m5World.trainingManager.entity,this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
     const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
     if(!entity){this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互对象');return;}
     const previousStage=this.world.quest.stage;
@@ -1288,7 +1309,7 @@ export class M4RuntimeIntegration{
   private nearestInteraction(snapshot:Snapshot):string|undefined{
     if(snapshot.inBattleView)return undefined;
     const actor=this.currentWorldState();
-    const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
+    const entities=this.m5World?[this.m5World.trainingManager.entity,this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
     const entity=entities.find(candidate=>canInteract(candidate,actor));
     if(!entity)return undefined;
     if(entity.kind==='npc')return `与${entity.displayName}交谈`;
