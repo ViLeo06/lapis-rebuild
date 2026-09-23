@@ -128,13 +128,15 @@ test('black veil is physical accuracy denial while blindness is stronger and als
   assert.equal(m7WizardEffectiveRangeCells(4,status),2);
 });
 
-test('poison mist scales with INT, receives the approved >=50% boost, and ticks independently of actor actions',()=>{
+test('poison mist scales with INT, deals fixed 50% follow-up damage, and ticks independently of actor actions',()=>{
   const low=applyM7WizardSkillStatus(createM7WizardStatusState(),'poison-mist',6,{intelligence:10});
   const high=applyM7WizardSkillStatus(createM7WizardStatusState(),'poison-mist',6,{intelligence:100});
-  assert.equal(M7_WIZARD_RUNTIME_POLICY.poisonDamageMultiplier,1.5);
-  assert.equal(high.poison?.damagePerTick,50,'Lv6 INT 100 baseline 33 is boosted to ceil(33*1.5)=50');
-  assert.ok((high.poison?.damagePerTick??0)>(low.poison?.damagePerTick??0));
-  const first=tickM7WizardStatus(high,4999);
+  assert.equal(M7_WIZARD_RUNTIME_POLICY.poisonFollowupDamageRatio,0.5);
+  assert.equal(M7_WIZARD_RUNTIME_POLICY.poisonTickIntervalMs,6000);
+  assert.equal(high.poison?.initialDamage,33);
+  assert.equal(high.poison?.damagePerTick,17);
+  assert.ok((high.poison?.initialDamage??0)>(low.poison?.initialDamage??0));
+  const first=tickM7WizardStatus(high,5999);
   assert.equal(first.poisonDamage,0);
   const second=tickM7WizardStatus(first.state,1);
   assert.equal(second.poisonDamage,high.poison?.damagePerTick);
@@ -146,17 +148,18 @@ test('poison keeps ticking while curse eye petrification prevents action and ord
   status=applyM7WizardSkillStatus(status,'curse-eye',6);
   assert.equal(m7WizardCanAct(status),false);
   assert.equal(m7WizardOrdinaryAttackTargetable(status),false);
-  const tick=tickM7WizardStatus(status,5000);
+  const tick=tickM7WizardStatus(status,6000);
   assert.ok(tick.poisonDamage>0);
-  assert.equal(tick.state.petrifiedMs,10000);
+  assert.equal(tick.state.petrifiedMs,9000);
 });
 
-test('nature force is a timed staff enchant and drains only available MP into available caster room',()=>{
+test('nature force is battle-persistent and drains only available MP into available caster room',()=>{
   let status=applyM7WizardSkillStatus(createM7WizardStatusState(),'nature-force',6);
   const drained=applyM7NatureForceStaffHit(status,8,10,50,0.9);
   assert.deepEqual(drained,{casterMp:10,targetMp:48,drained:2},'caster room caps a Lv6 three-MP drain');
-  status=tickM7WizardStatus(status,45000).state;
-  assert.deepEqual(applyM7NatureForceStaffHit(status,0,10,10,0.5),{casterMp:0,targetMp:10,drained:0});
+  status=tickM7WizardStatus(status,10*60*1000).state;
+  assert.equal(status.natureForce?.battlePersistent,true);
+  assert.deepEqual(applyM7NatureForceStaffHit(status,0,10,10,0.5),{casterMp:3,targetMp:7,drained:3});
 });
 
 test('ashes blocks HP recovery from any caller but leaves recovery available after expiry',()=>{

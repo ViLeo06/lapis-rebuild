@@ -12,11 +12,13 @@ export type M7WizardPoisonStatus=Readonly<{
   tickIntervalMs:number;
   tickClockMs:number;
   ticksRemaining:number;
+  initialDamage:number;
   damagePerTick:number;
 }>;
 
 export type M7WizardNatureForceStatus=Readonly<{
-  remainingMs:number;
+  remainingMs:number|null;
+  battlePersistent:boolean;
   drainMin:number;
   drainMax:number;
 }>;
@@ -46,6 +48,14 @@ export type M7WizardStatusState=Readonly<{
 export type M7WizardTickResult=Readonly<{
   state:M7WizardStatusState;
   poisonDamage:number;
+  endedSkillKeys:readonly M7WizardSkillKey[];
+}>;
+
+export type M7WizardPoisonDamageProfile=Readonly<{
+  initialDamage:number;
+  followupDamage:number;
+  tickIntervalMs:number;
+  followupTicks:number;
 }>;
 
 export type M7WizardHealingResult=Readonly<{
@@ -91,6 +101,31 @@ function decayAccuracy(status:M7WizardAccuracyStatus|null,deltaMs:number):M7Wiza
   return remainingMs>0?Object.freeze({...status,remainingMs}):null;
 }
 
+export function m7WizardPoisonDamageProfile(
+  level:M7WizardSkillLevel,
+  intelligence:number,
+):M7WizardPoisonDamageProfile{
+  finiteNonNegative(intelligence,'wizard intelligence');
+  const params=m7WizardSkillLevel('poison-mist',level);
+  const initialDamage=Math.max(1,Math.round(
+    numberParam(params,'baseDamage')+intelligence*numberParam(params,'intScale'),
+  ));
+  const ratio=numberParam(params,'followupDamageRatio');
+  if(Math.abs(ratio-M7_WIZARD_RUNTIME_POLICY.poisonFollowupDamageRatio)>1e-9){
+    throw new Error('Poison follow-up ratio drift');
+  }
+  const followupTicks=numberParam(params,'ticks');
+  if(followupTicks!==M7_WIZARD_RUNTIME_POLICY.poisonFollowupTicks){
+    throw new Error('Poison follow-up tick-count drift');
+  }
+  return Object.freeze({
+    initialDamage,
+    followupDamage:Math.max(1,Math.round(initialDamage*ratio)),
+    tickIntervalMs:numberParam(params,'tickIntervalMs'),
+    followupTicks,
+  });
+}
+
 export function createM7WizardStatusState():M7WizardStatusState{
   return Object.freeze({
     darkVeil:null,
@@ -123,33 +158,31 @@ export function applyM7WizardSkillStatus(
         }),
       });
     case 'poison-mist':{
-      const intelligence=finiteNonNegative(context.intelligence??0,'wizard intelligence');
-      const baselineDamagePerTick=Math.max(1,Math.round(
-        numberParam(params,'baseDamage')+intelligence*numberParam(params,'intScale'),
-      ));
-      const damagePerTick=Math.max(1,Math.ceil(
-        baselineDamagePerTick*M7_WIZARD_RUNTIME_POLICY.poisonDamageMultiplier,
-      ));
+      const profile=m7WizardPoisonDamageProfile(level,context.intelligence??0);
       return Object.freeze({
         ...current,
         poison:Object.freeze({
           remainingMs:durationMs,
-          tickIntervalMs:numberParam(params,'tickIntervalMs'),
+          tickIntervalMs:profile.tickIntervalMs,
           tickClockMs:0,
-          ticksRemaining:numberParam(params,'ticks'),
-          damagePerTick,
+          ticksRemaining:profile.followupTicks,
+          initialDamage:profile.initialDamage,
+          damagePerTick:profile.followupDamage,
         }),
       });
     }
-    case 'nature-force':
+    case 'nature-force':{
+      const battlePersistent=boolParam(params,'battlePersistent');
       return Object.freeze({
         ...current,
         natureForce:Object.freeze({
-          remainingMs:durationMs,
+          remainingMs:battlePersistent?null:durationMs,
+          battlePersistent,
           drainMin:numberParam(params,'drainMin'),
           drainMax:numberParam(params,'drainMax'),
         }),
       });
+    }
     case 'ashes':
       if(!boolParam(params,'healingBlocked'))throw new Error('Ashes must block healing');
       return Object.freeze({...current,healingBlockedMs:durationMs});
@@ -201,27 +234,45 @@ export function tickM7WizardStatus(
       :null;
   }
   const natureForce=current.natureForce
-    ?Math.max(0,current.natureForce.remainingMs-deltaMs)>0
-      ?Object.freeze({...current.natureForce,remainingMs:Math.max(0,current.natureForce.remainingMs-deltaMs)})
-      :null
+    ?current.natureForce.battlePersistent
+      ?current.natureForce
+      :Math.max(0,(current.natureForce.remainingMs??0)-deltaMs)>0
+        ?Object.freeze({...current.natureForce,remainingMs:Math.max(0,(current.natureForce.remainingMs??0)-deltaMs)})
+        :null
     :null;
   const cursedSword=current.cursedSword
     ?Math.max(0,current.cursedSword.remainingMs-deltaMs)>0
       ?Object.freeze({...current.cursedSword,remainingMs:Math.max(0,current.cursedSword.remainingMs-deltaMs)})
       :null
     :null;
-  return Object.freeze({
-    state:Object.freeze({
-      darkVeil:decayAccuracy(current.darkVeil,deltaMs),
-      poison,
-      natureForce,
-      healingBlockedMs:Math.max(0,current.healingBlockedMs-deltaMs),
-      petrifiedMs:Math.max(0,current.petrifiedMs-deltaMs),
-      blind:decayAccuracy(current.blind,deltaMs),
-      cursedSword,
-    }),
-    poisonDamage,
+  const state:M7WizardStatusState=Object.freeze({
+    darkVeil:decayAccuracy(current.darkVeil,deltaMs),
+    poison,
+    natureForce,
+    healingBlockedMs:Math.max(0,current.healingBlockedMs-deltaMs),
+    petrifiedMs:Math.max(0,current.petrifiedMs-deltaMs),
+    blind:decayAccuracy(current.blind,deltaMs),
+    cursedSword,
   });
+  const after=new Set(m7WizardActiveStatusKeys(state));
+  const endedSkillKeys=m7WizardActiveStatusKeys(current).filter(key=>!after.has(key));
+  return Object.freeze({
+    state,
+    poisonDamage,
+    endedSkillKeys:Object.freeze(endedSkillKeys),
+  });
+}
+
+export function m7WizardActiveStatusKeys(status:M7WizardStatusState):readonly M7WizardSkillKey[]{
+  const active:M7WizardSkillKey[]=[];
+  if(status.darkVeil)active.push('dark-veil');
+  if(status.poison)active.push('poison-mist');
+  if(status.natureForce)active.push('nature-force');
+  if(status.healingBlockedMs>0)active.push('ashes');
+  if(status.petrifiedMs>0)active.push('curse-eye');
+  if(status.blind)active.push('blindness');
+  if(status.cursedSword)active.push('cursed-sword');
+  return Object.freeze(active);
 }
 
 export function m7WizardCanAct(status:M7WizardStatusState):boolean{

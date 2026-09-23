@@ -67,7 +67,7 @@ test('S34 poison ticks without the poisoned target taking an action',()=>{
   const cast=useM7Skill(state,target.id,0,0,poison);
   assert.equal(cast.ok,true);
   const before=target.hp;
-  const events=tickM7BattleStatuses(state,5_000);
+  const events=tickM7BattleStatuses(state,6_000);
   assert.ok(target.hp<before);
   assert.ok(events.some(event=>event.target===target.id));
 });
