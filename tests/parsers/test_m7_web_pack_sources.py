@@ -27,7 +27,7 @@ class M7WebPackSourcesTest(unittest.TestCase):
             for ext in ('imf','mmf','smf'):
                 key=f'sgres/sz-{zone:04d}.{ext}'
                 self.assertRegex(lower[key],r'^[0-9a-f]{64}$')
-        for visual in (4524,4525,4526,4544):
+        for visual in (4023,4524,4525,4526,4544):
             for slot in ('00','01','02','03'):
                 for ext in ('ani','spr'):
                     key=f'char/b{visual}_{slot}.{ext}'
