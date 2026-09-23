@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import {createM4RewardState,parseM4Quest,questHud} from '../src/m4-runtime-integration.ts';
 import {applyBattleReward,applyQuestReward} from '../src/progression/rewards.ts';
 import {TRAINING_QUEST_ID} from '../src/world/world-content.ts';
+import {M71_EXPERIENCE_POLICY} from '../src/progression/m7-1-experience-policy.ts';
 
 test('M4 starter state uses versioned progression and quantity inventory',()=>{
   const state=createM4RewardState(7);
   assert.equal(state.gold,7);
   assert.equal(state.progression.level,1);
-  assert.equal(state.progression.policyId,'m4-linear-100x-level-v1');
+  assert.equal(state.progression.policyId,M71_EXPERIENCE_POLICY.id);
   assert.ok(state.inventory.items.length>0);
   assert.ok(state.inventory.items.every(item=>item.quantity===1));
 });
@@ -30,11 +31,13 @@ test('M4 battle and quest settlement share S12 idempotent rewards',()=>{
   const starter=createM4RewardState();
   const battle=applyBattleReward(starter,'s9-training-battle','battle:s9-training-run:win',{gold:10,exp:100});
   assert.equal(battle.state.gold,10);
-  assert.equal(battle.state.progression.level,2);
+  assert.equal(battle.state.progression.level,1);
+  assert.equal(battle.state.progression.exp,100);
   const duplicate=applyBattleReward(battle.state,'s9-training-battle','battle:s9-training-run:win',{gold:10,exp:100});
   assert.equal(duplicate.applied,false);
   const quest=applyQuestReward(duplicate.state,TRAINING_QUEST_ID,'quest:s9-training-run:turn-in',{gold:5,exp:200,questFlags:['m4.training.complete']});
   assert.equal(quest.state.gold,15);
-  assert.equal(quest.state.progression.level,3);
+  assert.equal(quest.state.progression.level,1);
+  assert.equal(quest.state.progression.exp,300);
   assert.equal(quest.state.questFlags['m4.training.complete'],true);
 });
