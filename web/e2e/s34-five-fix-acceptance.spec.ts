@@ -75,12 +75,17 @@ async function hoverWorld(page:Page,x:number,y:number){
   await page.mouse.move(point.x,point.y);
 }
 
+function battleGridDistance(a:readonly[number,number],b:readonly[number,number]){
+  const dx=Math.abs(a[0]-b[0]),dy=Math.abs(a[1]-b[1]);
+  return dx%2===dy%2?Math.max(dx,dy):Number.POSITIVE_INFINITY;
+}
+
 async function moveIntoBasicAttackRange(page:Page,targetId:string,input:'mouse'|'touch'){
   for(let attempt=0;attempt<10;attempt++){
     let state:any=await extendedScene(page);
     const target=live(state).find((row:any)=>row.id===targetId);
     if(!target)throw new Error('Target died before direct-attack acceptance');
-    const distance=Math.max(Math.abs(target.cell[0]-state.battleCell[0]),Math.abs(target.cell[1]-state.battleCell[1]));
+    const distance=battleGridDistance(target.cell,state.battleCell);
     if(distance<=1){
       if(!state.actionReady)await advanceBattleTime(page,10000);
       return;
@@ -90,8 +95,7 @@ async function moveIntoBasicAttackRange(page:Page,targetId:string,input:'mouse'|
     const currentTarget=live(state).find((row:any)=>row.id===targetId);
     if(!currentTarget)throw new Error('Target died while approaching direct-attack range');
     const reachable=[...(state.reachable??[])].sort((a:any,b:any)=>
-      Math.max(Math.abs(a[0]-currentTarget.cell[0]),Math.abs(a[1]-currentTarget.cell[1]))-
-      Math.max(Math.abs(b[0]-currentTarget.cell[0]),Math.abs(b[1]-currentTarget.cell[1]))
+      battleGridDistance(a,currentTarget.cell)-battleGridDistance(b,currentTarget.cell)
     );
     if(!reachable.length)throw new Error('No reachable battle cell while approaching direct-attack target');
     const destination=reachable[0];
@@ -209,6 +213,7 @@ test.describe('S34 five-fix final acceptance',()=>{
     await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeClickAction);
     expect((await extendedScene(page)).target).toBe(firstEnemy.id);
     await advanceBattleTime(page,10000);
+    await moveIntoBasicAttackRange(page,firstEnemy.id,'mouse');
     const beforeAAction=(await extendedScene(page)).action;
     await page.keyboard.press('A');
     await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeAAction);
