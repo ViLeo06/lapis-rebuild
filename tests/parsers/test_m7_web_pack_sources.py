@@ -18,7 +18,7 @@ class M7WebPackSourcesTest(unittest.TestCase):
         visuals=assignment('WEB_VISUALS')
         required={1,3,9,11,13,15,21,23,31,41,51,61,71,81,91}
         self.assertTrue(required.issubset(maps))
-        self.assertTrue({4524,4525,4526,4544}.issubset(visuals))
+        self.assertTrue({4023,4524,4525,4526,4544}.issubset(visuals))
 
     def test_fixed_source_baseline_covers_every_training_map_triplet_and_visual(self):
         baseline=json.loads((ROOT/'manifests/web-source-baseline.json').read_text(encoding='utf-8'))
