@@ -1,7 +1,6 @@
 import {expect,test} from '@playwright/test';
 import type {Page} from '@playwright/test';
 
-const finalGate=process.env.S34_FIVE_FIX_FINAL==='1';
 const runtime=(page:Page)=>page.evaluate(()=>window.lapisM4!.snapshot());
 const scene=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot());
 const extendedScene=(page:Page)=>page.evaluate(()=>window.lapisDiagnostics!.snapshot() as any);
@@ -159,7 +158,6 @@ async function confirmRetreat(page:Page){
 }
 
 test.describe('S34 five-fix final acceptance',()=>{
-  test.skip(!finalGate,'Enable only after Workers 1-4 are merged into the S34 integration branch; a skipped run is not acceptance evidence.');
 
   test('desktop wizard flow covers input, encounter, poison, camera, minimap and confirmed exit',async({page})=>{
     await ready(page);
@@ -252,7 +250,6 @@ test.describe('S34 five-fix final acceptance',()=>{
 
 test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
   test.use({viewport:{width:412,height:915},hasTouch:true});
-  test.skip(!finalGate,'Enable only after Workers 1-4 are merged into the S34 integration branch; a skipped run is not acceptance evidence.');
 
   test('touch move, direct attack, two-step poison targeting, minimap camera and confirmed exit share desktop authority',async({page})=>{
     await ready(page);
