@@ -11,7 +11,8 @@ import {createInventory,knownItemIds} from './progression/inventory.ts';
 import type {InventoryState} from './progression/inventory.ts';
 import {equipItem as equipProgression,reconcileEquipmentForCharacter} from './progression/equipment.ts';
 import type {EquipmentCompatibilityResolver} from './progression/equipment.ts';
-import {initialProgression,totalExpForLevel} from './progression/progression.ts';
+import {initialM71Progression,RECONSTRUCTION_PROGRESSION_POLICY,totalExpForLevel} from './progression/progression.ts';
+import {M71_EXPERIENCE_POLICY,m71AuthoredExperienceValue} from './progression/m7-1-experience-policy.ts';
 import {applyBattleReward,applyQuestReward} from './progression/rewards.ts';
 import type {RewardState} from './progression/rewards.ts';
 import {CURRENT_SAVE_VERSION,SAVE_KIND} from './progression/save-schema.ts';
@@ -41,7 +42,7 @@ import {renderBattleHud} from './ui/battle-hud.ts';
 import {renderGameMenu} from './ui/game-menu.ts';
 import {renderDebugPanel} from './ui/debug-panel.ts';
 import {escapeHtml} from './ui/ui-utils.ts';
-import type {BattleHudState,DiagnosticsState,FieldHudState,PlayerHudState} from './ui/types.ts';
+import type {BattleHudState,BattleStatusView,DiagnosticsState,FieldHudState,PlayerHudState} from './ui/types.ts';
 import {readM4Save,writeM4Save} from './m4-save-store.ts';
 import {equipmentBonus as legacyEquipmentBonus} from './inventory.ts';
 import {createM5PlayableWorld} from './world/m5-playable-world.ts';
@@ -59,8 +60,10 @@ import {beginM7SkillTargeting,cancelM7SkillTargeting,confirmM7SkillTargeting,cre
 import type {M7GridCell,M7SkillTargetingState} from './combat/m7-grid-targeting.ts';
 import {m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-stage-runtime.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
+import {resolveM7TrainingManagerInteraction} from './world/m7-training-manager.ts';
+import {m7EffectiveDefense,m7EffectivePhysicalAttack} from './combat/m7-status-effects.ts';
 import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
-import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
+import {renderM7DeveloperPreset,renderM7TrainingManagerDialog} from './ui/m7-training-camp.ts';
 import {battleSkillHotkeyLabel,resolveBattleHotkey} from './input/battle-hotkeys.ts';
 import type {BattleHotkeyCommand} from './input/battle-hotkeys.ts';
 
@@ -79,7 +82,7 @@ function starterInventory():InventoryState{
 }
 
 export function createM4RewardState(gold=0):RewardState{
-  return {gold,inventory:starterInventory(),progression:initialProgression(),questFlags:{},rewardReceipts:[]};
+  return {gold,inventory:starterInventory(),progression:initialM71Progression(),questFlags:{},rewardReceipts:[]};
 }
 
 export function parseM4Quest(raw:JsonValue,questId=TRAINING_QUEST_ID):QuestRuntimeState{
@@ -135,6 +138,7 @@ export class M4RuntimeIntegration{
   developerMode=false;
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
+  private trainingManagerOpen=false;
   private battleExitConfirm=false;
   private battleRangeOverlayVisible=false;
   private battleTargetingState:M7SkillTargetingState=createM7SkillTargetingState();
