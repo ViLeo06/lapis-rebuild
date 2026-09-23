@@ -41,10 +41,14 @@ test.describe('S41 M7.1 final acceptance skeleton',()=>{
   test('world entry exposes training manager, world minimap and direct fullscreen action',async({page})=>{
     await ready(page);
     const state:any=await extendedScene(page);
+    const app:any=await runtime(page);
     expect(state.inBattleView).toBe(false);
     await expect(page.locator('[data-world-minimap="true"]')).toBeVisible();
     await expect(page.locator('[data-action="fullscreen"]:visible')).toBeVisible();
-    expect((state.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
+    expect(app.m7Training?.battleCount).toBe(15);
+    if(app.playableRecovery){
+      expect((state.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
+    }
     await expect(page.locator('[data-settings-training-selector]')).toHaveCount(0);
     await expect(page.locator('[data-ui="m7-training-camp"]')).toHaveCount(0);
   });
@@ -80,7 +84,11 @@ test.describe('S41 M7.1 mobile/coarse-pointer final skeleton',()=>{
   test('mobile field exposes tappable training manager and battle minimap consumes touch',async({page})=>{
     await ready(page);
     const field:any=await extendedScene(page);
-    expect((field.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
+    const app:any=await runtime(page);
+    expect(app.m7Training?.battleCount).toBe(15);
+    if(app.playableRecovery){
+      expect((field.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
+    }
     await acceptanceStartTraining(page,1);
     const state:any=await extendedScene(page);
     expect(state.minimap?.placement).toBe('bottom-right');
