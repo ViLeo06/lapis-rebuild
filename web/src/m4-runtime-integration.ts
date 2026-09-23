@@ -1399,10 +1399,13 @@ export class M4RuntimeIntegration{
     if(!M6_CHARACTER_IDS.includes(snapshot.character))return;
     const definition=playableClassById(snapshot.character);
     const fieldStats=this.m5World?this.playerCombatStats():null;
+    const expHud=this.playerExpHud();
+    const presentationStats=this.playerPresentationStats();
     const player:PlayerHudState={
       name:'佣兵',className:definition.displayName,portraitLabel:definition.family==='swordsman'?'剑':'巫',level:this.rewards.progression.level,
       hp:snapshot.inBattleView?snapshot.hp:fieldStats?.maxHp??definition.baseAuthoredStats.hp,hpMax:snapshot.inBattleView?this.scene.state.maxHp:fieldStats?.maxHp??definition.baseAuthoredStats.hp,
-      mp:snapshot.inBattleView?snapshot.mp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,mpMax:snapshot.inBattleView?this.scene.state.maxMp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,gold:this.rewards.gold,
+      mp:snapshot.inBattleView?snapshot.mp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,mpMax:snapshot.inBattleView?this.scene.state.maxMp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,
+      exp:expHud.exp,expMax:expHud.expMax,atk:presentationStats.atk,def:presentationStats.def,gold:this.rewards.gold,
     };
     const quest=questHud(this.world.quest.stage);
     const field:FieldHudState={mapId:snapshot.mapId,mapName:snapshot.mapName,...quest,interactionPrompt:this.nearestInteraction(snapshot)};
@@ -1413,6 +1416,7 @@ export class M4RuntimeIntegration{
         phase:snapshot.phase,readiness:snapshot.action,readinessMax:snapshot.actionMax,ready:snapshot.actionReady,busy:snapshot.busy,paused:snapshot.battlePaused,
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
+        statuses:this.battleStatusViews(),
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
         skills:this.runtimeSkillCommands().map((command,index)=>({id:command.authoredSkillId??command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:battleSkillHotkeyLabel(index),disabled:snapshot.mp<command.mpCost})),
       };
@@ -1451,7 +1455,6 @@ export class M4RuntimeIntegration{
       const panel=this.menuRoot.querySelector<HTMLElement>('.menu-panel');
       if(panel&&!snapshot.inBattleView){
         panel.classList.add('m7-menu-panel');
-        panel.insertAdjacentHTML('beforeend',renderM7TrainingCamp(this.rewards.progression.level,this.selectedTrainingBattleId));
         if(this.developerMode)panel.insertAdjacentHTML('beforeend',renderM7DeveloperPreset(definition.family as M7Profession,this.rewards.progression.level,this.developerUnlockAllSkills));
       }
       this.menuHtml=menuSignature;
