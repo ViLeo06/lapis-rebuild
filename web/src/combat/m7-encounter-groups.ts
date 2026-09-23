@@ -41,3 +41,36 @@ export function enemyInActiveEncounterGroup(
 ):boolean{
   return enemy.hp>0&&enemy.encounterGroup===activeEnemyEncounterGroup(state,playerX,playerY);
 }
+
+
+export const M7_BATTLE_POINTER_RADIUS_PX=30;
+
+export function enemyVisibleInBattle(enemy:Enemy):boolean{
+  return enemy.hp>0;
+}
+
+export type BattlePointerAction=Readonly<{
+  enemy:Enemy;
+  kind:'basic-attack'|'skill-target';
+}>;
+
+export function resolveBattlePointerAction(
+  state:BattleState,
+  pointerX:number,
+  pointerY:number,
+  targetingSkill:boolean,
+  radius=M7_BATTLE_POINTER_RADIUS_PX,
+):BattlePointerAction|null{
+  if(!Number.isFinite(pointerX)||!Number.isFinite(pointerY)||!Number.isFinite(radius)||radius<=0)return null;
+  let match:Enemy|null=null;
+  let matchDistance=Number.POSITIVE_INFINITY;
+  for(const enemy of state.enemies){
+    if(!enemyVisibleInBattle(enemy))continue;
+    const distance=Math.hypot(enemy.x-pointerX,enemy.y-pointerY);
+    if(distance<=radius&&distance<matchDistance){
+      match=enemy;
+      matchDistance=distance;
+    }
+  }
+  return match?Object.freeze({enemy:match,kind:targetingSkill?'skill-target':'basic-attack'}):null;
+}
