@@ -129,6 +129,13 @@ export class ViewportController{
     return scroll;
   }
 
+  setScroll(scrollX:number,scrollY:number){
+    const camera=this.port.cameraState();
+    const scroll=clampScroll({x:scrollX,y:scrollY},this.port.viewportSize(),this.port.worldBounds(),camera.zoom);
+    this.port.setScroll(scroll.x,scroll.y);
+    return scroll;
+  }
+
   reclamp(){
     const camera=this.port.cameraState();
     const scroll=clampScroll({x:camera.scrollX,y:camera.scrollY},this.port.viewportSize(),this.port.worldBounds(),camera.zoom);
