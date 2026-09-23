@@ -66,6 +66,9 @@ test('battle shell exposes readiness, target, attack, skill, rest and settlement
   assert.match(html,/休息/);
   assert.match(html,/返回/);
   assert.match(html,/行动/);
+  assert.match(html,/<span>普通攻击<\/span><small>A<\/small>/);
+  assert.match(html,/<span>休息<\/span><small>F<\/small>/);
+  assert.match(html,/<span>范围<\/span><small>Space<\/small>/);
 });
 
 test('shell escapes authored display text and clamps player vitals before integration',()=>{
