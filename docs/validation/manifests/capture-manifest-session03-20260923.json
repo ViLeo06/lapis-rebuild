@@ -1,0 +1,294 @@
+{
+  "session": "2026-09-23-current-client-mvp-continuation",
+  "client_version_evidence": {
+    "current_txt": "2.7",
+    "running_pe_file_version": "2.2.8.6"
+  },
+  "source_directory_windows": "C:\\Program Files (x86)\\YBCS Online\\versions\\live\\client\\Capture",
+  "capture_range": [
+    "cap-027.bmp",
+    "cap-057.bmp"
+  ],
+  "file_count": 31,
+  "files": [
+    {
+      "file": "cap-027.bmp",
+      "source_modified_utc": "2026-09-23T12:31:43.761184+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "C69E0BD483D4E6738B236D21A3BFF019B319C8A581668A9276C20E945AC26896",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-028.bmp",
+      "source_modified_utc": "2026-09-23T12:34:40.720311+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "E8095563B0EA1A7BBBCBA011E76D26EF70C3DD356891ED4D053889E11DBDF732",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-029.bmp",
+      "source_modified_utc": "2026-09-23T12:35:40.035925+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "544021F94763ECF4F2ABAA14C66A1B0784D81E7C2D81E2FB3114A219B9FBB576",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-030.bmp",
+      "source_modified_utc": "2026-09-23T12:37:09.051589+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "05E4795DC55BECB04128D2DE97ABD4F603AB4F10B37AE5ADA9CEF85088BB7CD4",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-031.bmp",
+      "source_modified_utc": "2026-09-23T12:38:35.225262+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "3D1118C9191641948129639E4D70B37BBBD60ABD83C893751E86AB6CDBF560F8",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-032.bmp",
+      "source_modified_utc": "2026-09-23T12:39:29.400816+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "F8ED13E672CA3F61AF76B1828942B5B8F5DB61213C246AD4AC3BBBCD5703F475",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-033.bmp",
+      "source_modified_utc": "2026-09-23T12:41:34.501160+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "6CD19A7CEF3C0D9B40111C4C5E599DFDCBC75755113708182BDAE4F97A2B80CE",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-034.bmp",
+      "source_modified_utc": "2026-09-23T12:42:28.667285+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "EEDF6857F3D1EDF28BA9A5A8FF6E730F9BD3DD3EF48BE97392935CFB81F220EB",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-035.bmp",
+      "source_modified_utc": "2026-09-23T12:43:41.992133+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "847B874B910C386A6B66A9794FF89197DA9AC0D83E091FA753B74BCAA7FD8DA3",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-036.bmp",
+      "source_modified_utc": "2026-09-23T12:46:03.969970+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "FEB2E7D034A0A91D40A3E3A674536350A8ED462B5390C4A50284726EA310EC68",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-037.bmp",
+      "source_modified_utc": "2026-09-23T12:48:26.573702+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "15C594FD19E9EE2C9D75954EAF5AC9D828EAEF717575247FB0A74BD33126A5AF",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-038.bmp",
+      "source_modified_utc": "2026-09-23T12:49:39.839854+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "8049AD35F9566C3A944F103E947B79DC6902AA294BD6A2737EA2EB2AEA87AC9E",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-039.bmp",
+      "source_modified_utc": "2026-09-23T12:54:46.477894+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "0A6621816818F0D201312A6BBF4F5EEC089D0808FF5608E0EC0B2B352C0E349B",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-040.bmp",
+      "source_modified_utc": "2026-09-23T12:55:47.817948+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "0FA0D8C62868CDEC442C5B7196EF5E7F7D67D8676311872BD388B24EB2EE34ED",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-041.bmp",
+      "source_modified_utc": "2026-09-23T12:57:46.745779+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "6012EF963E5EA60499966AC900E210927CE0397A50A4135E18D2DB2222C46ACA",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-042.bmp",
+      "source_modified_utc": "2026-09-23T13:02:16.636590+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "1C234EB3326C3370077F9CF0BFD2C82C82C10411DCC9D44F741D30C47BD6CA8B",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-043.bmp",
+      "source_modified_utc": "2026-09-23T13:04:45.089686+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "1D39FD14F21B6F8C8CEDDE4F85DA0000BF7FE3D1631495BB5AF4104031C388DF",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-044.bmp",
+      "source_modified_utc": "2026-09-23T13:07:06.371272+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "C849224038DB6E6CA4EE04D90A02B05DA63ED971AD8A7AE915B5B5A5701B2015",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-045.bmp",
+      "source_modified_utc": "2026-09-23T13:08:18.730935+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "98044DE5E7F0E7487DBD5445FDBE1B35D04595B83A8D0116804C9D076FEB83E3",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-046.bmp",
+      "source_modified_utc": "2026-09-23T13:09:33.879052+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "3E1A9BD229EFC478BD8E1F2FAFAEFE01538031E16FB8E79B717D769FDEC9D9FA",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-047.bmp",
+      "source_modified_utc": "2026-09-23T13:10:52.868789+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "6AFEF32BA356C45BB817A0271F92471754AC1AB8B25E96918C752C5B9DE1AAC9",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-048.bmp",
+      "source_modified_utc": "2026-09-23T13:14:35.082212+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "81BB6AFA03B97EAA1086C246E70D817F13DA9F0DAA2FBF196D0356D2E9B78EC9",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-049.bmp",
+      "source_modified_utc": "2026-09-23T13:16:13.636688+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "2850EDA6DC71E73A9FB83274B45668E500D635B1FE7B018F08866A662A74A5ED",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-050.bmp",
+      "source_modified_utc": "2026-09-23T13:18:08.372895+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "DA5369A2D3019E59970C70A4F8A0F6A0A34B9CF5CEF01A87250CA205A5BE14F7",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-051.bmp",
+      "source_modified_utc": "2026-09-23T13:22:40.547211+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "C366F79666872C5777EE3EBB745127C5E44967060219C1DED170DF21CAF6621E",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-052.bmp",
+      "source_modified_utc": "2026-09-23T13:23:09.518624+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "25D06605820789EA3AC8930FBC114060CD993970E9113BAAF173871549E7795B",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-053.bmp",
+      "source_modified_utc": "2026-09-23T13:24:37.851583+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "572A3625AB6734E04D5144B0FEBC6A9EFB832D0A856B11F23ADB39C41A0B7F51",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-054.bmp",
+      "source_modified_utc": "2026-09-23T13:30:04.522239+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "5B0D0B13D6F19C1A4C0DBA67DA177F6BE3EB475A3B1BD5D3C2BD47D5DCAD29CE",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-055.bmp",
+      "source_modified_utc": "2026-09-23T13:31:16.322599+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "B4F1DD32A5F38B61DA98FC25FFEC524E0447BCA053544977D9FF78EFAFBBE51C",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-056.bmp",
+      "source_modified_utc": "2026-09-23T13:34:22.013026+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "B46D8ECAE72F390A5AA8DFDBADD75FC5CC4D5C17C6181E687D26A685B427B0FA",
+      "copy_sha256_verified": true
+    },
+    {
+      "file": "cap-057.bmp",
+      "source_modified_utc": "2026-09-23T13:35:13.350636+00:00",
+      "bytes": 5745757,
+      "width": 1598,
+      "height": 1198,
+      "sha256": "128D40502F8D0F04FFD5FAA3055E11EADF3A7F8A9D220B5A7B98A7BFDF893E45",
+      "copy_sha256_verified": true
+    }
+  ]
+}

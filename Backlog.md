@@ -227,12 +227,17 @@
 - [ ] 与用户确认下一任务/里程碑后，再从 `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430` 新建功能分支。
 - [ ] 下一阶段启动时同步升级 Plan/Backlog，并明确新的人工验收门与证据边界。
 - [ ] 若出现 M7 回归，单独登记新缺陷并引用已验收 artifact SHA `862eceb4...e409` 与 merge `6094aae3...`，不改写历史验收。
+- [x] 按 MVP 顺序完成一轮当前客户端非战斗场景实测：`cap-018.bmp`–`cap-026.bmp` 新增户外地图、自由行走/镜头跟随、仓库管理员对话选项与仓库 UI 证据；记录见 `docs/validation/manual-20260923-town-exploration.md`。只有 UI 级实测，不将当前 YBCS 标记外推至固定资产 2.2 或历史国服。
+- [ ] 延续 `docs/validation/manual-20260923-combat-materials-plan.md`：寻找可确认的战斗入口，实测 FIELD→BATTLE、MOVE/ATTACK/REST/MAGIC、敌方行动、结算和 RETURN。战斗信息面板、NPC 名称/问候及场景选择都不视作已经进入 battle scene；每个动作单独留证，继续区分 YBCS 当前客户端、本项目固定资产 2.2 与历史资料，不据此启动共享 runtime 大改。
+- [ ] 原客户端复测剧情1入口：确认 `参加` 后实际进入 battle scene 所需的第二步交互/资格条件；不得把一次客户端观察直接升级为服务器规则。
+- [x] 归档本次当前客户端实机素材：城镇仓库 `cap-018.bmp`–`cap-026.bmp` 共 9 张及 session03 `cap-027.bmp`–`cap-057.bmp` 共 31 张，私有 Drive 保存两批原图 ZIP/清单及第三批总览图，Git 保存观察报告和第三批逐图 SHA-256 索引；见 `docs/validation/manual-20260923-town-exploration.md` 与 `docs/validation/manual-20260923-mvp-exploration-session03.md`。
+- [ ] 用 session03 的城镇/室内/NPC 样本对本地 Web 做同场景人工对照：点击目标标记与约 4 秒后镜头/角色位置、街道↔道具屋/锻造屋落点、问候/肖像/选项、F8 小地图及 F3/F4/F5 面板。逐项保存重建侧画面并记录差异，避免仅凭原客户端截图声称 Web 已有缺陷。
 
 ## 边界
 
 - 第一波 S1–S5 已关闭，不再向旧分支追加共享运行时改动。
 - 当前旧 server/source/capture 缺失不是“多扫几遍客户端”就一定能解决；缺口必须显式落在 reconstruction policy 层。
-- 原安装器、`NeoDark.exe`、未知 DLL 不在普通环境/CI 执行；UPX 只做固定哈希静态解包。
+- 原安装器、未知 DLL 不在普通环境/CI 执行；`NeoDark.exe` 仅在用户本轮明确授权的已打开 Windows 当前会话中按 `AGENTS.md` 第 5 节观察，CI 永不执行；UPX 只做固定哈希静态解包。
 - compatibility / reverse-engineering secondary source 不能自动升级为 retail fact。
 - battle scene 内容不等于 field→zone 触发映射；client authored stats 不等于 server formula。
 - 原版正文和大量版权资源不进入 Git，公开发布需单独授权/审查。
