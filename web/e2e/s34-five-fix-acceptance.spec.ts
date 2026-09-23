@@ -352,7 +352,10 @@ test.describe('S34 five-fix final acceptance',()=>{
     const playerBefore=(await scene(page)).battleCell;
     const cameraBeforeMap=(await scene(page)).camera;
     const inner=minimapBefore.minimap.layout.inner;
-    const mapClick=await canvasUiPoint(page,inner.x+inner.width*0.8,inner.y+inner.height*0.5);
+    // Pick the minimap edge opposite the current camera so the assertion
+    // remains meaningful even if preceding edge-pan already reached a clamp.
+    const minimapX=cameraBeforeMap.x>1?inner.x:inner.x+inner.width;
+    const mapClick=await canvasUiPoint(page,minimapX,inner.y+inner.height*0.5);
     await page.mouse.click(mapClick.x,mapClick.y);
     await expect.poll(async()=>(await scene(page)).camera.x).not.toBe(cameraBeforeMap.x);
     expect((await scene(page)).battleCell).toEqual(playerBefore);

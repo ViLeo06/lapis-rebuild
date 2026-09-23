@@ -55,7 +55,10 @@ test('S34A battle HUD displays the runtime hotkeys and hides legacy H/M recovery
   assert.match(html,/<small>S · 行动/);
   assert.match(html,/<small>D · 行动/);
   assert.match(html,/<span>休息<\/span><small>F<\/small>/);
-  assert.match(html,/<span>范围<\/span><small>Space<\/small>/);
+  assert.doesNotMatch(html,/data-action="battle-range-toggle"/);
+  assert.match(html,/EXP/);
+  assert.match(html,/ATK/);
+  assert.match(html,/DEF/);
   assert.match(html,/<span>菜单<\/span><small>Esc<\/small>/);
   for(const label of ['Q / 1','W / 2','E / 3','R / 4','5 ·','6 ·'])assert.match(html,new RegExp(label.replace('/','\\/')));
   assert.doesNotMatch(html,/<small>H · 行动/);
