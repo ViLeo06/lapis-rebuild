@@ -384,8 +384,7 @@ test.describe('S34 mobile seven-skill touch contract',()=>{
     for(const action of ['recovery-hp','recovery-mp','battle-exit-request']){
       const button=page.locator(`[data-action="${action}"]:visible`).first();
       await expect(button).toBeVisible();
-      const box=await button.boundingBox();
-      expect(box?.height??0).toBeGreaterThanOrEqual(44);
+      await expect.poll(async()=>(await button.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);
     }
     const lastSkill=skills.nth(6);
     await expect.poll(async()=>(await lastSkill.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);
