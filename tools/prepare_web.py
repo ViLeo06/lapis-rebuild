@@ -23,7 +23,7 @@ WEB_MAPS={
     21:'阿斯特来亚防御战',23:'决战',31:'泊罗斯帝国军本营',41:'泊罗斯帝国军本营',
     51:'沙哈格拉神殿',61:'布日古斯港',71:'死亡之岛',81:'西西里奥岛',91:'达莱易湖',
 }
-WEB_VISUALS={1001:'training-guide-reconstruction',4524:'green-sword-humanoid-reconstruction',4525:'blue-polearm-humanoid-reconstruction',4526:'green-armored-humanoid-reconstruction',4544:'cyan-spectral-humanoid-reconstruction'}
+WEB_VISUALS={1001:'training-guide-reconstruction',4023:'training-manager-reconstruction',4524:'green-sword-humanoid-reconstruction',4525:'blue-polearm-humanoid-reconstruction',4526:'green-armored-humanoid-reconstruction',4544:'cyan-spectral-humanoid-reconstruction'}
 VISUAL_ACTIONS=('00','01','02','03')
 WEB_EFFECTS=(1,2,3,35,36,37,38)
 def digest(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
