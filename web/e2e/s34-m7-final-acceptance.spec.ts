@@ -291,8 +291,11 @@ test('S34 wizard Lv6 Poison applies INT-scaled DOT that ticks without target act
   await developerPreset(page,'wizard',6,false);
   await startTraining(page,3);
   const targetId=await selectTarget(page);
-  const before=(await scene(page)).enemies.find(row=>row.id===targetId)!.hp;
+  const selected=(await scene(page)).enemies.find(row=>row.id===targetId)!;
+  const before=selected.hp;
   await clickSkill(page,'毒雾');
+  await expect.poll(async()=>Boolean((await scene(page)).targeting?.active)).toBe(true);
+  await clickBattleCell(page,selected.cell);
   await expect.poll(async()=>{
     const target=(await scene(page)).enemies.find(row=>row.id===targetId);
     return Boolean(target?.m7Status.wizard.poison);
