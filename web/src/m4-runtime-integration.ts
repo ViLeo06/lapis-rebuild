@@ -560,6 +560,7 @@ export class M4RuntimeIntegration{
   private changeClass(id:'100'|'109'):void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再开始新职业档');return;}
     this.activeDialogue=null;
+    this.trainingManagerOpen=false;
     this.pendingEncounter=null;
     this.activeTrainingBattleId=null;
     this.trainingLaunchPending=false;
@@ -840,6 +841,7 @@ export class M4RuntimeIntegration{
       const preset=trainingBattleById(id);
       this.selectedTrainingBattleId=preset.id;
       this.activeDialogue=null;
+      this.trainingManagerOpen=false;
       this.pendingEncounter=null;
       this.menuOpen=false;
       this.trainingLaunchPending=true;
@@ -1201,6 +1203,7 @@ export class M4RuntimeIntegration{
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
     this.activeDialogue=null;
+    this.trainingManagerOpen=false;
     this.activeTrainingBattleId=null;
     this.trainingLaunchPending=false;
     this.developerPresetActive=false;
