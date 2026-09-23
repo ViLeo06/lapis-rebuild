@@ -655,3 +655,130 @@
     min-height:48px;
   }
 }
+
+/* S39 M7.1 world training manager / direct fullscreen UX. */
+.top-command-strip{padding-right:82px}
+.field-fullscreen-button{
+  position:absolute;
+  top:2px;
+  right:6px;
+  z-index:8;
+  min-width:68px;
+  height:27px;
+  padding:2px 9px;
+  border:1px solid #8b744b;
+  border-radius:0;
+  background:linear-gradient(rgba(72,68,51,.94),rgba(38,38,30,.94));
+  color:#eee3c8;
+  box-shadow:inset 0 0 0 1px #1118,0 1px 2px #0009;
+  font-size:9px;
+  cursor:pointer;
+  pointer-events:auto;
+  touch-action:manipulation;
+}
+.field-fullscreen-button:focus-visible{outline:1px solid #e0c58d;outline-offset:2px}
+
+.m7-training-manager-dialog{
+  position:fixed;
+  inset:0;
+  z-index:24;
+  display:grid;
+  place-items:center;
+  padding:12px;
+  background:rgba(5,7,6,.58);
+  pointer-events:auto;
+}
+.m7-training-manager-dialog[hidden]{display:none}
+.m7-training-manager-panel{
+  width:min(720px,calc(100vw - 24px));
+  max-height:min(82vh,760px);
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  border:1px solid #8a7854;
+  background:rgba(18,25,21,.97);
+  box-shadow:0 10px 28px #000c,inset 0 0 0 1px #0c0f0daa;
+}
+.m7-training-manager-panel>header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 10px;
+  border-bottom:1px solid #514a39;
+}
+.m7-training-manager-panel>header b,
+.m7-training-manager-panel>header small{display:block}
+.m7-training-manager-panel>header b{font-size:12px;color:#e7dcc0}
+.m7-training-manager-panel>header small{margin-top:3px;font-size:9px;color:#99927f}
+.m7-training-manager-close{
+  flex:0 0 44px;
+  width:44px;
+  min-height:44px;
+  border:1px solid #76674a;
+  background:#2b2d25;
+  color:#eee3c8;
+  cursor:pointer;
+}
+.m7-training-manager-dialog .m7-training-list{
+  overflow:auto;
+  display:grid;
+  gap:6px;
+  padding:8px;
+}
+.m7-training-manager-dialog .m7-training-battle{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 82px;
+  gap:8px;
+  align-items:center;
+  padding:7px 8px;
+  border:1px solid #4f4b3c;
+  background:rgba(28,34,29,.72);
+}
+.m7-training-manager-dialog .m7-training-battle.selected{
+  border-color:#9b8154;
+  box-shadow:inset 0 0 0 1px #6f5d3f;
+}
+.m7-training-manager-dialog .m7-training-battle-copy{min-width:0}
+.m7-training-manager-dialog .m7-training-battle-copy>*{display:block}
+.m7-training-manager-dialog .m7-training-battle-copy b{font-size:11px;color:#ded4ba}
+.m7-training-manager-dialog .m7-training-battle-copy span,
+.m7-training-manager-dialog .m7-training-battle-copy small{margin-top:2px;font-size:8px;color:#a09a88}
+.m7-training-manager-dialog .m7-training-battle-copy p{margin:4px 0 0;font-size:9px;color:#c3bda8}
+.m7-training-manager-dialog [data-action="training-start"]{
+  min-width:76px;
+  min-height:44px;
+  border:1px solid #8a744c;
+  background:linear-gradient(rgba(67,63,47,.96),rgba(35,36,29,.96));
+  color:#eee3c8;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.m7-training-manager-panel>footer{
+  padding:6px 10px;
+  border-top:1px solid #494637;
+  color:#7f8274;
+  font:8px/1.2 ui-monospace,monospace;
+}
+
+@media(max-width:560px){
+  .top-command-strip{padding-right:84px}
+  .field-fullscreen-button{
+    top:4px;
+    right:5px;
+    min-width:72px;
+    height:44px;
+    padding:4px 9px;
+    font-size:10px;
+  }
+  .m7-training-manager-dialog{padding:6px}
+  .m7-training-manager-panel{width:calc(100vw - 12px);max-height:calc(100vh - 12px)}
+  .m7-training-manager-panel>header{padding:7px 8px}
+  .m7-training-manager-dialog .m7-training-list{padding:6px}
+  .m7-training-manager-dialog .m7-training-battle{
+    grid-template-columns:minmax(0,1fr) 72px;
+    gap:6px;
+    padding:6px;
+  }
+  .m7-training-manager-dialog [data-action="training-start"]{min-width:68px}
+}
+

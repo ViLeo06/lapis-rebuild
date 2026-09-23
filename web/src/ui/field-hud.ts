@@ -29,6 +29,7 @@ export function renderFieldHud(player:PlayerHudState,field:FieldHudState):string
 
   return `<div class="field-hud" data-ui="field-hud">
     <nav class="top-command-strip" data-ui="top-command-strip" aria-label="原版结构命令条">${topCommands}</nav>
+    <button type="button" class="field-fullscreen-button" data-ui="field-fullscreen" data-action="fullscreen" aria-label="切换全屏">全屏</button>
 
     <section class="map-plate small-map-plate" data-ui="small-map" aria-label="小地图区域">
       <span class="hud-kicker">MAP</span>

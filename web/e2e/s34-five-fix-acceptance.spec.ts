@@ -322,6 +322,11 @@ test.describe('S34 five-fix final acceptance',()=>{
       const now=live(afterTick).find((enemy:any)=>enemy.id===row.id);return now&&now.hp<row.hp;
     })).toBe(true);
 
+    // Poison-cast readiness is intentionally consumed. Refill it through the
+    // deterministic acceptance clock before asserting the recovery hotkey;
+    // otherwise real browser timing can decide whether S is accepted.
+    await advanceBattleTime(page,10000);
+    await waitBattleInputReady(page);
     await setPlayerVitals(page,Math.max(1,(afterTick.maxHp??500)-250),Math.max(0,(afterTick.maxMp??500)-250));
     const beforeHp=await extendedScene(page);
     await page.keyboard.press('S');
