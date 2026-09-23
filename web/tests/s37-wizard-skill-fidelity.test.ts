@@ -220,3 +220,13 @@ test('S37 Nature Force persists for the battle and still drains only small histo
   assert.equal(drained.casterMp,3);
   assert.equal(drained.targetMp,97);
 });
+
+test('S37 exposes status expiry keys for presentation without mutating gameplay authority',()=>{
+  let status=applyM7WizardSkillStatus(createM7WizardStatusState(),'cursed-sword',1);
+  const before=tickM7WizardStatus(status,9_999);
+  assert.deepEqual(before.endedSkillKeys,[]);
+  assert.ok(before.state.cursedSword);
+  const ended=tickM7WizardStatus(before.state,1);
+  assert.equal(ended.state.cursedSword,null);
+  assert.deepEqual(ended.endedSkillKeys,['cursed-sword']);
+});
