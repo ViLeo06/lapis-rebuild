@@ -4,7 +4,7 @@ import {advanceEnemyMotion,createEnemyMotion} from '../src/view/enemy-motion.ts'
 import {resolveBattleFeedbackAnchor} from '../src/view/battle-feedback.ts';
 import {buildWorldMinimapModel,worldMinimapLayout} from '../src/view/world-minimap.ts';
 import {battleMinimapLayout} from '../src/view/battle-minimap.ts';
-import {manualCameraQuantizationStalled} from '../src/view/battle-camera.ts';
+import {manualCameraWithinSettleWindow} from '../src/view/battle-camera.ts';
 import {renderBattleHud} from '../src/ui/battle-hud.ts';
 import type {BattleHudState,PlayerHudState} from '../src/ui/types.ts';
 
@@ -37,10 +37,10 @@ test('S40 world minimap is upper-left and tracks player plus viewport',()=>{
   assert.ok(model.viewport.width>0&&model.viewport.height>0);
 });
 
-test('S40 manual camera detects only near-target quantization stalls',()=>{
-  assert.equal(manualCameraQuantizationStalled({x:0,y:89.5},{x:0,y:89.5},{x:0,y:99.5}),true);
-  assert.equal(manualCameraQuantizationStalled({x:0,y:89.5},{x:0,y:90.5},{x:0,y:99.5}),false);
-  assert.equal(manualCameraQuantizationStalled({x:0,y:0},{x:0,y:0},{x:100,y:100}),false);
+test('S40 manual camera settles only inside the final 16px window',()=>{
+  assert.equal(manualCameraWithinSettleWindow({x:0,y:90.5},{x:0,y:99.5}),true);
+  assert.equal(manualCameraWithinSettleWindow({x:0,y:80},{x:0,y:99.5}),false);
+  assert.throws(()=>manualCameraWithinSettleWindow({x:0,y:0},{x:0,y:1},0),/positive/);
 });
 
 test('S40 battle minimap remains right-side and above bottom HUD inset',()=>{

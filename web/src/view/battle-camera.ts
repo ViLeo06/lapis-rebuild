@@ -11,6 +11,7 @@ export type BattleCameraOptions=Readonly<{
   safeInsetRatio:number;
   followLerp:number;
   manualLerp:number;
+  manualSettleSnapPx:number;
 }>;
 
 export const DEFAULT_BATTLE_CAMERA_OPTIONS:BattleCameraOptions={
@@ -19,6 +20,9 @@ export const DEFAULT_BATTLE_CAMERA_OPTIONS:BattleCameraOptions={
   safeInsetRatio:0.22,
   followLerp:0.08,
   manualLerp:0.14,
+  // Final settle window prevents Phaser half-pixel camera quantization from
+  // leaving a manual target permanently active near its legal destination.
+  manualSettleSnapPx:16,
 };
 
 export function battleEntryZoom(viewport:Size,world:Rect):number{
@@ -26,10 +30,9 @@ export function battleEntryZoom(viewport:Size,world:Rect):number{
   return Math.max(1,v.width/w.width,v.height/w.height);
 }
 
-export function manualCameraQuantizationStalled(before:Point,after:Point,desired:Point):boolean{
-  const moved=Math.hypot(after.x-before.x,after.y-before.y);
-  const remaining=Math.hypot(after.x-desired.x,after.y-desired.y);
-  return moved<0.25&&remaining>=2&&remaining<=32;
+export function manualCameraWithinSettleWindow(current:Point,desired:Point,settlePx=DEFAULT_BATTLE_CAMERA_OPTIONS.manualSettleSnapPx):boolean{
+  if(!Number.isFinite(settlePx)||settlePx<=0)throw new RangeError('manual settle snap must be positive');
+  return Math.hypot(current.x-desired.x,current.y-desired.y)<=settlePx;
 }
 
 function alphaFor(lerp:number,deltaMs:number){
@@ -48,6 +51,7 @@ export class BattleCameraPolicy{
     for(const [label,value] of [['followLerp',merged.followLerp],['manualLerp',merged.manualLerp]] as const){
       if(!Number.isFinite(value)||value<=0||value>1)throw new RangeError(`${label} must be in (0, 1]`);
     }
+    finitePositive(merged.manualSettleSnapPx,'manual settle snap');
     this.options=merged;
   }
 

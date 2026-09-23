@@ -16,7 +16,7 @@ import {frameIntervalMs,sequenceDurationMs} from './animation-policy.ts';
 import {createTrainingInteraction,OFFLINE_TRAINING_ENCOUNTER_AUTHORITY} from './runtime-boundaries.ts';
 import type {BattleEntry,InteractionIntent} from './runtime-boundaries.ts';
 import {ViewportController,BrowserFullscreenPort} from './view/viewport-controller.ts';
-import {BattleCameraPolicy,battleEntryZoom,manualCameraQuantizationStalled} from './view/battle-camera.ts';
+import {BattleCameraPolicy,battleEntryZoom,manualCameraWithinSettleWindow} from './view/battle-camera.ts';
 import {buildBattleMinimapModel,minimapContains,minimapToWorld} from './view/battle-minimap.ts';
 import type {BattleMinimapModel} from './view/battle-minimap.ts';
 import {buildWorldMinimapModel} from './view/world-minimap.ts';
@@ -356,23 +356,24 @@ export class LabScene extends Phaser.Scene {
     const snapshot=this.viewport.snapshot();
     if(this.battleCameraTarget){
       const target=this.battleCameraTarget;
+      const desired=this.battleCamera.targetScroll(snapshot.camera,target,snapshot.viewport,snapshot.world);
+      if(manualCameraWithinSettleWindow(
+        {x:snapshot.camera.scrollX,y:snapshot.camera.scrollY},
+        desired,
+        this.battleCamera.options.manualSettleSnapPx,
+      )){
+        // Finish the final sub-grid approach deterministically. Phaser
+        // centerOn() quantizes tiny lerp deltas to half pixels, otherwise a
+        // manual target can remain active indefinitely near its destination.
+        this.viewport.setScroll(desired.x,desired.y);
+        this.battleCameraTarget=null;
+        return;
+      }
       const next=this.battleCamera.centerStep(snapshot.camera,target,snapshot.viewport,snapshot.world,deltaMs);
       this.viewport.setScroll(next.x,next.y);
       const after=this.viewport.snapshot();
       const afterDesired=this.battleCamera.targetScroll(after.camera,target,after.viewport,after.world);
-      const remaining=Math.hypot(after.camera.scrollX-afterDesired.x,after.camera.scrollY-afterDesired.y);
-      if(remaining<2)this.battleCameraTarget=null;
-      else if(manualCameraQuantizationStalled(
-        {x:snapshot.camera.scrollX,y:snapshot.camera.scrollY},
-        {x:after.camera.scrollX,y:after.camera.scrollY},
-        afterDesired,
-      )){
-        // Phaser centerOn() can quantize a small lerp step back onto the
-        // previous half-pixel. Snap only after we prove the camera actually
-        // stalled inside the final 32px approach window.
-        this.viewport.setScroll(afterDesired.x,afterDesired.y);
-        this.battleCameraTarget=null;
-      }
+      if(Math.hypot(after.camera.scrollX-afterDesired.x,after.camera.scrollY-afterDesired.y)<2)this.battleCameraTarget=null;
       return;
     }
     const model=this.currentBattleMinimapModel();
