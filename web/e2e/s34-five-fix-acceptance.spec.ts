@@ -340,6 +340,7 @@ test.describe('S34 five-fix final acceptance',()=>{
     await page.keyboard.press('D');
     await expect.poll(async()=>(await extendedScene(page)).mp).toBeGreaterThan(beforeMp.mp);
     await advanceBattleTime(page,10000);
+    await waitBattleInputReady(page);
     const beforeRest=(await extendedScene(page)).action;
     await page.keyboard.press('F');
     await expect.poll(async()=>(await extendedScene(page)).action).toBeLessThan(beforeRest);
