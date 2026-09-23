@@ -1,6 +1,6 @@
 {
   "schema": "m7-final-private-artifact-v1",
-  "generated_at": "2026-09-22",
+  "generated_at": "2026-09-23",
   "branch": "codex/s34-m7-integration-acceptance",
   "executable_source_commit": "62566a549a2d1f6f2c15b1a4370329e4382ae94a",
   "fixed_client": {
@@ -108,13 +108,13 @@
     "status": "not-executed",
     "reason": "The execution environment browser administrator policy blocked both file:// and localhost navigation. The policy was not bypassed.",
     "compensating_evidence": [
-      "same runtime shell passed Chromium E2E in run 35690650510",
-      "all 3772 embedded private-pack entries were decoded and checksum-verified",
-      "user manual playtest remains required before merge"
+      "final S34 runtime shell passed Chromium E2E in GitHub Actions run 35834469240",
+      "all 3771 indexed private resources passed size/SHA validation in the final user-playtest artifact",
+      "user manually played the final artifact SHA 862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409 and explicitly approved merge"
     ]
   },
-  "human_playtest": "PENDING",
-  "merge_main": "FORBIDDEN_UNTIL_USER_ACCEPTANCE",
+  "human_playtest": "USER_ACCEPTED",
+  "merge_main": "MERGED",
   "user_handoff_html": {
     "filename": "lapis-m7-private-62566a5-handoff.html",
     "bytes": 122196302,
@@ -131,5 +131,36 @@
     "relationship_to_historical_artifact": "regenerated from the same executable source and fixed-hash private assets; structurally/integrity-equivalent but byte-distinct, so the SHA is intentionally recorded separately",
     "visibility": "private-only"
   },
-  "human_playtest_artifact_sha256": "4c337dd2cb34f838d961207eeb2a126a4c146089dae07cdcdda069f54eec156f"
+  "human_playtest_artifact_sha256": "862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409",
+  "final_user_accepted_artifact": {
+    "filename": "lapis-s34-final-playtest-20260923.html",
+    "bytes": 122226459,
+    "sha256": "862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409",
+    "runtime_shell_sha256": "0a3a26e44884610fd6bb879634dde66f6bdb461603818885fce068c9946f81a0",
+    "private_pack_sha256": "b310803ff4897f23f96cda34cc1989254261f8703d7457c3cf85691812e67287",
+    "indexed_files": 3771,
+    "indexed_bytes": 89656141,
+    "integrity_failures": 0,
+    "missing_entries": 0,
+    "s34_integration_head": "80e7c4307156b18a31c3631542c304d3cf5969b8",
+    "ci_validated_head": "dd6a8383963df667c4013004a0667080ae2bd201",
+    "git_tree": "1b44600e5d352649f766f054be63dd971614765a",
+    "ci_run_id": 35834469240,
+    "ci_conclusion": "success",
+    "user_accepted_at": "2026-09-23",
+    "merge_authorized": true,
+    "visibility": "private-only"
+  },
+  "repository_closeout": {
+    "legacy_worker_prs_closed_as_superseded": [
+      43,
+      44,
+      45,
+      46
+    ],
+    "integration_pr": 42,
+    "integration_pr_merged": true,
+    "main_merge_commit": "6094aae3c4ff0a04af5dd4376f2b59b8b342d430",
+    "stable_baseline": "main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430"
+  }
 }
