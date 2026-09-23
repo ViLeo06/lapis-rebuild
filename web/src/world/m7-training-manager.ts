@@ -72,7 +72,7 @@ export function createM7TrainingManager(mapId:number,cell:Cell):M7TrainingManage
     visualId:M7_TRAINING_MANAGER_VISUAL_ID,
     provenance:{
       source:M7_TRAINING_MANAGER_PROVENANCE.assetSource,
-      evidence:'RECONSTRUCTION_POLICY',
+      evidence:'RECONSTRUCTION_POLICY' as const,
       note:M7_TRAINING_MANAGER_PROVENANCE.note,
     },
   });
