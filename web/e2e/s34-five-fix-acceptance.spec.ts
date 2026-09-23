@@ -30,11 +30,15 @@ async function wizardPreset(page:Page){
   await expect.poll(async()=>(await runtime(page)).progression.level).toBe(56);
 }
 
-async function startManyEnemyBattle(page:Page){
+async function startTrainingBattle(page:Page,id:number){
   await openMenu(page);
-  await page.locator('[data-training-battle-id="15"] [data-action="training-start"]').click();
-  await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(15);
+  await page.locator(`[data-training-battle-id="${id}"] [data-action="training-start"]`).click();
+  await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
   await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
+}
+
+async function startManyEnemyBattle(page:Page){
+  await startTrainingBattle(page,15);
 }
 
 async function canvasPoint(page:Page,x:number,y:number){
@@ -198,9 +202,18 @@ test.describe('S34 five-fix final acceptance',()=>{
     await wizardPreset(page);
     await startManyEnemyBattle(page);
     await expectAllLivingVisible(page);
-
     let state:any=await extendedScene(page);
     expect(live(state).length).toBeGreaterThanOrEqual(20);
+    expect(new Set(live(state).map((row:any)=>row.encounterGroup)).size).toBeGreaterThanOrEqual(4);
+    await confirmRetreat(page);
+
+    // Input/targeting/camera acceptance uses a lower-risk multi-group battle.
+    // It still proves group switching and all-living visibility without letting
+    // the Stage-7 boss roster kill the player while UI interactions are tested.
+    await startTrainingBattle(page,6);
+    await expectAllLivingVisible(page);
+    state=await extendedScene(page);
+    expect(live(state).length).toBe(7);
     const firstGroup=activeGroup(state);
     expect(typeof firstGroup).toBe('number');
     const firstEnemy=live(state).find((row:any)=>row.encounterGroup===firstGroup);
@@ -295,8 +308,13 @@ test.describe('S34 five-fix mobile pointer/touch acceptance',()=>{
     await wizardPreset(page);
     await startManyEnemyBattle(page);
     await expectAllLivingVisible(page);
-
     let state:any=await extendedScene(page);
+    expect(live(state).length).toBeGreaterThanOrEqual(20);
+    await confirmRetreat(page);
+
+    await startTrainingBattle(page,6);
+    await expectAllLivingVisible(page);
+    state=await extendedScene(page);
     const active=activeGroup(state);
     const enemy=live(state).find((row:any)=>row.encounterGroup===active);
     expect(enemy).toBeTruthy();
