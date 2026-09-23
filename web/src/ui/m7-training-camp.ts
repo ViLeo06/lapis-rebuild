@@ -3,8 +3,8 @@ import {M7_TRAINING_BATTLES,monsterContractSummary,resolvePlayerDifficultyHint} 
 import {M7_DEVELOPER_PRESET_LEVELS} from '../training/m7-level-axis.ts';
 import type {M7Profession} from '../training/m7-level-axis.ts';
 
-export function renderM7TrainingCamp(playerLevel:number,selectedBattleId:number):string{
-  const rows=M7_TRAINING_BATTLES.map(row=>{
+function renderTrainingRows(playerLevel:number,selectedBattleId:number):string{
+  return M7_TRAINING_BATTLES.map(row=>{
     const hint=resolvePlayerDifficultyHint(playerLevel,row.recommendedLevel);
     const selected=row.id===selectedBattleId?' selected':'';
     return '<article class="m7-training-battle'+selected+'" data-training-battle-id="'+row.id+'">'+
@@ -18,9 +18,32 @@ export function renderM7TrainingCamp(playerLevel:number,selectedBattleId:number)
       '<button type="button" data-action="training-start" data-training-battle-id="'+row.id+'">Start</button>'+
     '</article>';
   }).join('');
-  return '<section class="m7-training-camp" data-ui="m7-training-camp">'+
-    '<header><div><b>Training Camp · 15 Battles</b><small>敌人等级固定；难度提示只比较当前等级，不缩放敌人。</small></div><span>RECONSTRUCTION_POLICY</span></header>'+
-    '<div class="m7-training-list">'+rows+'</div>'+
+}
+
+/**
+ * Legacy S33 renderer retained as a compatibility surface until S41 removes the
+ * shared-runtime insertion from the System menu. The authoritative rows still
+ * come directly from M7_TRAINING_BATTLES.
+ */
+export function renderM7TrainingCamp(playerLevel:number,selectedBattleId:number):string{
+  return '<section class="m7-training-camp" data-ui="m7-training-camp" data-training-surface="legacy-settings">'+
+    '<header><div><b>Training Camp · 15 Battles</b><small>敌人等级固定；兼容入口：M7.1 集成后由世界训练管理员替代。</small></div><span>RECONSTRUCTION_POLICY</span></header>'+
+    '<div class="m7-training-list">'+renderTrainingRows(playerLevel,selectedBattleId)+'</div>'+
+  '</section>';
+}
+
+export function renderM7TrainingManagerDialog(
+  playerLevel:number,
+  selectedBattleId:number,
+  open=true,
+):string{
+  return '<section class="m7-training-manager-dialog" data-ui="m7-training-manager-dialog"'+(open?'':' hidden')+' role="dialog" aria-modal="true" aria-label="训练管理员">'+
+    '<div class="m7-training-manager-panel">'+
+      '<header><div><b>训练管理员 · 15 场训练</b><small>选择后直接进入训练战；敌人等级固定，不随玩家缩放。</small></div>'+
+      '<button type="button" class="m7-training-manager-close" data-action="training-manager-close" aria-label="关闭训练列表">×</button></header>'+
+      '<div class="m7-training-list">'+renderTrainingRows(playerLevel,selectedBattleId)+'</div>'+
+      '<footer><span>训练管理员身份与关卡绑定：RECONSTRUCTION_POLICY</span></footer>'+
+    '</div>'+
   '</section>';
 }
 

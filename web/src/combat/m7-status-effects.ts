@@ -4,6 +4,7 @@ export type M7StatusKind =
   | 'stun'
   | 'physical-damage-reduction'
   | 'attack-modifier'
+  | 'defense-modifier'
   | 'max-hp-modifier'
   | 'incoming-physical-damage-penalty'
   | 'periodic-self-damage'
@@ -20,8 +21,11 @@ export type M7PeriodicSelfDamage = Readonly<{
 
 export type M7StatusModifiers = Readonly<{
   attackMultiplier?: number;
+  attackFlat?: number;
+  defenseFlat?: number;
   physicalDamageReduction?: number;
   maxHpMultiplier?: number;
+  maxHpFlat?: number;
   incomingPhysicalDamageMultiplier?: number;
   commandRangeFlat?: number;
   readinessEfficiencyMultiplier?: number;
@@ -43,6 +47,7 @@ export type M7StatusEffect = Readonly<{
 export type M7StatusAdvanceEvent = Readonly<{
   type: 'periodic-self-damage';
   sourceSkillKey: string;
+  sourceSkillLevel: number;
   ticks: number;
   hpLost: number;
 }>;
@@ -83,8 +88,11 @@ function validateModifiers(raw: unknown): M7StatusModifiers {
   const value = raw as Record<string, unknown>;
   const allowed = new Set([
     'attackMultiplier',
+    'attackFlat',
+    'defenseFlat',
     'physicalDamageReduction',
     'maxHpMultiplier',
+    'maxHpFlat',
     'incomingPhysicalDamageMultiplier',
     'commandRangeFlat',
     'readinessEfficiencyMultiplier',
@@ -94,9 +102,15 @@ function validateModifiers(raw: unknown): M7StatusModifiers {
 
   const attackMultiplier = value.attackMultiplier === undefined
     ? undefined : positive(value.attackMultiplier, 'attack multiplier');
+  const attackFlat = value.attackFlat === undefined
+    ? undefined : finite(value.attackFlat, 'attack flat modifier');
+  const defenseFlat = value.defenseFlat === undefined
+    ? undefined : finite(value.defenseFlat, 'defense flat modifier');
   const physicalDamageReduction = optionalUnitFraction(value.physicalDamageReduction, 'physical damage reduction');
   const maxHpMultiplier = value.maxHpMultiplier === undefined
     ? undefined : positive(value.maxHpMultiplier, 'max HP multiplier');
+  const maxHpFlat = value.maxHpFlat === undefined
+    ? undefined : finite(value.maxHpFlat, 'max HP flat modifier');
   const incomingPhysicalDamageMultiplier = value.incomingPhysicalDamageMultiplier === undefined
     ? undefined : positive(value.incomingPhysicalDamageMultiplier, 'incoming physical damage multiplier');
   const commandRangeFlat = value.commandRangeFlat === undefined
@@ -124,8 +138,11 @@ function validateModifiers(raw: unknown): M7StatusModifiers {
 
   return Object.freeze({
     ...(attackMultiplier === undefined ? {} : {attackMultiplier}),
+    ...(attackFlat === undefined ? {} : {attackFlat}),
+    ...(defenseFlat === undefined ? {} : {defenseFlat}),
     ...(physicalDamageReduction === undefined ? {} : {physicalDamageReduction}),
     ...(maxHpMultiplier === undefined ? {} : {maxHpMultiplier}),
+    ...(maxHpFlat === undefined ? {} : {maxHpFlat}),
     ...(incomingPhysicalDamageMultiplier === undefined ? {} : {incomingPhysicalDamageMultiplier}),
     ...(commandRangeFlat === undefined ? {} : {commandRangeFlat}),
     ...(readinessEfficiencyMultiplier === undefined ? {} : {readinessEfficiencyMultiplier}),
@@ -143,7 +160,7 @@ export function validateM7StatusEffect(raw: unknown): M7StatusEffect {
   if (Object.keys(value).some(key => !allowed.has(key))) throw new Error('Unknown M7 status field');
   if (typeof value.id !== 'string' || !value.id.length || value.id.length > 96 || !TOKEN.test(value.id)) throw new Error('Invalid status id');
   const kinds: readonly M7StatusKind[] = [
-    'stun', 'physical-damage-reduction', 'attack-modifier', 'max-hp-modifier',
+    'stun', 'physical-damage-reduction', 'attack-modifier', 'defense-modifier', 'max-hp-modifier',
     'incoming-physical-damage-penalty', 'periodic-self-damage', 'command-range-modifier',
     'readiness-efficiency-modifier', 'composite',
   ];
@@ -193,6 +210,20 @@ export function m7AttackMultiplier(statuses: readonly M7StatusEffect[]): number 
   );
 }
 
+export function m7AttackFlat(statuses: readonly M7StatusEffect[]): number {
+  return statuses.map(validateM7StatusEffect).reduce(
+    (sum, status) => sum + (status.modifiers.attackFlat ?? 0),
+    0,
+  );
+}
+
+export function m7DefenseFlat(statuses: readonly M7StatusEffect[]): number {
+  return statuses.map(validateM7StatusEffect).reduce(
+    (sum, status) => sum + (status.modifiers.defenseFlat ?? 0),
+    0,
+  );
+}
+
 export function m7MaxHpMultiplier(statuses: readonly M7StatusEffect[]): number {
   return statuses.map(validateM7StatusEffect).reduce(
     (multiplier, status) => multiplier * (status.modifiers.maxHpMultiplier ?? 1),
@@ -200,14 +231,26 @@ export function m7MaxHpMultiplier(statuses: readonly M7StatusEffect[]): number {
   );
 }
 
+export function m7MaxHpFlat(statuses: readonly M7StatusEffect[]): number {
+  return statuses.map(validateM7StatusEffect).reduce(
+    (sum, status) => sum + (status.modifiers.maxHpFlat ?? 0),
+    0,
+  );
+}
+
 export function m7EffectiveMaxHp(baseMaxHp: number, statuses: readonly M7StatusEffect[]): number {
   positive(baseMaxHp, 'base max HP');
-  return Math.max(1, Math.round(baseMaxHp * m7MaxHpMultiplier(statuses)));
+  return Math.max(1, Math.round(baseMaxHp * m7MaxHpMultiplier(statuses) + m7MaxHpFlat(statuses)));
 }
 
 export function m7EffectivePhysicalAttack(baseAttack: number, statuses: readonly M7StatusEffect[]): number {
   if (finite(baseAttack, 'base attack') < 0) throw new Error('Invalid base attack');
-  return Math.max(0, Math.round(baseAttack * m7AttackMultiplier(statuses)));
+  return Math.max(0, Math.round(baseAttack * m7AttackMultiplier(statuses) + m7AttackFlat(statuses)));
+}
+
+export function m7EffectiveDefense(baseDefense: number, statuses: readonly M7StatusEffect[]): number {
+  if (finite(baseDefense, 'base defense') < 0) throw new Error('Invalid base defense');
+  return Math.max(0, Math.round(baseDefense + m7DefenseFlat(statuses)));
 }
 
 export function m7EffectiveCommandRange(baseRange: number, statuses: readonly M7StatusEffect[]): number {
@@ -293,6 +336,7 @@ export function advanceM7Statuses(
         events.push(Object.freeze({
           type: 'periodic-self-damage',
           sourceSkillKey: original.sourceSkillKey,
+          sourceSkillLevel: original.sourceSkillLevel,
           ticks,
           hpLost: lost,
         }));

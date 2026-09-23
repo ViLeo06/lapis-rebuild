@@ -1,3 +1,4 @@
+import {migrateProgressionToM71} from './progression.ts';
 import {classFamilyForCharacter} from './equipment.ts';
 import {migrateSaveToM6,serializeM6SaveV2,validateM6SaveForContent} from './m6-save-migration.ts';
 import type {M6SaveContentContext,M6SaveV2} from './m6-save-migration.ts';
@@ -40,7 +41,10 @@ export function migrateSaveToM7(
   saveContext:SaveValidationContext,
   content:M6SaveContentContext,
 ):M7SaveV2{
-  const base=migrateSaveToM6(raw,saveContext,content);
+  const migrated=migrateSaveToM6(raw,saveContext,content);
+  const base=migrated.progression.level<=65
+    ?{...migrated,progression:migrateProgressionToM71(migrated.progression)}
+    :migrated;
   if(base.m7)return validateM7SaveForContent(base,saveContext,content);
   const legacy=legacyWizardSkillState(base,saveContext);
   const m7=createM7SaveExtension(base.character,base.progression.level,legacy??undefined);

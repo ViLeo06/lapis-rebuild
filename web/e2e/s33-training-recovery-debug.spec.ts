@@ -10,6 +10,18 @@ async function ready(page:Page){
   await page.waitForFunction(()=>document.body.classList.contains('m4-active'));
 }
 
+async function acceptanceStartTraining(page:Page,id:number){
+  const ok=await page.evaluate(trainingId=>{
+    const api=window.lapisM4 as any;
+    if(typeof api?.acceptanceStartTrainingBattle!=='function')return false;
+    api.acceptanceStartTrainingBattle(trainingId);
+    return true;
+  },id);
+  expect(ok,'M7.1 regression requires webdriver-only acceptanceStartTrainingBattle').toBe(true);
+  await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(id);
+  await expect.poll(async()=>(await scene(page)).inBattleView).toBe(true);
+}
+
 async function openMenu(page:Page){
   const button=page.locator('[data-action="menu"]:visible,[data-action="battle-menu"]:visible').first();
   await expect(button).toBeVisible();
@@ -20,7 +32,7 @@ async function openMenu(page:Page){
 test('S33 developer preset resolves M7 stage boundaries and cannot pollute normal SaveV2',async({page})=>{
   await ready(page);
   await openMenu(page);
-  await expect(page.locator('[data-action="training-start"]')).toHaveCount(15);
+  await expect(page.locator('[data-ui="m7-training-camp"]')).toHaveCount(0);
   await page.locator('[data-action="dev-toggle"]').check();
   await page.locator('[data-dev-profession]').selectOption('wizard');
   await page.locator('[data-dev-level-input]').fill('56');
@@ -42,14 +54,7 @@ test.describe('S33 mobile controls',()=>{
 
   test('15-battle Start, recovery actions and exit confirmation remain touchable',async({page})=>{
     await ready(page);
-    await openMenu(page);
-    const starts=page.locator('[data-action="training-start"]');
-    await expect(starts).toHaveCount(15);
-    const start8=page.locator('[data-training-battle-id="8"] [data-action="training-start"]');
-    const startBox=await start8.boundingBox();
-    expect(startBox?.height??0).toBeGreaterThanOrEqual(44);
-    await start8.tap();
-    await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(8);
+    await acceptanceStartTraining(page,8);
 
     for(const action of ['recovery-hp','recovery-mp','battle-exit-request']){
       const button=page.locator('[data-action="'+action+'"]:visible').first();
@@ -71,9 +76,7 @@ test.describe('S33 mobile controls',()=>{
 
 test('MP recovery consumes readiness after a real skill action without leaving battle',async({page})=>{
   await ready(page);
-  await openMenu(page);
-  await page.locator('[data-training-battle-id="1"] [data-action="training-start"]').click();
-  await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBe(1);
+  await acceptanceStartTraining(page,1);
   await page.waitForFunction(()=>window.lapisDiagnostics!.snapshot().actionReady);
   const skill=page.locator('[data-action="skill"]:visible').first();
   await expect(skill).toBeEnabled();

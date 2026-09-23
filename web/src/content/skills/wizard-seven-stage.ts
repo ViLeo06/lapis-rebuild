@@ -120,13 +120,16 @@ export const M7_WIZARD_SKILL_POINT_POLICY=Object.freeze({
 export const M7_WIZARD_RUNTIME_POLICY=Object.freeze({
   magicReadinessCost:integer(raw.sharedRuntimePolicy.magicReadinessCost,'magic readiness cost',1,20),
   poisonTickIntervalMs:integer(raw.sharedRuntimePolicy.poisonTickIntervalMs,'poison tick interval',1,60000),
-  poisonDamageMultiplier:Number(raw.sharedRuntimePolicy.poisonDamageMultiplier),
+  poisonFollowupDamageRatio:Number(raw.sharedRuntimePolicy.poisonFollowupDamageRatio),
+  poisonFollowupTicks:integer(raw.sharedRuntimePolicy.poisonFollowupTicks,'poison follow-up ticks',1,30),
   petrifyDotContinues:Boolean(raw.sharedRuntimePolicy.petrifyDotContinues),
   provenance:raw.sharedRuntimePolicy.provenance as 'RECONSTRUCTION_POLICY',
 });
 
-if(!Number.isFinite(M7_WIZARD_RUNTIME_POLICY.poisonDamageMultiplier)||M7_WIZARD_RUNTIME_POLICY.poisonDamageMultiplier<1.5){
-  throw new Error('M7 wizard poison damage multiplier must be at least 1.5');
+if(!Number.isFinite(M7_WIZARD_RUNTIME_POLICY.poisonFollowupDamageRatio)||
+  M7_WIZARD_RUNTIME_POLICY.poisonFollowupDamageRatio<=0||
+  M7_WIZARD_RUNTIME_POLICY.poisonFollowupDamageRatio>1){
+  throw new Error('Invalid M7 wizard poison follow-up damage ratio');
 }
 
 export function m7WizardStageForLevel(level:number):M7WizardStageRange{

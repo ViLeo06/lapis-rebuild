@@ -11,7 +11,8 @@ import {createInventory,knownItemIds} from './progression/inventory.ts';
 import type {InventoryState} from './progression/inventory.ts';
 import {equipItem as equipProgression,reconcileEquipmentForCharacter} from './progression/equipment.ts';
 import type {EquipmentCompatibilityResolver} from './progression/equipment.ts';
-import {initialProgression,totalExpForLevel} from './progression/progression.ts';
+import {initialM71Progression,RECONSTRUCTION_PROGRESSION_POLICY,totalExpForLevel} from './progression/progression.ts';
+import {M71_EXPERIENCE_POLICY} from './progression/m7-1-experience-policy.ts';
 import {applyBattleReward,applyQuestReward} from './progression/rewards.ts';
 import type {RewardState} from './progression/rewards.ts';
 import {CURRENT_SAVE_VERSION,SAVE_KIND} from './progression/save-schema.ts';
@@ -41,7 +42,7 @@ import {renderBattleHud} from './ui/battle-hud.ts';
 import {renderGameMenu} from './ui/game-menu.ts';
 import {renderDebugPanel} from './ui/debug-panel.ts';
 import {escapeHtml} from './ui/ui-utils.ts';
-import type {BattleHudState,DiagnosticsState,FieldHudState,PlayerHudState} from './ui/types.ts';
+import type {BattleHudState,BattleStatusView,DiagnosticsState,FieldHudState,PlayerHudState} from './ui/types.ts';
 import {readM4Save,writeM4Save} from './m4-save-store.ts';
 import {equipmentBonus as legacyEquipmentBonus} from './inventory.ts';
 import {createM5PlayableWorld} from './world/m5-playable-world.ts';
@@ -59,14 +60,15 @@ import {beginM7SkillTargeting,cancelM7SkillTargeting,confirmM7SkillTargeting,cre
 import type {M7GridCell,M7SkillTargetingState} from './combat/m7-grid-targeting.ts';
 import {m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-stage-runtime.ts';
 import type {M7Profession} from './training/m7-level-axis.ts';
+import {resolveM7TrainingManagerInteraction} from './world/m7-training-manager.ts';
+import {m7EffectiveDefense,m7EffectivePhysicalAttack} from './combat/m7-status-effects.ts';
 import {integratedPromotionRuleForCharacter} from './training/m7-promotion-policy.ts';
-import {renderM7DeveloperPreset,renderM7TrainingCamp} from './ui/m7-training-camp.ts';
+import {renderM7DeveloperPreset,renderM7TrainingManagerDialog} from './ui/m7-training-camp.ts';
 import {battleSkillHotkeyLabel,resolveBattleHotkey} from './input/battle-hotkeys.ts';
 import type {BattleHotkeyCommand} from './input/battle-hotkeys.ts';
 
 type Snapshot=ReturnType<LabScene['snapshot']>;
 type BattleInputSceneContract=LabScene&{
-  setBattleRangeOverlayVisible?:(visible:boolean)=>void;
   cancelBattleTargeting?:()=>boolean;
 };
 const QUEST_STAGES:readonly QuestStage[]=['not_started','accepted','objective','ready_to_turn_in','complete'];
@@ -79,7 +81,7 @@ function starterInventory():InventoryState{
 }
 
 export function createM4RewardState(gold=0):RewardState{
-  return {gold,inventory:starterInventory(),progression:initialProgression(),questFlags:{},rewardReceipts:[]};
+  return {gold,inventory:starterInventory(),progression:initialM71Progression(),questFlags:{},rewardReceipts:[]};
 }
 
 export function parseM4Quest(raw:JsonValue,questId=TRAINING_QUEST_ID):QuestRuntimeState{
@@ -135,8 +137,8 @@ export class M4RuntimeIntegration{
   developerMode=false;
   inventoryOpen=false;
   private activeDialogue:NpcDialogueSession|null=null;
+  private trainingManagerOpen=false;
   private battleExitConfirm=false;
-  private battleRangeOverlayVisible=false;
   private battleTargetingState:M7SkillTargetingState=createM7SkillTargetingState();
   private battleTargetingCommandId:string|null=null;
   private suppressEncounterUntilLeave=false;
@@ -352,7 +354,7 @@ export class M4RuntimeIntegration{
       else if(action==='recovery-hp')this.trainingRecovery('hp');
       else if(action==='recovery-mp')this.trainingRecovery('mp');
       else if(action==='rest')this.rest();
-      else if(action==='battle-range-toggle')this.toggleBattleRangeOverlay();
+      else if(action==='training-manager-close'){this.trainingManagerOpen=false;this.render(this.scene.snapshot());}
       else if(action==='battle-exit-request')this.requestBattleExit();
       else if(action==='battle-exit-cancel')this.cancelBattleExit();
       else if(action==='battle-exit-confirm')this.confirmBattleExit();
@@ -402,7 +404,6 @@ export class M4RuntimeIntegration{
       else this.setNotice(`技能槽 ${command.slot+1} 当前未配置`);
       return;
     }
-    if(command.kind==='toggle-range'){this.toggleBattleRangeOverlay();return;}
     this.handleEscape();
   }
 
@@ -419,22 +420,6 @@ export class M4RuntimeIntegration{
     this.menuOpen=!this.menuOpen;
     this.render(this.scene.snapshot());
   }
-
-  private publishBattleRangeOverlay(visible:boolean,announce:boolean):void{
-    this.battleRangeOverlayVisible=visible;
-    this.battleInputScene().setBattleRangeOverlayVisible?.(visible);
-    window.dispatchEvent(new CustomEvent('lapis-battle-range-overlay',{detail:{visible}}));
-    if(announce){
-      this.setNotice(`战斗移动 / 攻击 / 施法范围：${visible?'显示':'隐藏'}`);
-      this.render(this.scene.snapshot());
-    }
-  }
-
-  private toggleBattleRangeOverlay():void{
-    if(!this.scene.inBattleView)return;
-    this.publishBattleRangeOverlay(!this.battleRangeOverlayVisible,true);
-  }
-
 
   private installBattleTargetingAdapter():void{
     this.scene.setBattleSkillTargetingAdapter({
@@ -557,6 +542,7 @@ export class M4RuntimeIntegration{
   private changeClass(id:'100'|'109'):void{
     if(this.scene.inBattleView){this.setNotice('请先结束战斗再开始新职业档');return;}
     this.activeDialogue=null;
+    this.trainingManagerOpen=false;
     this.pendingEncounter=null;
     this.activeTrainingBattleId=null;
     this.trainingLaunchPending=false;
@@ -574,6 +560,12 @@ export class M4RuntimeIntegration{
     this.menuOpen=false;
     this.setNotice(id==='100'?'已开始新的剑士职业档':'已开始新的巫师职业档');
     this.render(this.scene.snapshot());
+  }
+
+  acceptanceStartTrainingBattle(id:number):void{
+    if(!navigator.webdriver)throw new Error('M7.1 acceptance training fixture is automation-only');
+    this.trainingManagerOpen=false;
+    this.startTrainingBattle(id);
   }
 
   acceptanceSetEnemyHp(targetId:string,hp:number):void{
@@ -664,14 +656,23 @@ export class M4RuntimeIntegration{
   acceptanceGrantLevel(targetLevel:number):void{
     if(!navigator.webdriver)throw new Error('M6 acceptance reward fixture is automation-only');
     if(!Number.isInteger(targetLevel)||targetLevel<1||targetLevel>99)throw new Error('Invalid M6 acceptance target level');
-    const targetExp=totalExpForLevel(targetLevel);
-    const amount=Math.max(0,targetExp-this.rewards.progression.exp);
-    if(amount===0)return;
-    const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
     const oldLevel=this.rewards.progression.level;
-    const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
-    this.rewards=applied.state;
-    this.reconcileM7Skills(oldLevel);
+    if(targetLevel>65&&this.rewards.progression.policyId===M71_EXPERIENCE_POLICY.id){
+      this.rewards={...this.rewards,progression:{
+        level:targetLevel,
+        exp:totalExpForLevel(targetLevel,RECONSTRUCTION_PROGRESSION_POLICY.id),
+        policyId:RECONSTRUCTION_PROGRESSION_POLICY.id,
+      }};
+      this.reconcileM7Skills(oldLevel);
+    }else{
+      const targetExp=totalExpForLevel(targetLevel,this.rewards.progression.policyId);
+      const amount=Math.max(0,targetExp-this.rewards.progression.exp);
+      if(amount===0)return;
+      const receipt=`s29-acceptance:stage-${this.scene.character}:level-${targetLevel}`;
+      const applied=applyBattleReward(this.rewards,'s29-acceptance-fixture',receipt,{gold:0,exp:amount});
+      this.rewards=applied.state;
+      this.reconcileM7Skills(oldLevel);
+    }
     this.scene.gold=this.rewards.gold;
     this.applyClassProfile(false);
     this.setNotice(`M6 acceptance fixture：通过生产 reward/progression authority 到达 Lv.${this.rewards.progression.level}`);
@@ -716,7 +717,7 @@ export class M4RuntimeIntegration{
     const unlockAll=this.menuRoot.querySelector<HTMLInputElement>('[data-dev-unlock-all]')?.checked??false;
     try{
       const preset=buildM7DeveloperCharacterPreset(profession,level,unlockAll);
-      this.rewards={...this.rewards,progression:{...this.rewards.progression,level:preset.level,exp:totalExpForLevel(preset.level)}};
+      this.rewards={...this.rewards,progression:{...this.rewards.progression,level:preset.level,exp:totalExpForLevel(preset.level,this.rewards.progression.policyId)}};
       this.m7Skills=createM7IntegratedSkillState(String(preset.stageId),Math.min(65,preset.level));
       this.developerPresetActive=true;
       this.developerUnlockAllSkills=preset.unlockAllImplementedSkills;
@@ -780,6 +781,43 @@ export class M4RuntimeIntegration{
     reconcileBattlePhase(this.scene.state);
     this.setNotice(result.message);
     if(!result.ok){this.render(this.scene.snapshot());return;}
+    for(const event of result.events){
+      this.scene.presentBattleFeedback({
+        kind:event.effect??'DAMAGE',
+        target:event.target,
+        amount:event.amount,
+        tone:event.source==='poison'?'poison':'damage',
+      });
+    }
+    const feedbackLabels:Record<string,Readonly<{label:string;tone:'buff'|'debuff'|'control'|'poison'}>>={
+      DARK_VEIL_APPLIED:{label:'黑暗之帐',tone:'debuff'},
+      NATURE_FORCE_APPLIED:{label:'自然力量',tone:'buff'},
+      HEALING_BLOCK_APPLIED:{label:'灰烬·禁疗',tone:'debuff'},
+      PETRIFY_APPLIED:{label:'诅咒之眼·石化',tone:'control'},
+      BLIND_APPLIED:{label:'失明',tone:'debuff'},
+      CURSE_WINDOW_APPLIED:{label:'诅咒之剑',tone:'debuff'},
+    };
+    for(const feedback of result.feedbackEvents??[]){
+      if(feedback.kind==='POISON_INITIAL_DAMAGE')continue;
+      const view=feedbackLabels[feedback.kind];
+      if(view)this.scene.presentBattleFeedback({kind:feedback.kind,target:feedback.targetId,label:view.label,tone:view.tone});
+    }
+    if(command.family==='swordsman'){
+      const swordLabels:Partial<Record<string,Readonly<{label:string;tone:'buff'|'control'}>>>={
+        '1301':{label:'强防',tone:'buff'},
+        '1401':{label:'爆发',tone:'buff'},
+        '1501':{label:'舍身',tone:'buff'},
+        'battle-command':{label:'战斗命令',tone:'buff'},
+      };
+      const view=swordLabels[String(command.skillKey)];
+      if(view&&command.target==='self')this.scene.presentBattleFeedback({kind:'BUFF_GAINED',target:'player',label:view.label,tone:view.tone});
+      for(const enemyId of result.affectedEnemyIds){
+        const enemy=this.scene.state.enemies.find(row=>row.id===enemyId);
+        if(enemy?.m7Status.swordsman.some(status=>status.kind==='stun')){
+          this.scene.presentBattleFeedback({kind:'STUN_APPLIED',target:enemyId,label:'眩晕',tone:'control'});
+        }
+      }
+    }
     const visual=visualSkillForCommand(command);
     const magicResourceId=visual?.magic_pattern?.magic_resources?.[0]?.magic_resource_id;
     const explicitOrigin=targetCell?(()=>{const [x,y]=referenceCellToScreen(targetCell);return{x,y};})():undefined;
@@ -837,6 +875,7 @@ export class M4RuntimeIntegration{
       const preset=trainingBattleById(id);
       this.selectedTrainingBattleId=preset.id;
       this.activeDialogue=null;
+      this.trainingManagerOpen=false;
       this.pendingEncounter=null;
       this.menuOpen=false;
       this.trainingLaunchPending=true;
@@ -901,11 +940,13 @@ export class M4RuntimeIntegration{
     this.render(this.scene.snapshot());
   }
 
-  private beginNpcInteraction(entityId:string|undefined,inputSource:NpcInteractionInputSource):void{
+  private beginNpcInteraction(entityId:string|undefined,inputSource:Exclude<NpcInteractionInputSource,'compatibility'>):void{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
-    const entities=this.m5World?[this.m5World.content.guide.entity]:WORLD_ENTITIES.filter(entity=>entity.kind==='npc');
+    const entities=this.m5World
+      ?[this.m5World.trainingManager.entity,this.m5World.content.guide.entity]
+      :WORLD_ENTITIES.filter(entity=>entity.kind==='npc');
     const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
     if(!entity){
       if(!this.m5World&&!entityId){
@@ -913,10 +954,29 @@ export class M4RuntimeIntegration{
         if(objective){this.interactWorld(objective.id);return;}
       }
       this.activeDialogue=null;
+      this.trainingManagerOpen=false;
       this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互 NPC');
       this.render(this.scene.snapshot());
       return;
     }
+    if(this.m5World&&entity.id===this.m5World.trainingManager.entity.id){
+      const manager=resolveM7TrainingManagerInteraction(this.m5World.trainingManager,actor,{
+        entityId:entity.id,mapId:actor.mapId,actorX:actor.x,actorY:actor.y,inputSource,provenance:'RECONSTRUCTION_POLICY',
+      });
+      this.activeDialogue=null;
+      if(!manager.accepted){
+        this.trainingManagerOpen=false;
+        this.setNotice(manager.message);
+        this.render(this.scene.snapshot());
+        return;
+      }
+      this.trainingManagerOpen=true;
+      this.menuOpen=false;
+      this.setNotice('训练管理员：请选择训练关卡。');
+      this.render(this.scene.snapshot());
+      return;
+    }
+    this.trainingManagerOpen=false;
     const resolved=this.worldAuthority.beginNpcInteraction(this.world,{
       entityId:entity.id,
       mapId:actor.mapId,
@@ -969,7 +1029,7 @@ export class M4RuntimeIntegration{
     if(this.scene.inBattleView)return;
     const actor=this.currentWorldState();
     this.world={...this.world,world:actor};
-    const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
+    const entities=this.m5World?[this.m5World.trainingManager.entity,this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
     const entity=entityId?entities.find(candidate=>candidate.id===entityId):entities.find(candidate=>canInteract(candidate,actor));
     if(!entity){this.setNotice(entityId?'当前 NPC 不能交互':'附近没有可交互对象');return;}
     const previousStage=this.world.quest.stage;
@@ -1023,13 +1083,30 @@ export class M4RuntimeIntegration{
     if(this.activeTrainingBattleId!==null){
       const preset=trainingBattleById(this.activeTrainingBattleId);
       const enemies=reconstructionEnemiesForTrainingBattle(preset.id);
-      const reward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
+      const combatReward=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.rewardForEncounter(
         enemies.map(enemy=>({level:enemy.level,rank:enemy.rank})),
       );
       const oldLevel=this.rewards.progression.level;
-      const applied=applyBattleReward(this.rewards,'m7-training-battle-'+preset.id,'battle:m7-training:'+preset.id+':win',{gold:reward.gold,exp:reward.exp});
-      this.rewards=applied.state;this.reconcileM7Skills(oldLevel);this.scene.gold=this.rewards.gold;
-      this.setNotice('Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+' / 金币 +'+reward.gold+' / EXP +'+reward.exp+' / RECONSTRUCTION_POLICY');
+      const receiptPrefix='battle:m7-training:'+preset.id+':win:';
+      const runNumber=1+this.rewards.rewardReceipts.filter(id=>id.startsWith(receiptPrefix)).length;
+      const applied=applyBattleReward(
+        this.rewards,
+        'm7-training-battle-'+preset.id,
+        receiptPrefix+runNumber,
+        {gold:combatReward.gold,exp:preset.expReward},
+      );
+      this.rewards=applied.state;
+      this.reconcileM7Skills(oldLevel);
+      this.scene.gold=this.rewards.gold;
+      const levels=applied.events.filter(event=>event.type==='level_up').map(event=>'Lv.'+event.toLevel);
+      const skillPoints=applied.events.filter(event=>event.type==='skill_point').length;
+      this.setNotice(
+        'Training Battle #'+preset.id+' 胜利：Fixed Enemy Lv.'+enemies.map(enemy=>enemy.level).join('/')+
+        ' / 金币 +'+combatReward.gold+' / EXP +'+preset.expReward+
+        (levels.length?' / LEVEL UP '+levels.join(' → '):'')+
+        (skillPoints?' / Skill Point +'+skillPoints:'')+
+        ' / RECONSTRUCTION_POLICY'
+      );
       return;
     }
     if(this.m5World){
@@ -1067,6 +1144,65 @@ export class M4RuntimeIntegration{
 
   private playerCombatStats(){
     return DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.playerStats(this.scene.character,Math.max(1,this.rewards.progression.level),this.combatEquipment());
+  }
+
+  private playerExpHud():Readonly<{exp:number;expMax:number}>{
+    const progression=this.rewards.progression;
+    const maxLevel=progression.policyId===M71_EXPERIENCE_POLICY.id?M71_EXPERIENCE_POLICY.maxLevel:RECONSTRUCTION_PROGRESSION_POLICY.maxLevel;
+    if(progression.level>=maxLevel)return Object.freeze({exp:1,expMax:1});
+    const start=totalExpForLevel(progression.level,progression.policyId);
+    const next=totalExpForLevel(progression.level+1,progression.policyId);
+    return Object.freeze({exp:Math.max(0,progression.exp-start),expMax:Math.max(1,next-start)});
+  }
+
+  private playerPresentationStats():Readonly<{atk:number;def:number}>{
+    const base=this.scene.inBattleView&&this.scene.state.combatPlayerStats
+      ?this.scene.state.combatPlayerStats
+      :this.playerCombatStats();
+    const statuses=this.scene.inBattleView?this.scene.state.playerM7Status.swordsman:Object.freeze([]);
+    const family=playableClassById(this.scene.character).family;
+    const atk=family==='wizard'?base.magicAttack:m7EffectivePhysicalAttack(base.attack,statuses);
+    const def=m7EffectiveDefense(base.defense,statuses);
+    return Object.freeze({atk,def});
+  }
+
+  private statusDuration(ms:number|null|undefined):string|undefined{
+    if(ms===null)return '本场';
+    if(ms===undefined||ms<=0)return undefined;
+    return Math.ceil(ms/1000)+'s';
+  }
+
+  private battleStatusViews():readonly BattleStatusView[]{
+    if(!this.scene.inBattleView)return Object.freeze([]);
+    const rows:BattleStatusView[]=[];
+    const add=(id:string,label:string,tone:BattleStatusView['tone'],ms?:number|null)=>{
+      rows.push(Object.freeze({id,label,tone,...(this.statusDuration(ms)?{durationText:this.statusDuration(ms)}:{})}));
+    };
+    for(const status of this.scene.state.playerM7Status.swordsman){
+      const labels:Record<string,string>={
+        '1301':'强防','1401':'爆发','1501':'舍身','battle-command':'战斗命令',
+        '1101':'眩晕','stun-strike':'眩晕',
+      };
+      const label=labels[status.sourceSkillKey]??status.sourceSkillKey;
+      add('player:'+status.id,label,status.kind==='stun'?'control':'buff',status.remainingMs);
+    }
+    const playerWizard=this.scene.state.playerM7Status.wizard;
+    if(playerWizard.natureForce)add('player:nature-force','自然力量','buff',playerWizard.natureForce.remainingMs);
+
+    const target=this.scene.state.enemies.find(enemy=>enemy.id===this.scene.selectedEnemy&&enemy.hp>0);
+    if(target){
+      for(const status of target.m7Status.swordsman){
+        if(status.kind==='stun')add('target:'+status.id,'眩晕','control',status.remainingMs);
+      }
+      const wizard=target.m7Status.wizard;
+      if(wizard.darkVeil)add('target:dark-veil','黑暗之帐','debuff',wizard.darkVeil.remainingMs);
+      if(wizard.poison)add('target:poison','毒雾','poison',wizard.poison.remainingMs);
+      if(wizard.healingBlockedMs>0)add('target:ashes','灰烬·禁疗','debuff',wizard.healingBlockedMs);
+      if(wizard.petrifiedMs>0)add('target:petrified','诅咒之眼·石化','control',wizard.petrifiedMs);
+      if(wizard.blind)add('target:blind','失明','debuff',wizard.blind.remainingMs);
+      if(wizard.cursedSword)add('target:cursed-sword','诅咒之剑','debuff',wizard.cursedSword.remainingMs);
+    }
+    return Object.freeze(rows);
   }
 
   private prepareReconstructionBattle(trainingBattleId:number|null=null):void{
@@ -1177,6 +1313,7 @@ export class M4RuntimeIntegration{
   restore(raw:unknown):void{
     if(this.scene.inBattleView)throw new Error('请先结束战斗再读档');
     this.activeDialogue=null;
+    this.trainingManagerOpen=false;
     this.activeTrainingBattleId=null;
     this.trainingLaunchPending=false;
     this.developerPresetActive=false;
@@ -1206,17 +1343,10 @@ export class M4RuntimeIntegration{
 
   private onSnapshot(snapshot:Snapshot):void{
     if(!snapshot.inBattleView&&this.battleTargetingState.phase==='aiming')this.clearBattleTargeting(false);
-    if(!snapshot.inBattleView&&this.battleRangeOverlayVisible)this.publishBattleRangeOverlay(false,false);
     if(this.lastSnapshot&&snapshot.inBattleView){
-      if(snapshot.hp<this.lastSnapshot.hp){
-        this.present(this.presentation.hit({targetId:'player',amount:this.lastSnapshot.hp-snapshot.hp,resultingHp:snapshot.hp,maxHp:this.scene.state.maxHp}));
-      }
       for(const enemy of snapshot.enemies){
         const previous=this.lastSnapshot.enemies.find(entry=>entry.id===enemy.id);
-        if(previous&&enemy.hp<previous.hp){
-          this.present(this.presentation.hit({targetId:enemy.id,amount:previous.hp-enemy.hp,resultingHp:enemy.hp,maxHp:this.scene.state.enemies.find(entry=>entry.id===enemy.id)?.maxHp??previous.hp}));
-          if(enemy.hp<=0&&previous.hp>0)this.present(this.presentation.deathOf('enemy',enemy.id));
-        }
+        if(previous&&enemy.hp<=0&&previous.hp>0)this.present(this.presentation.deathOf('enemy',enemy.id));
       }
       if(this.lastSnapshot.phase!==snapshot.phase&&(snapshot.phase==='won'||snapshot.phase==='lost')){
         this.present(this.presentation.terminal(snapshot.phase));
@@ -1285,7 +1415,7 @@ export class M4RuntimeIntegration{
   private nearestInteraction(snapshot:Snapshot):string|undefined{
     if(snapshot.inBattleView)return undefined;
     const actor=this.currentWorldState();
-    const entities=this.m5World?[this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
+    const entities=this.m5World?[this.m5World.trainingManager.entity,this.m5World.content.guide.entity,this.m5World.content.objective]:WORLD_ENTITIES;
     const entity=entities.find(candidate=>canInteract(candidate,actor));
     if(!entity)return undefined;
     if(entity.kind==='npc')return `与${entity.displayName}交谈`;
@@ -1296,10 +1426,13 @@ export class M4RuntimeIntegration{
     if(!M6_CHARACTER_IDS.includes(snapshot.character))return;
     const definition=playableClassById(snapshot.character);
     const fieldStats=this.m5World?this.playerCombatStats():null;
+    const expHud=this.playerExpHud();
+    const presentationStats=this.playerPresentationStats();
     const player:PlayerHudState={
       name:'佣兵',className:definition.displayName,portraitLabel:definition.family==='swordsman'?'剑':'巫',level:this.rewards.progression.level,
       hp:snapshot.inBattleView?snapshot.hp:fieldStats?.maxHp??definition.baseAuthoredStats.hp,hpMax:snapshot.inBattleView?this.scene.state.maxHp:fieldStats?.maxHp??definition.baseAuthoredStats.hp,
-      mp:snapshot.inBattleView?snapshot.mp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,mpMax:snapshot.inBattleView?this.scene.state.maxMp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,gold:this.rewards.gold,
+      mp:snapshot.inBattleView?snapshot.mp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,mpMax:snapshot.inBattleView?this.scene.state.maxMp:fieldStats?.maxMp??definition.baseAuthoredStats.mp,
+      exp:expHud.exp,expMax:expHud.expMax,atk:presentationStats.atk,def:presentationStats.def,gold:this.rewards.gold,
     };
     const quest=questHud(this.world.quest.stage);
     const field:FieldHudState={mapId:snapshot.mapId,mapName:snapshot.mapName,...quest,interactionPrompt:this.nearestInteraction(snapshot)};
@@ -1310,6 +1443,7 @@ export class M4RuntimeIntegration{
         phase:snapshot.phase,readiness:snapshot.action,readinessMax:snapshot.actionMax,ready:snapshot.actionReady,busy:snapshot.busy,paused:snapshot.battlePaused,
         targetName:target?.id,targetHp:target?.hp,targetHpMax:target?this.scene.state.enemies.find(enemy=>enemy.id===target.id)?.maxHp:undefined,
         statusText:snapshot.phase==='active'?(snapshot.actionReady?'可以行动':'等待行动槽'):snapshot.phase==='won'?'战斗已胜利':'战斗已结束',
+        statuses:this.battleStatusViews(),
         canAttack:snapshot.phase==='active',canRest:snapshot.phase==='active',canReturn:snapshot.phase==='won'||snapshot.phase==='lost',
         skills:this.runtimeSkillCommands().map((command,index)=>({id:command.authoredSkillId??command.id,name:`${command.displayName} Lv.${command.skillLevel}`,mpCost:command.mpCost,hotkey:battleSkillHotkeyLabel(index),disabled:snapshot.mp<command.mpCost})),
       };
@@ -1348,7 +1482,6 @@ export class M4RuntimeIntegration{
       const panel=this.menuRoot.querySelector<HTMLElement>('.menu-panel');
       if(panel&&!snapshot.inBattleView){
         panel.classList.add('m7-menu-panel');
-        panel.insertAdjacentHTML('beforeend',renderM7TrainingCamp(this.rewards.progression.level,this.selectedTrainingBattleId));
         if(this.developerMode)panel.insertAdjacentHTML('beforeend',renderM7DeveloperPreset(definition.family as M7Profession,this.rewards.progression.level,this.developerUnlockAllSkills));
       }
       this.menuHtml=menuSignature;
@@ -1385,6 +1518,9 @@ export class M4RuntimeIntegration{
           <small class="npc-dialogue-provenance">RECONSTRUCTION_POLICY</small>
         </div>
       </section>`;
+    }
+    if(this.trainingManagerOpen&&!this.scene.inBattleView){
+      return renderM7TrainingManagerDialog(this.rewards.progression.level,this.selectedTrainingBattleId,true);
     }
     const session=this.activeDialogue;
     if(!session)return '';

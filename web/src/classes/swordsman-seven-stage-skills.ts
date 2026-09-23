@@ -3,6 +3,7 @@ export type M7EvidenceLevel =
   | 'VERIFIED-STATIC-ORIGINAL'
   | 'VERIFIED-HISTORICAL'
   | 'RECOVERED_SECONDARY'
+  | 'CONFLICTING_SECONDARY'
   | 'INFERRED'
   | 'SERVER-BOUNDARY'
   | 'RECONSTRUCTION_POLICY'
@@ -62,10 +63,10 @@ export type M7SwordsmanSkillLevelDefinition = Readonly<{
   durationMs: number | null;
   stunChance: number | null;
   bossStunChance: number | null;
-  physicalDamageReduction: number | null;
-  attackBonus: number | null;
-  maxHpBonus: number | null;
-  incomingPhysicalDamagePenalty: number | null;
+  defenseFlatBonus: number | null;
+  attackFlatBonus: number | null;
+  maxHpFlatBonus: number | null;
+  defenseFlatPenalty: number | null;
   periodicSelfDamage: Readonly<{amount:number;intervalMs:number;minimumHp:number}> | null;
   commandRangeBonus: number | null;
   readinessEfficiencyBonus: number | null;
@@ -93,7 +94,7 @@ export type M7SwordsmanSkillDefinition = Readonly<{
 const STATIC_M5_SKILLS: M7EvidenceRef = Object.freeze({
   level: 'VERIFIED-STATIC-ORIGINAL',
   source: 'fixed-hash 2.2 Set.lib levelabl.atr -> Magictbl.atr canonical S25 matrix',
-  note: 'The first five swordsman stage-entry Magic references, names, MP costs and high-level descriptions are authored client data. These rows do not prove server-side arithmetic.',
+  note: 'The first five swordsman stage-entry Magic references, Lv1 names/MP and high-level descriptions are authored client data. Lv2-Lv6 raw rows are consumed only where explicitly supplied by the M7.1 contract or a later S35 handoff.',
 });
 const HISTORICAL_LATE_SKILLS: M7EvidenceRef = Object.freeze({
   level: 'VERIFIED-HISTORICAL',
@@ -102,13 +103,13 @@ const HISTORICAL_LATE_SKILLS: M7EvidenceRef = Object.freeze({
 });
 const RECONSTRUCTION_NUMBERS: M7EvidenceRef = Object.freeze({
   level: 'RECONSTRUCTION_POLICY',
-  source: 'M7 S31 approved balance contract',
-  note: 'Percentages, durations, readiness costs, chances and offline effect arithmetic are replaceable M7 tuning, not retail claims.',
+  source: 'M7.1 S36 approved fidelity contract',
+  note: 'Offline damage/control arithmetic, durations, late-skill costs/probabilities and any interim values not yet promoted by S35 remain replaceable reconstruction policy.',
 });
 const SACRIFICE_MEMORY: PlayerMemoryRef = Object.freeze({
   level: 'PLAYER_MEMORY',
-  source: 'user play memory recorded in the approved M7 S31 contract',
-  note: '舍身 was remembered as losing roughly 4-5 HP about every 10 seconds, with little cost growth at higher skill levels. This is an input to reconstruction, not retail verification.',
+  source: 'user play memory recorded in the approved M7.1 contract',
+  note: '舍身 was remembered as losing roughly 4-5 HP about every 10 seconds, without sharply increasing self-damage at higher skill levels. This is an input to reconstruction, not retail verification.',
 });
 
 function level(
@@ -122,26 +123,31 @@ const empty = Object.freeze({
   durationMs:null,
   stunChance:null,
   bossStunChance:null,
-  physicalDamageReduction:null,
-  attackBonus:null,
-  maxHpBonus:null,
-  incomingPhysicalDamagePenalty:null,
+  defenseFlatBonus:null,
+  attackFlatBonus:null,
+  maxHpFlatBonus:null,
+  defenseFlatPenalty:null,
   periodicSelfDamage:null,
   commandRangeBonus:null,
   readinessEfficiencyBonus:null,
 } as const);
 
+const HEAVY_MP=[25,32,38,44,50,60] as const;
+const DOUBLE_MP=[23,29,35,40,46,55] as const;
 const HEAVY_DAMAGE=[1.35,1.39,1.43,1.47,1.51,1.55] as const;
 const HEAVY_STUN=[0.25,0.27,0.29,0.31,0.33,0.35] as const;
 const DOUBLE_HIT=[0.70,0.72,0.74,0.76,0.78,0.80] as const;
-const STRONG_DEF=[0.25,0.30,0.35,0.40,0.45,0.50] as const;
-const BURST_ATTACK=[0.25,0.30,0.35,0.40,0.45,0.50] as const;
-const BURST_HP=[0.15,0.18,0.21,0.24,0.27,0.30] as const;
-const BURST_INCOMING=[0.25,0.28,0.31,0.34,0.37,0.40] as const;
+const STRONG_DEF=[20,25,30,35,40,50] as const;
+const STRONG_DEF_DURATION=[30000,32000,34000,36000,38000,40000] as const;
+const BURST_ATTACK=[10,15,20,25,30,35] as const;
+const BURST_HP=[10,15,20,25,30,35] as const;
+const BURST_DEF_PENALTY=[5,7,9,11,14,17] as const;
 const BURST_DURATION=[25000,27000,29000,31000,33000,35000] as const;
 const SACRIFICE_HP=[4,4,5,5,6,6] as const;
-const SACRIFICE_ATTACK=[0.15,0.18,0.22,0.26,0.30,0.35] as const;
+const SACRIFICE_ATTACK=[15,18,22,26,30,35] as const;
+const COMMAND_RANGE=[1,1,2,2,3,3] as const;
 const COMMAND_EFFICIENCY=[0.05,0.06,0.07,0.08,0.09,0.10] as const;
+const STUN_STRIKE_DAMAGE=[0.68,0.70,0.72,0.74,0.76,0.78] as const;
 const STUN_STRIKE_CHANCE=[0.55,0.59,0.63,0.67,0.71,0.75] as const;
 const STUN_STRIKE_BOSS=[0.20,0.22,0.24,0.26,0.28,0.30] as const;
 
@@ -149,40 +155,48 @@ function six(build:(index:number,skillLevel:M7SkillLevel)=>M7SwordsmanSkillLevel
   return Object.freeze(([1,2,3,4,5,6] as const).map((skillLevel,index)=>build(index,skillLevel)));
 }
 
+function originalLv1OtherwiseReconstruction(index:number):M7EvidenceLevel{
+  return index===0?'VERIFIED-STATIC-ORIGINAL':'RECONSTRUCTION_POLICY';
+}
+
+function suppliedRawMpEvidence(index:number):M7EvidenceLevel{
+  return index===0?'VERIFIED-STATIC-ORIGINAL':'RECOVERED_SECONDARY';
+}
+
 export const M7_SWORDSMAN_SKILL_CATALOG: Readonly<Record<M7SwordsmanSkillKey,M7SwordsmanSkillDefinition>> = Object.freeze({
   '1101': Object.freeze({
-    skillKey:'1101',originalSkillId:1101,displayName:'重击',aliases:Object.freeze(['强力一击']),unlockLevel:1,stageId:100,target:'enemy',role:'single-hit damage + probabilistic stun',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:25,mpCostEvidence:'VERIFIED-STATIC-ORIGINAL',readinessCost:6,hitMultipliers:Object.freeze([HEAVY_DAMAGE[i]!] as number[]),independentHitRolls:false,stunChance:HEAVY_STUN[i]!,bossStunChance:null})),
+    skillKey:'1101',originalSkillId:1101,displayName:'重击',aliases:Object.freeze(['强力一击']),unlockLevel:1,stageId:100,target:'enemy',role:'single-hit high damage + probabilistic stun',
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:HEAVY_MP[i]!,mpCostEvidence:suppliedRawMpEvidence(i),readinessCost:6,hitMultipliers:Object.freeze([HEAVY_DAMAGE[i]!] as number[]),independentHitRolls:false,stunChance:HEAVY_STUN[i]!,bossStunChance:null})),
     evidence:Object.freeze({identity:STATIC_M5_SKILLS,highLevelBehavior:STATIC_M5_SKILLS,numbers:RECONSTRUCTION_NUMBERS}),
   }),
   '1201': Object.freeze({
     skillKey:'1201',originalSkillId:1201,displayName:'连砍',aliases:Object.freeze(['连续攻击']),unlockLevel:6,stageId:110,target:'enemy',role:'two independent physical strikes',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:23,mpCostEvidence:'VERIFIED-STATIC-ORIGINAL',readinessCost:7,hitMultipliers:Object.freeze([DOUBLE_HIT[i]!,DOUBLE_HIT[i]!] as number[]),independentHitRolls:true})),
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:DOUBLE_MP[i]!,mpCostEvidence:suppliedRawMpEvidence(i),readinessCost:7,hitMultipliers:Object.freeze([DOUBLE_HIT[i]!,DOUBLE_HIT[i]!] as number[]),independentHitRolls:true})),
     evidence:Object.freeze({identity:STATIC_M5_SKILLS,highLevelBehavior:STATIC_M5_SKILLS,numbers:RECONSTRUCTION_NUMBERS}),
   }),
   '1301': Object.freeze({
-    skillKey:'1301',originalSkillId:1301,displayName:'强防',aliases:Object.freeze(['石头皮肤']),unlockLevel:16,stageId:120,target:'self',role:'physical-only mitigation buff',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'VERIFIED-STATIC-ORIGINAL',readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:30000,physicalDamageReduction:STRONG_DEF[i]!})),
+    skillKey:'1301',originalSkillId:1301,displayName:'强防',aliases:Object.freeze(['石头皮肤']),unlockLevel:16,stageId:120,target:'self',role:'flat DEF buff',
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:originalLv1OtherwiseReconstruction(i),readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:STRONG_DEF_DURATION[i]!,defenseFlatBonus:STRONG_DEF[i]!})),
     evidence:Object.freeze({identity:STATIC_M5_SKILLS,highLevelBehavior:STATIC_M5_SKILLS,numbers:RECONSTRUCTION_NUMBERS}),
   }),
   '1401': Object.freeze({
-    skillKey:'1401',originalSkillId:1401,displayName:'瞬间爆发',aliases:Object.freeze(['爆发','血爆']),unlockLevel:26,stageId:130,target:'self',role:'attack + max HP buff with physical defence tradeoff',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'VERIFIED-STATIC-ORIGINAL',readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:BURST_DURATION[i]!,attackBonus:BURST_ATTACK[i]!,maxHpBonus:BURST_HP[i]!,incomingPhysicalDamagePenalty:BURST_INCOMING[i]!})),
+    skillKey:'1401',originalSkillId:1401,displayName:'瞬间爆发',aliases:Object.freeze(['爆发','血爆']),unlockLevel:26,stageId:130,target:'self',role:'flat ATK + MaxHP buff with flat DEF penalty',
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:originalLv1OtherwiseReconstruction(i),readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:BURST_DURATION[i]!,attackFlatBonus:BURST_ATTACK[i]!,maxHpFlatBonus:BURST_HP[i]!,defenseFlatPenalty:BURST_DEF_PENALTY[i]!})),
     evidence:Object.freeze({identity:STATIC_M5_SKILLS,highLevelBehavior:STATIC_M5_SKILLS,numbers:RECONSTRUCTION_NUMBERS}),
   }),
   '1501': Object.freeze({
-    skillKey:'1501',originalSkillId:1501,displayName:'舍身',aliases:Object.freeze(['献身']),unlockLevel:36,stageId:140,target:'self',role:'sustained attack buff with periodic non-lethal HP cost',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'VERIFIED-STATIC-ORIGINAL',readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:60000,attackBonus:SACRIFICE_ATTACK[i]!,periodicSelfDamage:Object.freeze({amount:SACRIFICE_HP[i]!,intervalMs:10000,minimumHp:1})})),
+    skillKey:'1501',originalSkillId:1501,displayName:'舍身',aliases:Object.freeze(['献身']),unlockLevel:36,stageId:140,target:'self',role:'sustained flat ATK buff with periodic non-lethal HP cost',
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:originalLv1OtherwiseReconstruction(i),readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:60000,attackFlatBonus:SACRIFICE_ATTACK[i]!,periodicSelfDamage:Object.freeze({amount:SACRIFICE_HP[i]!,intervalMs:10000,minimumHp:1})})),
     evidence:Object.freeze({identity:STATIC_M5_SKILLS,highLevelBehavior:STATIC_M5_SKILLS,numbers:RECONSTRUCTION_NUMBERS,playerMemory:SACRIFICE_MEMORY}),
   }),
   'battle-command': Object.freeze({
-    skillKey:'battle-command',originalSkillId:null,displayName:'战斗命令',aliases:Object.freeze(['统帅']),unlockLevel:46,stageId:150,target:'self',role:'command range + light action/readiness efficiency buff',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'RECONSTRUCTION_POLICY',readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:30000,commandRangeBonus:2,readinessEfficiencyBonus:COMMAND_EFFICIENCY[i]!})),
+    skillKey:'battle-command',originalSkillId:null,displayName:'战斗命令',aliases:Object.freeze(['统帅']),unlockLevel:46,stageId:150,target:'self',role:'command range + action/readiness efficiency buff',
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'RECONSTRUCTION_POLICY',readinessCost:8,hitMultipliers:Object.freeze([]),independentHitRolls:false,durationMs:30000,commandRangeBonus:COMMAND_RANGE[i]!,readinessEfficiencyBonus:COMMAND_EFFICIENCY[i]!})),
     evidence:Object.freeze({identity:HISTORICAL_LATE_SKILLS,highLevelBehavior:HISTORICAL_LATE_SKILLS,numbers:RECONSTRUCTION_NUMBERS}),
   }),
   'stun-strike': Object.freeze({
-    skillKey:'stun-strike',originalSkillId:null,displayName:'打晕',aliases:Object.freeze(['眩晕攻击']),unlockLevel:56,stageId:160,target:'enemy',role:'low damage + high control, boss-resistant',
-    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'RECONSTRUCTION_POLICY',readinessCost:8,hitMultipliers:Object.freeze([0.75]),independentHitRolls:false,stunChance:STUN_STRIKE_CHANCE[i]!,bossStunChance:STUN_STRIKE_BOSS[i]!})),
+    skillKey:'stun-strike',originalSkillId:null,displayName:'打晕',aliases:Object.freeze(['眩晕攻击']),unlockLevel:56,stageId:160,target:'enemy',role:'lower damage + high control, boss-resistant',
+    levels:six((i,sl)=>level(sl,{...empty,mpCost:20,mpCostEvidence:'RECONSTRUCTION_POLICY',readinessCost:8,hitMultipliers:Object.freeze([STUN_STRIKE_DAMAGE[i]!] as number[]),independentHitRolls:false,stunChance:STUN_STRIKE_CHANCE[i]!,bossStunChance:STUN_STRIKE_BOSS[i]!})),
     evidence:Object.freeze({identity:HISTORICAL_LATE_SKILLS,highLevelBehavior:HISTORICAL_LATE_SKILLS,numbers:RECONSTRUCTION_NUMBERS}),
   }),
 });
@@ -193,13 +207,23 @@ export const RECONSTRUCTION_SWORDSMAN_SACRIFICE_POLICY = Object.freeze({
   durationMs:60000,
   tickIntervalMs:10000,
   hpCostBySkillLevel:Object.freeze([...SACRIFICE_HP]),
-  attackBonusBySkillLevel:Object.freeze([...SACRIFICE_ATTACK]),
+  attackFlatBySkillLevel:Object.freeze([...SACRIFICE_ATTACK]),
   minimumHp:1,
-  note:'The 15/18/22/26/30/35 curve matches an observed fixed-client Magictbl parameter sequence, but S31 does not claim that client field has been proven to be an attack percentage.',
+  note:'The approved M7.1 reconstruction keeps periodic 10-second HP loss and treats 15/18/22/26/30/35 as flat ATK until stronger original-server evidence exists.',
+});
+
+export const RECONSTRUCTION_SWORDSMAN_FLAT_STAT_POLICY = Object.freeze({
+  id:'ReconstructionSwordsmanFlatStatPolicy',
+  provenance:'RECONSTRUCTION_POLICY' as const,
+  strongDefenseFlatBySkillLevel:Object.freeze([...STRONG_DEF]),
+  burstAttackFlatBySkillLevel:Object.freeze([...BURST_ATTACK]),
+  burstMaxHpFlatBySkillLevel:Object.freeze([...BURST_HP]),
+  burstDefensePenaltyFlatBySkillLevel:Object.freeze([...BURST_DEF_PENALTY]),
+  note:'Strong Defence and Burst use the M7.1 unified ATK/DEF flat presentation model. Mid-curve Burst and duration values remain replaceable if S35 later promotes exact raw-field interpretations.',
 });
 
 export const M7_SWORDSMAN_SKILL_BALANCE_POLICY = Object.freeze({
-  id:'m7-s31-swordsman-seven-stage-v1',
+  id:'m7-1-s36-swordsman-fidelity-v1',
   provenance:'RECONSTRUCTION_POLICY' as const,
   skillPointPolicy:Object.freeze({pointsPerPlayerLevel:1,unlockGrantsSkillLevelOne:true,maxSkillLevel:6}),
   statusStacking:'refresh' as const,

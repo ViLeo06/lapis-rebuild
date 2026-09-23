@@ -36,7 +36,7 @@ export class VisualActor{
 
   setAnchor(x:number,y:number):this{this.anchor={x,y};return this}
   setDirection(direction:number):this{
-    if(Number.isInteger(direction)&&direction>=0&&direction<8){this.direction=direction;this.cursor=0;this.elapsed=0;}
+    if(Number.isInteger(direction)&&direction>=0&&direction<8&&direction!==this.direction){this.direction=direction;this.cursor=0;this.elapsed=0;}
     return this;
   }
   setVisible(visible:boolean):this{this.image.setVisible(visible);return this}

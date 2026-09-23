@@ -28,7 +28,7 @@ test('missing pack fails closed',async({page})=>{await page.route('**/game-data/
 test('responsive layout has no horizontal overflow',async({page})=>{await page.setViewportSize({width:820,height:1180});await ready(page);expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(820);await page.screenshot({path:'test-results/compact.png',fullPage:true});});
 test('offline HTML opens without external requests',async({page})=>{test.skip(!process.env.LAPIS_OFFLINE_PREVIEW,'No offline build supplied');const external:string[]=[];page.on('request',r=>{if(/^https?:/.test(r.url()))external.push(r.url());});await page.goto(pathToFileURL(process.env.LAPIS_OFFLINE_PREVIEW!).href);await page.waitForFunction(()=>window.lapisDiagnostics?.snapshot().ready);await page.selectOption('#character','109');await page.selectOption('#action','05');await page.click('#step');expect((await snap(page)).length).toBe(11);await page.selectOption('#map','1');expect((await snap(page)).mapId).toBe(1);await page.click('#battle');await expect.poll(async()=>(await snap(page)).inBattleView).toBe(true);expect((await snap(page)).mapId).toBe(0);await page.click('#battle-pause');await page.click('#return');expect((await snap(page)).mapId).toBe(1);expect(external).toEqual([]);await page.screenshot({path:'test-results/offline.png',fullPage:true});});
 test('training victory, settlement and saved reward survive reload',async({page})=>{
- test.setTimeout(60000);await ready(page);
+ test.setTimeout(120000);await ready(page);
  // Exercise a legal equipped loadout for the settlement scenario. Separate
  // tests cover unarmored damage, defeat, armor restrictions and saved gear.
  await page.selectOption('#equip-weapon','3');

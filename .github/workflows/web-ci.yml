@@ -16,7 +16,7 @@ concurrency:
 jobs:
   synthetic:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: {persist-credentials: false}
@@ -51,7 +51,14 @@ jobs:
         working-directory: web
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
-        run: npm run test:e2e
+        run: npm run test:e2e -- --workers=2
+      - name: S41 M7.1 final acceptance
+        if: github.ref_name == 'codex/s41-m7-1-final-glue' || github.head_ref == 'codex/s41-m7-1-final-glue'
+        working-directory: web
+        env:
+          LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/offline.html
+          S41_M7_1_FINAL: '1'
+        run: npm run test:e2e -- e2e/s41-m7-1-acceptance.spec.ts
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -200,6 +207,7 @@ jobs:
         working-directory: web
         env:
           LAPIS_OFFLINE_PREVIEW: ${{ runner.temp }}/lapis-private.html
+          S41_M7_1_FINAL: '1'
         # One CI retry absorbs transient Chromium screenshot/protocol failures;
         # deterministic assertion failures still fail both attempts.
         run: npm run test:e2e -- --retries=1

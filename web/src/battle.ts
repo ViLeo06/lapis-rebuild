@@ -13,7 +13,7 @@ import {DEFAULT_RECONSTRUCTION_COMBAT_BALANCE} from './combat/reconstruction-com
 import type {CombatantStats,EquipmentCombatBonuses,EnemyRank} from './combat/reconstruction-combat-balance.ts';
 import {applyM7NatureForceStaffHit,consumeM7CursedSwordPhysicalWindow,createM7WizardStatusState,m7WizardOrdinaryAttackTargetable} from './content/skills/wizard-seven-stage-runtime.ts';
 import type {M7WizardStatusState} from './content/skills/wizard-seven-stage-runtime.ts';
-import {m7AdjustIncomingDamage} from './combat/m7-status-effects.ts';
+import {m7AdjustIncomingDamage,m7EffectiveDefense,m7EffectivePhysicalAttack,m7ReadinessEfficiencyMultiplier} from './combat/m7-status-effects.ts';
 import type {M7StatusEffect} from './combat/m7-status-effects.ts';
 import {applyM7EnemyHealing,consumeM7EnemyActionBlock,m7EnemyAccuracyModifier,m7EnemyEffectiveRange,tickM7BattleStatuses} from './combat/m7-battle-skills.ts';
 import {activeEnemyEncounterGroup} from './combat/m7-encounter-groups.ts';
@@ -306,9 +306,12 @@ export function useAttack(
   else if(sid===19301)s.manaBuff=P.manaBuffDurationMs;
   else if(e&&s.combatPlayerStats&&e.combatStats){
     const balance=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE;
+    const playerAttacker=!skill
+      ?Object.freeze({...s.combatPlayerStats,attack:m7EffectivePhysicalAttack(s.combatPlayerStats.attack,s.playerM7Status.swordsman)})
+      :s.combatPlayerStats;
     const resolution=skill
-      ?balance.resolveSkillAttack(s.combatPlayerStats,e.combatStats,skill.skill_id,()=>nextBattleRandom(s))
-      :balance.resolveAttack(s.combatPlayerStats,e.combatStats,{kind:'physical',multiplier:1,hits:1},()=>nextBattleRandom(s));
+      ?balance.resolveSkillAttack(playerAttacker,e.combatStats,skill.skill_id,()=>nextBattleRandom(s))
+      :balance.resolveAttack(playerAttacker,e.combatStats,{kind:'physical',multiplier:1,hits:1},()=>nextBattleRandom(s));
     if(sid===19101)e.blind=P.blindDurationMs;
     if(sid===19201&&resolution.dotTicks>0){
       e.poison=P.poisonDurationMs;e.poisonTickDamage=resolution.dotDamagePerTick;e.poisonTicks=resolution.dotTicks;e.poisonClock=0;
@@ -362,7 +365,8 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
   if(ticks>0){
     s.actionClock-=ticks*RECOVERED_READINESS.inferredTickMs;
     const slowMultiplier=s.playerSlowMs>0?0.5:1;
-    s.action=Math.min(s.actionMax,s.action+ticks*RECOVERED_READINESS.incrementPerTick*slowMultiplier);
+    const readinessEfficiency=m7ReadinessEfficiencyMultiplier(s.playerM7Status.swordsman);
+    s.action=Math.min(s.actionMax,s.action+ticks*RECOVERED_READINESS.incrementPerTick*slowMultiplier*readinessEfficiency);
     if(s.playerStunActions>0&&s.action>=s.actionMax){
       s.playerStunActions-=1;
       s.action=0;
@@ -449,7 +453,11 @@ export function updateBattle(s:BattleState,delta:number,x:number,y:number,defens
 
         let damage:number,provenance:RuntimeProvenance;
         if(s.combatPlayerStats&&e.combatStats){
-          const defender=s.shield>0?{...s.combatPlayerStats,defense:Math.round(s.combatPlayerStats.defense*1.45),magicDefense:Math.round(s.combatPlayerStats.magicDefense*1.45)}:s.combatPlayerStats;
+          const effectiveDefense=m7EffectiveDefense(s.combatPlayerStats.defense,s.playerM7Status.swordsman);
+          const baseDefender=Object.freeze({...s.combatPlayerStats,defense:effectiveDefense});
+          const defender=s.shield>0
+            ?Object.freeze({...baseDefender,defense:Math.round(baseDefender.defense*1.45),magicDefense:Math.round(baseDefender.magicDefense*1.45)})
+            :baseDefender;
           const kind=ability?.kind==='magic-bolt'||ability?.kind==='command-burst'?'magic':'physical';
           const hits=ability?.kind==='rapid-strike'?2:1;
           const multiplier=ability?.kind==='enrage'?1.35:(ability?.powerMultiplier??1);

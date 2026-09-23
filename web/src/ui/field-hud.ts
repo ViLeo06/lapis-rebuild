@@ -29,11 +29,12 @@ export function renderFieldHud(player:PlayerHudState,field:FieldHudState):string
 
   return `<div class="field-hud" data-ui="field-hud">
     <nav class="top-command-strip" data-ui="top-command-strip" aria-label="原版结构命令条">${topCommands}</nav>
+    <button type="button" class="field-fullscreen-button" data-ui="field-fullscreen" data-action="fullscreen" aria-label="切换全屏">全屏</button>
 
-    <section class="map-plate small-map-plate" data-ui="small-map" aria-label="小地图区域">
+    <section class="map-plate small-map-plate" data-ui="small-map" data-world-minimap="true" aria-label="世界小地图">
       <span class="hud-kicker">MAP</span>
       <b>${String(field.mapId).padStart(4,'0')} · ${escapeHtml(field.mapName)}</b>
-      <span class="map-placeholder">地图框 / 未恢复</span>
+      <span class="map-placeholder">F8 · 显示 / 隐藏</span>
     </section>
 
     <section class="quest-tracker hud-corner-top-right" aria-label="任务追踪">

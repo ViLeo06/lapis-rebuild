@@ -43,11 +43,38 @@ export const M7_WIZARD_INTELLIGENCE_BRIDGE_POLICY=Object.freeze({
   source:'current reconstruction combat magicAttack is used as the runtime INT bridge until a dedicated base-attribute system exists',
 });
 
+export type M7WizardFeedbackEventKind=
+  |'DARK_VEIL_APPLIED'
+  |'POISON_INITIAL_DAMAGE'
+  |'NATURE_FORCE_APPLIED'
+  |'HEALING_BLOCK_APPLIED'
+  |'PETRIFY_APPLIED'
+  |'BLIND_APPLIED'
+  |'CURSE_WINDOW_APPLIED';
+
+export type M7WizardFeedbackEvent=Readonly<{
+  kind:M7WizardFeedbackEventKind;
+  skillKey:M7WizardSkillKey;
+  skillLevel:number;
+  targetId:'player'|string;
+  targetCell:M7GridCell;
+  damageAmount?:number;
+  eventTimeMs:number;
+  provenance:'RECONSTRUCTION_POLICY'|'RECOVERED_SECONDARY'|'VERIFIED-STATIC-ORIGINAL';
+}>;
+
+export type M7BattleFeedbackEvent=BattleEvent&Readonly<{
+  effect?:'POISON_INITIAL_DAMAGE'|'POISON_TICK';
+  targetCell?:M7GridCell;
+  eventTimeMs?:number;
+}>;
+
 export type M7SkillUseResult=Readonly<{
   ok:boolean;
   message:string;
-  events:readonly BattleEvent[];
+  events:readonly M7BattleFeedbackEvent[];
   affectedEnemyIds:readonly string[];
+  feedbackEvents?:readonly M7WizardFeedbackEvent[];
 }>;
 
 export type M7SkillTargetSelection=Readonly<{
@@ -77,16 +104,61 @@ function liveTarget(state:BattleState,targetId:string):Enemy|null{
   return state.enemies.find(enemy=>enemy.id===targetId&&enemy.hp>0)??null;
 }
 
-function eventForEnemy(enemy:Enemy,before:number):BattleEvent|null{
+const M7_BATTLE_EVENT_CLOCK_MS=new WeakMap<BattleState,number>();
+
+function m7BattleEventTimeMs(state:BattleState):number{
+  return M7_BATTLE_EVENT_CLOCK_MS.get(state)??0;
+}
+
+function eventForEnemy(
+  state:BattleState,
+  enemy:Enemy,
+  before:number,
+  effect?:M7BattleFeedbackEvent['effect'],
+  source:'player'|'poison'='player',
+):M7BattleFeedbackEvent|null{
   if(enemy.hp>=before)return null;
   return Object.freeze({
     kind:'hp-loss' as const,
     target:enemy.id,
-    source:'player' as const,
+    source,
     amount:before-enemy.hp,
     resultingHp:enemy.hp,
     provenance:'RECONSTRUCTION_POLICY' as const,
+    ...(effect?{effect,targetCell:pixelCell(enemy.x,enemy.y),eventTimeMs:m7BattleEventTimeMs(state)}:{}),
   });
+}
+
+function wizardFeedback(
+  state:BattleState,
+  command:M7RuntimeSkillCommand,
+  kind:M7WizardFeedbackEventKind,
+  targetId:'player'|string,
+  targetCell:M7GridCell,
+  damageAmount?:number,
+):M7WizardFeedbackEvent{
+  return Object.freeze({
+    kind,
+    skillKey:command.skillKey as M7WizardSkillKey,
+    skillLevel:command.skillLevel,
+    targetId,
+    targetCell:Object.freeze([targetCell[0],targetCell[1]] as const),
+    ...(typeof damageAmount==='number'?{damageAmount}:{}),
+    eventTimeMs:m7BattleEventTimeMs(state),
+    provenance:'RECONSTRUCTION_POLICY',
+  });
+}
+
+function wizardFeedbackKind(key:M7WizardSkillKey):M7WizardFeedbackEventKind{
+  switch(key){
+    case 'dark-veil':return 'DARK_VEIL_APPLIED';
+    case 'poison-mist':return 'POISON_INITIAL_DAMAGE';
+    case 'nature-force':return 'NATURE_FORCE_APPLIED';
+    case 'ashes':return 'HEALING_BLOCK_APPLIED';
+    case 'curse-eye':return 'PETRIFY_APPLIED';
+    case 'blindness':return 'BLIND_APPLIED';
+    case 'cursed-sword':return 'CURSE_WINDOW_APPLIED';
+  }
 }
 
 function swordsmanState(state:BattleState):M7SwordsmanCombatState{
@@ -142,27 +214,32 @@ function useSwordsman(
   applySwordsmanResult(state,paid);
   const attack=m7EffectivePhysicalAttack(state.combatPlayerStats.attack,state.playerM7Status.swordsman);
   const attacker=Object.freeze({...state.combatPlayerStats,attack});
-  const multiplier=plan.hitMultipliers[0]??1;
-  const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(
-    attacker,
-    enemy.combatStats,
-    {kind:'physical',multiplier,hits:Math.max(1,plan.hitMultipliers.length)},
-    ()=>randomUnit(state),
-  );
-  let damage=resolution.totalDamage;
-  const curse=consumeM7CursedSwordPhysicalWindow(enemy.m7Status.wizard,damage);
-  damage=curse.damage;
-  enemy.m7Status=Object.freeze({...enemy.m7Status,wizard:curse.state});
-  const before=enemy.hp;
-  enemy.hp=Math.max(0,enemy.hp-damage);
+  const hitMultipliers=plan.hitMultipliers.length?plan.hitMultipliers:Object.freeze([1]);
+  const events:M7BattleFeedbackEvent[]=[];
+  for(const multiplier of hitMultipliers){
+    if(enemy.hp<=0)break;
+    const resolution=DEFAULT_RECONSTRUCTION_COMBAT_BALANCE.resolveAttack(
+      attacker,
+      enemy.combatStats,
+      {kind:'physical',multiplier,hits:1},
+      ()=>randomUnit(state),
+    );
+    let damage=resolution.totalDamage;
+    const curse=consumeM7CursedSwordPhysicalWindow(enemy.m7Status.wizard,damage);
+    damage=curse.damage;
+    enemy.m7Status=Object.freeze({...enemy.m7Status,wizard:curse.state});
+    const before=enemy.hp;
+    enemy.hp=Math.max(0,enemy.hp-damage);
+    const hitEvent=eventForEnemy(state,enemy,before);
+    if(hitEvent)events.push(hitEvent);
+  }
 
-  const targetStatus=applyM7SwordsmanTargetStatus(enemy.m7Status.swordsman,plan,randomUnit(state));
+  const targetStatus=applyM7SwordsmanTargetStatus(enemy.m7Status.swordsman,plan,randomUnit(state),enemy.id);
   enemy.m7Status=Object.freeze({...enemy.m7Status,swordsman:targetStatus.statuses});
-  const event=eventForEnemy(enemy,before);
   return Object.freeze({
     ok:true,
     message:`${command.displayName} Lv.${command.skillLevel} / RECONSTRUCTION_POLICY`,
-    events:event?Object.freeze([event]):Object.freeze([]),
+    events:Object.freeze(events),
     affectedEnemyIds:Object.freeze([enemy.id]),
   });
 }
@@ -181,10 +258,12 @@ function wizardTargets(
   state:BattleState,
   selected:Enemy,
   key:M7WizardSkillKey,
+  level:number,
 ):readonly Enemy[]{
-  if(key!=='ashes'&&key!=='curse-eye')return Object.freeze([selected]);
-  const areaCode=authoredAreaCode(key);
-  if(areaCode===null)return Object.freeze([selected]);
+  const params=m7WizardSkillLevel(key,level);
+  const configured=numeric(params,'areaCode');
+  const areaCode=configured!==undefined?configured:authoredAreaCode(key);
+  if(areaCode===null||areaCode<=0)return Object.freeze([selected]);
   return affectedM7GridTargets(
     state.enemies,
     pixelCell(selected.x,selected.y),
@@ -215,7 +294,15 @@ function useWizard(
       ...state.playerM7Status,
       wizard:applyM7WizardSkillStatus(state.playerM7Status.wizard,key,command.skillLevel),
     });
-    return Object.freeze({ok:true,message:`${command.displayName} Lv.${command.skillLevel} / RECONSTRUCTION_POLICY`,events:[],affectedEnemyIds:[]});
+    return Object.freeze({
+      ok:true,
+      message:`${command.displayName} Lv.${command.skillLevel} / RECONSTRUCTION_POLICY`,
+      events:[],
+      affectedEnemyIds:[],
+      feedbackEvents:Object.freeze([
+        wizardFeedback(state,command,wizardFeedbackKind(key),'player',pixelCell(x,y)),
+      ]),
+    });
   }
 
   if(key==='poison-mist'){
@@ -237,17 +324,26 @@ function useWizard(
     }
     const intelligence=state.combatPlayerStats?.magicAttack??0;
     const targets=affectedM7GridTargets(state.enemies,targetCell,geometry.areaCode,activeGroup);
+    const events:M7BattleFeedbackEvent[]=[];
+    const feedbackEvents:M7WizardFeedbackEvent[]=[];
     for(const enemy of targets){
-      enemy.m7Status=Object.freeze({
-        ...enemy.m7Status,
-        wizard:applyM7WizardSkillStatus(enemy.m7Status.wizard,key,command.skillLevel,{intelligence}),
-      });
+      const wizard=applyM7WizardSkillStatus(enemy.m7Status.wizard,key,command.skillLevel,{intelligence});
+      enemy.m7Status=Object.freeze({...enemy.m7Status,wizard});
+      const initialDamage=wizard.poison?.initialDamage??0;
+      const before=enemy.hp;
+      enemy.hp=Math.max(0,enemy.hp-initialDamage);
+      const event=eventForEnemy(state,enemy,before,'POISON_INITIAL_DAMAGE','poison');
+      if(event)events.push(event);
+      feedbackEvents.push(wizardFeedback(
+        state,command,'POISON_INITIAL_DAMAGE',enemy.id,pixelCell(enemy.x,enemy.y),before-enemy.hp,
+      ));
     }
     return Object.freeze({
       ok:true,
-      message:`${command.displayName} Lv.${command.skillLevel} / VERIFIED-STATIC-ORIGINAL grid geometry`,
-      events:[],
+      message:`${command.displayName} Lv.${command.skillLevel}：首击 + DOT / VERIFIED-STATIC-ORIGINAL grid geometry`,
+      events:Object.freeze(events),
       affectedEnemyIds:Object.freeze(targets.map(enemy=>enemy.id)),
+      feedbackEvents:Object.freeze(feedbackEvents),
     });
   }
 
@@ -267,18 +363,23 @@ function useWizard(
   }
 
   const intelligence=state.combatPlayerStats?.magicAttack??0;
-  const targets=wizardTargets(state,selected,key);
+  const targets=wizardTargets(state,selected,key,command.skillLevel);
+  const feedbackEvents:M7WizardFeedbackEvent[]=[];
   for(const enemy of targets){
     enemy.m7Status=Object.freeze({
       ...enemy.m7Status,
       wizard:applyM7WizardSkillStatus(enemy.m7Status.wizard,key,command.skillLevel,{intelligence}),
     });
+    feedbackEvents.push(wizardFeedback(
+      state,command,wizardFeedbackKind(key),enemy.id,pixelCell(enemy.x,enemy.y),
+    ));
   }
   return Object.freeze({
     ok:true,
     message:`${command.displayName} Lv.${command.skillLevel} / RECONSTRUCTION_POLICY`,
     events:[],
     affectedEnemyIds:Object.freeze(targets.map(enemy=>enemy.id)),
+    feedbackEvents:Object.freeze(feedbackEvents),
   });
 }
 
@@ -312,9 +413,10 @@ export function useM7Skill(
   return useM7SkillTargeted(state,{targetId,targetCell},x,y,command);
 }
 
-export function tickM7BattleStatuses(state:BattleState,deltaMs:number):readonly BattleEvent[]{
+export function tickM7BattleStatuses(state:BattleState,deltaMs:number):readonly M7BattleFeedbackEvent[]{
   if(!Number.isFinite(deltaMs)||deltaMs<0)return Object.freeze([]);
-  const events:BattleEvent[]=[];
+  M7_BATTLE_EVENT_CLOCK_MS.set(state,m7BattleEventTimeMs(state)+deltaMs);
+  const events:M7BattleFeedbackEvent[]=[];
   if(state.combatPlayerStats){
     const advanced=advanceM7Statuses(state.hp,state.combatPlayerStats.maxHp,state.playerM7Status.swordsman,deltaMs);
     if(advanced.currentHp<state.hp){
@@ -337,7 +439,7 @@ export function tickM7BattleStatuses(state:BattleState,deltaMs:number):readonly 
     if(wizard.poisonDamage>0&&enemy.hp>0){
       const before=enemy.hp;
       enemy.hp=Math.max(0,enemy.hp-wizard.poisonDamage);
-      const event=eventForEnemy(enemy,before);
+      const event=eventForEnemy(state,enemy,before,'POISON_TICK','poison');
       if(event)events.push(event);
     }
     enemy.m7Status=Object.freeze({swordsman:sword.statuses,wizard:wizard.state});

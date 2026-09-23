@@ -1,3 +1,4 @@
+import {M71_EXPERIENCE_POLICY} from './m7-1-experience-policy.ts';
 import {grantItem, validateInventory} from './inventory.ts';
 import type {InventoryState} from './inventory.ts';
 import {applyExperience, validateProgression} from './progression.ts';
@@ -24,7 +25,8 @@ export type RewardEvent =
   | {type: 'gold'; amount: number; source: RewardSource}
   | {type: 'item'; itemId: number; quantity: number; source: RewardSource}
   | {type: 'quest_flag'; flag: string; source: RewardSource}
-  | {type: 'exp'; amount: number; source: RewardSource}
+  | {type:'exp';amount:number;source:RewardSource}
+  | {type:'skill_point';amount:1;level:number;source:RewardSource;provenance:'RECONSTRUCTION_POLICY'}
   | LevelUpEvent;
 export type RewardApplication = { state: RewardState; events: RewardEvent[]; applied: boolean };
 
@@ -83,7 +85,12 @@ export function applyRewardBundle(state: RewardState, bundle: RewardBundle): Rew
   if ((reward.gold ?? 0) > 0) events.push({type: 'gold', amount: reward.gold!, source: reward.source});
   if ((reward.exp ?? 0) > 0) events.push({type: 'exp', amount: reward.exp!, source: reward.source});
   for (const flag of reward.questFlags ?? []) events.push({type: 'quest_flag', flag, source: reward.source});
-  events.push(...expResult.levelUps);
+  for(const levelUp of expResult.levelUps){
+    events.push(levelUp);
+    if(expResult.state.policyId===M71_EXPERIENCE_POLICY.id){
+      events.push({type:'skill_point',amount:1,level:levelUp.toLevel,source:reward.source,provenance:'RECONSTRUCTION_POLICY'});
+    }
+  }
   const questFlags = {...current.questFlags};
   for (const flag of reward.questFlags ?? []) questFlags[flag] = true;
   const next: RewardState = {

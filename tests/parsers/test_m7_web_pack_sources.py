@@ -18,7 +18,7 @@ class M7WebPackSourcesTest(unittest.TestCase):
         visuals=assignment('WEB_VISUALS')
         required={1,3,9,11,13,15,21,23,31,41,51,61,71,81,91}
         self.assertTrue(required.issubset(maps))
-        self.assertTrue({4524,4525,4526,4544}.issubset(visuals))
+        self.assertTrue({4023,4524,4525,4526,4544}.issubset(visuals))
 
     def test_fixed_source_baseline_covers_every_training_map_triplet_and_visual(self):
         baseline=json.loads((ROOT/'manifests/web-source-baseline.json').read_text(encoding='utf-8'))
@@ -27,7 +27,7 @@ class M7WebPackSourcesTest(unittest.TestCase):
             for ext in ('imf','mmf','smf'):
                 key=f'sgres/sz-{zone:04d}.{ext}'
                 self.assertRegex(lower[key],r'^[0-9a-f]{64}$')
-        for visual in (4524,4525,4526,4544):
+        for visual in (4023,4524,4525,4526,4544):
             for slot in ('00','01','02','03'):
                 for ext in ('ani','spr'):
                     key=f'char/b{visual}_{slot}.{ext}'
