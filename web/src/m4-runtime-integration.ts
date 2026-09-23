@@ -602,6 +602,28 @@ export class M4RuntimeIntegration{
     enemy.action=this.scene.state.actionMax;
   }
 
+  acceptanceRunEnemyAbility(targetId:string,abilityKind:string):void{
+    if(!navigator.webdriver)throw new Error('S34 acceptance enemy ability fixture is automation-only');
+    if(!this.scene.inBattleView||this.scene.state.phase!=='active')throw new Error('S34 acceptance enemy ability fixture requires active battle');
+    const enemy=this.scene.state.enemies.find(row=>row.id===targetId&&row.hp>0);
+    if(!enemy)throw new Error('Unknown live acceptance enemy '+targetId);
+    const ability=enemy.abilities.find(row=>row.kind===abilityKind);
+    if(!ability)throw new Error('Enemy '+targetId+' lacks acceptance ability '+abilityKind);
+    enemy.abilityCooldownMs[ability.abilityId]=0;
+    enemy.action=this.scene.state.actionMax;
+    const defense=legacyEquipmentBonus(this.scene.inventory,this.scene.character).defense;
+    updateBattle(
+      this.scene.state,
+      1,
+      enemy.x,
+      enemy.y,
+      defense,
+      {collision:this.scene.currentMap().collision,playerBusy:false,reserved:[]},
+    );
+    reconcileBattlePhase(this.scene.state);
+    this.render(this.scene.snapshot());
+  }
+
   acceptanceSelectEnemy(targetId:string):void{
     if(!navigator.webdriver)throw new Error('S34 acceptance target fixture is automation-only');
     if(!this.scene.inBattleView)throw new Error('S34 acceptance target fixture requires active battle');
