@@ -175,12 +175,12 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-**M7 已正式收口，当前稳定基线为 `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。**
+**M7.1 工程收口与训练管理员入口修复已合入。当前稳定功能基线为 `main@fb738eec6d519bccd5c06f46b87d02282a26de6e`；其后仅有文档收口提交。**
 
-- M7/S34 不再有待合并 PR；#42 已合并，#43–#46 已按 superseded 清理。
-- 后续工作必须从上述 `main` 基线新建功能分支，不复用已关闭的 S30–S34 worker 分支。
-- 下一里程碑尚未在本计划中预设；先与用户确认下一任务，再据任务性质升级 Plan/Backlog 并拆分新的并行线。
-- 若后续发现 M7 回归，作为新缺陷单独记录并回溯到用户已验收 artifact SHA `862eceb4...e409` 与 merge `6094aae3...`，不得改写历史验收结论。
+- M7/S34 历史线已关闭；M7.1 S35–S41、最终集成 PR #63/#64 与 follow-up PR #66 均已合入 `main`。
+- 后续功能工作必须从当前 `main` 新建分支，不复用已关闭的 S30–S41 worker/fix 分支。
+- 当前唯一未关闭门禁是修复版 M7.1 standalone 的用户复验；合并授权不等于 `USER-ACCEPTED`。
+- 若修复版继续暴露问题，以 `fb738eec6d519bccd5c06f46b87d02282a26de6e` 为功能基线登记新缺陷，不改写 M7 已完成的历史验收。
 - authored client data / recovered evidence / reconstruction policy 三层继续严格分离。
 
 ---
