@@ -198,7 +198,7 @@ export class M4RuntimeIntegration{
       this.scene.setPlayerCameraFollow(true);
       this.scene.focusPlayer();
       this.spatial?.start({mapId:initial.mapId,cell:[initial.x,initial.y]});
-      this.setNotice('M5 可玩性恢复运行时：NPC / 怪物 / 空间切场景 / camera follow / reconstruction balance 已接入');
+      this.setNotice('训练管理员就在出生点附近：按 E / 轻点“与训练管理员交谈”即可打开 15 场训练。');
     }
     this.applyClassProfile(false);
     window.addEventListener('lapis-state',event=>this.onSnapshot((event as CustomEvent<Snapshot>).detail));
