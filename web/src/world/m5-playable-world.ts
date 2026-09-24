@@ -2,6 +2,7 @@ import type {LoadedPack,Collision} from '../model.ts';
 import {findRoute,walkable} from '../coordinates.ts';
 import type {Cell} from '../coordinates.ts';
 import type {NpcDefinition} from './npc-model.ts';
+import {canInteract} from './world-model.ts';
 import type {WorldEntity,WorldState} from './world-model.ts';
 import type {TrainingWorldContent} from './world-content.ts';
 import {createTrainingHousePolicy} from './s18-world-policy.ts';
@@ -73,8 +74,14 @@ export function createM5PlayableWorld(pack:LoadedPack):M5PlayableWorld{
   const guide=nearestDistinct(field.collision,[22,24]);
   const door=reachableNear(field.collision,guide,[26,24],[guide]);
   const returnSpawn=reachableNear(field.collision,door,[24,24],[door]);
-  const managerCell=reachableNear(field.collision,guide,[guide[0]+4,guide[1]],[guide,door,returnSpawn]);
+  // M7.1 primary training entry: keep the manager immediately actionable
+  // from the field spawn instead of hiding it several cells away behind the
+  // legacy guide flow. Map 1 uses checkerboard walkability, so two cells left
+  // is the nearest visually distinct authored walkable candidate.
+  const managerCell=reachableNear(field.collision,guide,[guide[0]-2,guide[1]],[guide,door,returnSpawn]);
   const trainingManager=createM7TrainingManager(M5_FIELD_MAP_ID,managerCell);
+  const start:WorldState={mapId:M5_FIELD_MAP_ID,x:guide[0],y:guide[1]};
+  if(!canInteract(trainingManager.entity,start))throw new Error('Training manager must be interactable from the M7.1 field spawn');
   const entry=nearestDistinct(interior.collision,[44,49]);
   const exit=reachableNear(interior.collision,entry,[44,52],[entry]);
   const encounter=reachableNear(interior.collision,entry,[52,49],[entry,exit]);
@@ -95,7 +102,6 @@ export function createM5PlayableWorld(pack:LoadedPack):M5PlayableWorld{
     id:'training-house-encounter',kind:'encounter',mapId:M5_INTERIOR_MAP_ID,x:encounter[0],y:encounter[1],
     displayName:'训练怪物',interactionRadius:2,provenance:'RECONSTRUCTION_POLICY',
   };
-  const start:WorldState={mapId:M5_FIELD_MAP_ID,x:guide[0],y:guide[1]};
   const objectiveEntry:WorldState={mapId:M5_INTERIOR_MAP_ID,x:entry[0],y:entry[1]};
   const returnState:WorldState={mapId:M5_FIELD_MAP_ID,x:guide[0],y:guide[1]};
   const content:TrainingWorldContent={
@@ -119,7 +125,7 @@ export function createM5PlayableWorld(pack:LoadedPack):M5PlayableWorld{
     content,house,guideVisualBinding,trainingManager,doorCell:door,interiorEntry:entry,interiorExit:exit,encounterCell:encounter,
     visuals:Object.freeze([
       {id:'training-guide',kind:'npc',mapId:M5_FIELD_MAP_ID,cell:guide,resourceId:M5_GUIDE_VISUAL_RESOURCE_ID,label:'训练引导员',provenance:'RECONSTRUCTION_POLICY'},
-      ...(pack.animations[String(trainingManager.visualResourceId)]?[{id:trainingManager.entity.id,kind:'npc' as const,mapId:M5_FIELD_MAP_ID,cell:managerCell,resourceId:trainingManager.visualResourceId,label:trainingManager.entity.displayName,provenance:'RECONSTRUCTION_POLICY' as const}]:[]),
+      ...(pack.animations[String(trainingManager.visualResourceId)]?[{id:trainingManager.entity.id,kind:'npc' as const,mapId:M5_FIELD_MAP_ID,cell:managerCell,resourceId:trainingManager.visualResourceId,label:'训练管理员 · 15关',provenance:'RECONSTRUCTION_POLICY' as const}]:[]),
       {id:'dummy-melee-preview',kind:'encounter',mapId:M5_INTERIOR_MAP_ID,cell:encounter,resourceId:4524,label:'训练怪物',provenance:'RECONSTRUCTION_POLICY'},
       {id:'dummy-ranged-preview',kind:'encounter',mapId:M5_INTERIOR_MAP_ID,cell:secondMonster,resourceId:4544,label:'训练怪物',provenance:'RECONSTRUCTION_POLICY'},
     ]),

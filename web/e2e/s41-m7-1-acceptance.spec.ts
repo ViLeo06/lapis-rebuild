@@ -48,6 +48,12 @@ test.describe('S41 M7.1 final acceptance skeleton',()=>{
     expect(app.m7Training?.battleCount).toBe(15);
     if(app.playableRecovery){
       expect((state.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
+      const prompt=page.locator('[data-action="interact"]:visible');
+      await expect(prompt).toContainText('训练管理员');
+      await page.keyboard.press('E');
+      await expect(page.locator('[data-ui="m7-training-manager-dialog"]')).toBeVisible();
+      await expect(page.locator('[data-action="training-start"]')).toHaveCount(15);
+      await page.locator('[data-action="training-manager-close"]').click();
     }
     await expect(page.locator('[data-settings-training-selector]')).toHaveCount(0);
     await expect(page.locator('[data-ui="m7-training-camp"]')).toHaveCount(0);
@@ -88,6 +94,12 @@ test.describe('S41 M7.1 mobile/coarse-pointer final skeleton',()=>{
     expect(app.m7Training?.battleCount).toBe(15);
     if(app.playableRecovery){
       expect((field.worldVisuals??[]).some((row:any)=>row.id==='training-manager'&&row.visible)).toBe(true);
+      const prompt=page.locator('[data-action="interact"]:visible');
+      await expect(prompt).toContainText('训练管理员');
+      await prompt.tap();
+      await expect(page.locator('[data-ui="m7-training-manager-dialog"]')).toBeVisible();
+      await expect(page.locator('[data-action="training-start"]')).toHaveCount(15);
+      await page.locator('[data-action="training-manager-close"]').tap();
     }
     await acceptanceStartTraining(page,1);
     const state:any=await extendedScene(page);
