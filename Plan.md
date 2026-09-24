@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.7｜更新：2026-09-23｜Web-first  
+> 版本：v3.7｜更新：2026-09-23｜Web-first
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -27,8 +27,21 @@
 - 2026-09-20 用户亲自试玩最终 S24 standalone HTML 后明确确认 **通过**。M5.1 已完成原版结构优先 HUD、NPC pointer/hitbox、显式对话/任务选择、手机触控、延迟追中相机与战斗主动撤退确认。最终验收运行时 head `97bd5063749a15e114ce85119015f9dcb8b7afc0`；run `35442734082` synthetic/private-original/Chromium/offline 成功，E2E `58 passed / 4 skipped / 0 failed`；artifact `10583854810`；最终单 HTML 11,214,215 bytes，SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。**M5 Playability Gate 通过，项目正式进入 M6 Dual-class Completion。**
 - 2026-09-21 M6 Dual-class Completion 已完成自动化与人工验收。S25/S26/S28 已汇入 S29；原 S27 分支无实现，后由 S29 补齐巫师十阶段。生产 runtime 现支持剑士 `100→190`、巫师 `109→199` 共 20 阶段，保留 M5.1 三技能基线、阶段晋阶、M6 SaveV2 extension、装备约束与双职业独立存档轨道。fixed-hash private runtime head `0a51f242a6357031f7f5b83c743fae7724c7e2f9` 的 private E2E 为 `61 passed / 4 skipped / 0 failed`；最终 M6 validation run `35562393435` success，新 30 分钟 soak `1,800,634 ms`、0 page error、0 external request。最终 private HTML 22,968,621 bytes，SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。用户已于 2026-09-21 人工试玩确认无问题，**M6 Gate 正式通过**。
 - 2026-09-23 M7 Combat Content Expansion 已完成工程、最终 S34 五项试玩修复与用户验收。S34 最终集成 head `80e7c4307156b18a31c3631542c304d3cf5969b8` 与成功 CI head `dd6a8383963df667c4013004a0667080ae2bd201` 具有相同 Git tree `1b44600e5d352649f766f054be63dd971614765a`；GitHub Actions run `35834469240` success。最终用户试玩包 `lapis-s34-final-playtest-20260923.html` 为 122,226,459 bytes，SHA-256 `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409`，复用已验证 private pack `b310803ff4897f23f96cda34cc1989254261f8703d7457c3cf85691812e67287`，3,771/3,771 索引资源 size/SHA 校验通过、0 missing、0 integrity failure。用户于 2026-09-23 明确批准该版本合并；遗留 worker PR #43–#46 经文件级审计确认已被 S34 吸收后关闭为 superseded；PR #42 随后合并 `main`，当前 M7 收口 merge commit 为 `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。**M7 Engineering Gate 与 Human Playability Gate 均通过。**
+- 2026-09-23 用户明确授权在当前已打开 Windows 客户端中进行战斗实测，并更新了项目级 Computer Use 边界。`current.txt` 标记 `2.7`；运行中 `NeoDark.exe` 文件版本资源为 `2.2.8.6`、1,155,072 bytes、SHA-256 `EA084E7891E3AE298F184F7AEA5CE9ABF214BB4147C28855DECF62148DBCC136`，两种标记暂不合并解释。续接画面出现“退出目前战斗”热键提示，但未独立确认实际战斗阶段或 FIELD→BATTLE 切换；F4 打开并关闭右侧信息面板，自动普攻短暂开启后恢复关闭，约 3 秒内 HP 保持 `340/340`。选择可见单位后新增截图显示右侧单位属性（HP `340/340`、MP `199/200`、STR 10、INT 55、DEX 10、WIS 11、CON 10、REG 10），但身份未确认；Escape 弹出“承认战败吗？”后选择“不是”取消。F11 已在客户端 `Capture` 目录生成 `cap-000.bmp`（1600×1200，5,760,135 bytes）。随后地图点击结果未知并遇 Windows Hello 锁屏；再次续接后的 F11 输入/刷新结果仍未知，最新复核又见锁屏，Capture 中没有新文件且 `cap-000.bmp` 哈希/修改时间未变。该时点暂停游戏输入，详见 `docs/validation/manual-20260923-combat-session01.md`。
+
+- 2026-09-23 续采更新：用户手动解锁后重新枚举了唯一 `佣兵传说` 窗口并继续采集。step007–step010 原生 F11 截图记录白银骑士栏目（4 名、体力 200、攻击 5、防御 2）、黑暗之火 Lv.2 技能面板，以及 Lv.26 黑暗巫师状态（HP 293/340、MP 4/204）。step011–step014 保存游戏帮助页，补充基本窗口标注及帮助文案里的 F3 状态、F4 物品、F5 魔法入口。另一个状态画面显示不同基础属性（力量13、防御10、体力18、智力32、智慧17、魔防16），身份和变化原因未知。锁屏后设置的屏幕关闭/睡眠时长已在设置页回读为电池、接电均 2 小时。采集仍未测试 MOVE/ATTACK/REST、施法、敌方行动或结算；不从 UI 字段推导战斗公式。
+
+说明：较早的 2026-09-23 条目里“当前暂停”描述的是锁屏时点；用户后来手动解锁，已在同日续采更新中继续操作。
+
+- 2026-09-23 再续采：重新初始化 `@oai/sky` 并重新枚举后，唯一 `佣兵传说` 窗口仍可用，桌面未锁。新增 step015–step017 三份客户端 F11 截图；源文件分别为 `cap-010.bmp`–`cap-012.bmp`，复制到 Git 忽略素材目录后 SHA-256 一致。点击可见蓝色单位时短暂出现“兵士”字样和交互气泡，但敌我身份及操作语义未确认；点击空地仅见鼠标/目标标记，未证实队伍移动。没有尝试攻击、休息或施法，也没有观察到伤害、敌方行动或结算。详情见 `docs/validation/manual-20260923-combat-session01.md`；下一步先识别明确的战斗命令和合法目标，再做受控动作。
+
+- 2026-09-23 MVP 场景续采：按 MVP 验收逐项进入城镇非战斗地图；单击可走地面后等待约 4 秒，确认玩家角色移动且镜头跟随，但不补造坐标/路径规则，也不回写 step017 那次未确认的空地点击结果。右键“仓库管理员”打开底部对话与选项；选择仓库服务后出现背包/仓库界面。没有点选或拖动物品，但屏幕显示“保存物品完成”，其是否表示物品状态发生变化尚未核实。城镇中的 `白银骑士` 信息面板不等于活动战斗；本续采仍未进入可确认的 battle scene，也未执行 ATTACK/REST/MAGIC、敌方回合、结算或返回。新增实机记录见 `docs/validation/manual-20260923-town-exploration.md`；原图已在后续归档中保存到私有云盘并逐文件核验本地哈希。下一目标是定位无歧义的战斗入口并继续按单动作验证，暂不启动共享 runtime 改动。
+
+- 2026-09-23 素材归档：城镇仓库 `cap-018.bmp`–`cap-026.bmp` 共 9 张和后续 `cap-027.bmp`–`cap-057.bmp` 共 31 张原图均已逐张校验哈希；两批原图 ZIP/清单放在项目私有云盘，第三批另有两张总览图。Git 保存 [城镇观察报告](docs/validation/manual-20260923-town-exploration.md)、[`session03` 人工观察报告](docs/validation/manual-20260923-mvp-exploration-session03.md)与[第三批逐图索引](docs/validation/manifests/capture-manifest-session03-20260923.json)。当前客户端可见城镇点击移动/跟随镜头、道具屋和锻造屋的室内外切换、仓库管理员/店员/锻造师/吉奥老师对话；未实测到可确认的 FIELD→BATTLE、战斗动作或结算。下一目标先将这些 MVP 场景与本地 Web 同场景对照，再继续寻找明确战斗入口；不从现有截图推定 Web 缺陷或服务器规则。
 
 ### 0.2 第一波 S1–S5 收口结果
+
+- 2026-09-22 原客户端人工探针记录了城墙 NPC `兵士` 的剧情入口线索：`〈剧情1〉布日古斯城`、可参加指挥官数 `02`、胜利条件“消灭敌人”以及 `参加/不需要` 选择；点击参加后当时未观察到 battle scene 切换。该探针未保留截图/哈希、独立版本证据或等待时长，暂列 `UNVERIFIED`，需复测；不能据此推断服务器入口规则。详见 `docs/validation/manual-20260922-original-client.md`。
 
 #### S1 Encounter
 
@@ -236,6 +249,8 @@ S4 已到达明确的 client evidence boundary：
 `VERIFIED`：固定哈希、严格解析、全量验证、像素/帧检查、静态反汇编或隔离环境重复实验直接支持。
 
 `VERIFIED-HISTORICAL`：同期官方/主流媒体/玩家操作资料支持高层玩法/UI 架构，但不等于内部源码。
+
+`VERIFIED-MANUAL-CURRENT-CLIENT`：带版本/文件哈希范围的当前客户端直接窗口观察；只证明该次客户端会话中实际可见的 UI/状态，不代表固定哈希 2.2、历史版本或服务器权威规则。
 
 `RECOVERED_SECONDARY`：固定版本兼容/传输实现等可复现二级静态证据；不能自动升级为 retail fact。
 
