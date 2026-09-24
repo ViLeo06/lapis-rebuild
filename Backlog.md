@@ -280,8 +280,22 @@
 - [ ] M7.1 最终 standalone 人工试玩；本轮用户授权“检查、解决冲突并合并”记录为工程合并授权，不自动记作 `USER-ACCEPTED`。
 - [ ] 若需要重新声明 fixed-hash private-original browser acceptance，必须再跑可验证的 private-original job；本轮 PR-triggered final run 中该 job 为 skipped，禁止写成已通过。
 
+### M7.1 Follow-up — Training Manager Entry Discoverability
+
+- [x] 用户试玩确认旧 M7.1 handoff 中 15 场训练入口难以发现。
+- [x] 复现根因：出生点 `(22,24)` → 旧训练管理员 `(25,23)`，Manhattan distance `4` > interaction radius `2`。
+- [x] PR #66 将训练管理员 placement 调整为真实 Map 1 可走格 `(20,24)`，出生即可交互。
+- [x] 标签强化为 `训练管理员 · 15关`；出生 notice 明确提示按 `E` / 轻点进入。
+- [x] 增加 runtime invariant，防止 collision/map 变化后再次把入口摆出出生交互范围。
+- [x] S41 acceptance 覆盖 PC `E` 与 mobile tap 打开 15 场 training-manager dialog。
+- [x] PR #66 head `721dca21c998561021f261cd597663e63c4595a5`；run `35936533115` success。
+- [x] PR #66 已合入 `main`：`fb738eec6d519bccd5c06f46b87d02282a26de6e`。
+- [x] 修复版 private standalone 已生成：122,549,933 bytes；SHA-256 `15a8414ca3264a217447209b1fd6ff4c6649c31dcb8c4b09558e4c271b83c5db`；embedded entries `3,908`。
+- [ ] 用户重新试玩修复版：出生点看到/触发训练管理员 → 打开 15 场列表 → 任一关正常进入战斗。
+- [ ] 用户明确通过后再追加 `USER-ACCEPTED`；合并授权不等于人工玩法验收。
+
 ## M7.1 下一步
 
-- [ ] 从已合并 `main` 生成新的 M7.1 private standalone handoff。
-- [ ] 用户亲自试玩：训练管理员 → 15 场训练 → EXP/升级/技能点 → 双职业技能 → camera/minimap → 退出确认 → Save/Load。
+- [x] 已从修复后的 M7.1 代码重新生成 private standalone handoff：`lapis-m7-1-training-manager-fixed.html`，122,549,933 bytes，SHA-256 `15a8414ca3264a217447209b1fd6ff4c6649c31dcb8c4b09558e4c271b83c5db`。
+- [ ] 用户亲自复验修复版：出生即可发现训练管理员 → 15 场训练 → EXP/升级/技能点 → 双职业技能 → camera/minimap → 退出确认 → Save/Load。
 - [ ] 用户明确通过后追加 `USER-ACCEPTED` evidence；未通过则以当前 main 为新修复基线继续开独立 PR。
