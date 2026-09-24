@@ -11,6 +11,8 @@ import {
 import type {M7TrainingManagerInputSource} from '../src/world/m7-training-manager.ts';
 import {renderM7TrainingManagerDialog} from '../src/ui/m7-training-camp.ts';
 import {renderFieldHud} from '../src/ui/field-hud.ts';
+import {createM5PlayableWorld} from '../src/world/m5-playable-world.ts';
+import {canInteract} from '../src/world/world-model.ts';
 
 const manager=createM7TrainingManager(1,[12,10]);
 const world={mapId:1,x:11,y:10};
@@ -105,4 +107,30 @@ test('S39 field HUD exposes fullscreen directly outside the System menu',()=>{
   );
   assert.equal((html.match(/data-ui="field-fullscreen"/g)??[]).length,1);
   assert.match(html,/data-ui="field-fullscreen" data-action="fullscreen"/);
+});
+
+
+test('M7.1 primary training manager is immediately interactable at the real field spawn contract',()=>{
+  const collision=(width:number,height:number)=>({
+    width,height,
+    grid:Array.from({length:width*height},(_,index)=>{
+      const x=Math.floor(index/height),y=index%height;
+      return (x+y)%2===0&&x>1&&x<width-2&&y>1&&y<height-2?1:0;
+    }),
+  });
+  const map=(id:number,width:number,height:number)=>({
+    manifest:{id,name:'test-'+id,png:'',collision:'',inspector:'',render:{width:width*32,height:height*16},evidence:'SYNTHETIC'},
+    collision:collision(width,height),
+    inspector:{width:1,height:1,cells:[]},
+  });
+  const pack:any={
+    maps:{'0':map(0,47,47),'1':map(1,69,79),'7':map(7,69,79)},
+    animations:{'1001':{},'4023':{},'4524':{},'4544':{}},
+  };
+  const world=createM5PlayableWorld(pack);
+  assert.deepEqual(world.content.start,{mapId:1,x:22,y:24});
+  assert.deepEqual(world.trainingManager.entity.x,20);
+  assert.deepEqual(world.trainingManager.entity.y,24);
+  assert.equal(canInteract(world.trainingManager.entity,world.content.start),true);
+  assert.equal(world.visuals.find(row=>row.id==='training-manager')?.label,'训练管理员 · 15关');
 });
