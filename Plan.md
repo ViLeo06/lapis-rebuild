@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.7｜更新：2026-09-23｜Web-first  
+> 版本：v3.8｜更新：2026-09-24｜Web-first  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -27,6 +27,8 @@
 - 2026-09-20 用户亲自试玩最终 S24 standalone HTML 后明确确认 **通过**。M5.1 已完成原版结构优先 HUD、NPC pointer/hitbox、显式对话/任务选择、手机触控、延迟追中相机与战斗主动撤退确认。最终验收运行时 head `97bd5063749a15e114ce85119015f9dcb8b7afc0`；run `35442734082` synthetic/private-original/Chromium/offline 成功，E2E `58 passed / 4 skipped / 0 failed`；artifact `10583854810`；最终单 HTML 11,214,215 bytes，SHA-256 `0ddc54035f88c6b9c0e13a31fa621ac4a74a4455fb40e9959076fded34a201b7`。**M5 Playability Gate 通过，项目正式进入 M6 Dual-class Completion。**
 - 2026-09-21 M6 Dual-class Completion 已完成自动化与人工验收。S25/S26/S28 已汇入 S29；原 S27 分支无实现，后由 S29 补齐巫师十阶段。生产 runtime 现支持剑士 `100→190`、巫师 `109→199` 共 20 阶段，保留 M5.1 三技能基线、阶段晋阶、M6 SaveV2 extension、装备约束与双职业独立存档轨道。fixed-hash private runtime head `0a51f242a6357031f7f5b83c743fae7724c7e2f9` 的 private E2E 为 `61 passed / 4 skipped / 0 failed`；最终 M6 validation run `35562393435` success，新 30 分钟 soak `1,800,634 ms`、0 page error、0 external request。最终 private HTML 22,968,621 bytes，SHA-256 `f509c71b69ae5b41419a1f9c397108200bad1a1ef449f386927378d7d0ae59b4`。用户已于 2026-09-21 人工试玩确认无问题，**M6 Gate 正式通过**。
 - 2026-09-23 M7 Combat Content Expansion 已完成工程、最终 S34 五项试玩修复与用户验收。S34 最终集成 head `80e7c4307156b18a31c3631542c304d3cf5969b8` 与成功 CI head `dd6a8383963df667c4013004a0667080ae2bd201` 具有相同 Git tree `1b44600e5d352649f766f054be63dd971614765a`；GitHub Actions run `35834469240` success。最终用户试玩包 `lapis-s34-final-playtest-20260923.html` 为 122,226,459 bytes，SHA-256 `862eceb493e87ff53be2d102923b67441eef7791193a1f73ea13649e59f6e409`，复用已验证 private pack `b310803ff4897f23f96cda34cc1989254261f8703d7457c3cf85691812e67287`，3,771/3,771 索引资源 size/SHA 校验通过、0 missing、0 integrity failure。用户于 2026-09-23 明确批准该版本合并；遗留 worker PR #43–#46 经文件级审计确认已被 S34 吸收后关闭为 superseded；PR #42 随后合并 `main`，当前 M7 收口 merge commit 为 `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。**M7 Engineering Gate 与 Human Playability Gate 均通过。**
+- 2026-09-24 M7.1 Gameplay / Progression / Skill Fidelity Completion 已完成 S35–S41 工程收口并合入 `main`。随后用户试玩发现 15 场训练入口实际上难以发现：出生点 `(22,24)` 到旧训练管理员 `(25,23)` 的 Manhattan distance 为 4，而交互半径只有 2。PR #66 将训练管理员移动到真实 Map 1 可走格 `(20,24)`，使出生即处于交互半径；标签强化为 `训练管理员 · 15关`，并增加出生提示和初始化不变量。
+- PR #66 head `721dca21c998561021f261cd597663e63c4595a5` 的 run `35936533115` 通过 parser / typecheck / unit / build / standalone synthetic / Chromium+offline；已合入 `main`，merge `fb738eec6d519bccd5c06f46b87d02282a26de6e`。修复版 private handoff `lapis-m7-1-training-manager-fixed.html` 为 122,549,933 bytes，SHA-256 `15a8414ca3264a217447209b1fd6ff4c6649c31dcb8c4b09558e4c271b83c5db`；复用 fixed-hash 2.2 已验证 private pack。**M7.1 工程门保持关闭；修复版 Human Playability Gate 仍待用户复验。**
 
 ### 0.2 第一波 S1–S5 收口结果
 
@@ -174,10 +176,10 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-**M7 已正式收口，当前稳定基线为 `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。**
+**M7.1 工程收口与训练管理员入口修复已合入，当前稳定基线为 `main@fb738eec6d519bccd5c06f46b87d02282a26de6e`。**
 
-- M7/S34 不再有待合并 PR；#42 已合并，#43–#46 已按 superseded 清理。
-- 后续工作必须从上述 `main` 基线新建功能分支，不复用已关闭的 S30–S34 worker 分支。
+- M7/S34 历史线已收口；M7.1 S35–S41 与 follow-up PR #66 均已合入 `main`。
+- 后续工作必须从 `main@fb738eec6d519bccd5c06f46b87d02282a26de6e` 或更新基线新建功能分支，不复用已关闭的旧 worker 分支。
 - 下一里程碑尚未在本计划中预设；先与用户确认下一任务，再据任务性质升级 Plan/Backlog 并拆分新的并行线。
 - 若后续发现 M7 回归，作为新缺陷单独记录并回溯到用户已验收 artifact SHA `862eceb4...e409` 与 merge `6094aae3...`，不得改写历史验收结论。
 - authored client data / recovered evidence / reconstruction policy 三层继续严格分离。
@@ -481,6 +483,39 @@ S20/S23 必须读取 `docs/research/external-web-research-20260918.md`。其中�
 
 人工门：用户已明确授权本轮工程 PR 收口并合并；这不是对最终 M7.1 standalone 的人工试玩确认，故 Human Playability Gate 仍保持待验。
 
+### 5.8.1 M7.1 训练管理员入口试玩修复 — PR #66 — 已合并
+
+用户在 M7.1 private handoff 试玩时反馈“找不到 15 个关卡的触发入口”。复核确认不是关卡 registry 或对话面板缺失，而是世界入口 placement 不满足“主入口应立即可发现”的体验要求：
+
+- field spawn：`(22,24)`；
+- 修复前训练管理员：`(25,23)`；
+- Manhattan distance：`4`；
+- interaction radius：`2`。
+
+因此出生点不会出现“与训练管理员交谈”的主提示，旧训练引导员反而成为更明显的交互对象。
+
+修复结果：
+
+- 真实 Map 1 collision 上训练管理员落到可走格 `(20,24)`，与出生点距离 `2`；
+- PC `E` / pointer 与移动端 tap 均可在出生即触发同一 training-manager authority；
+- 世界标签改为 `训练管理员 · 15关`；
+- 出生 notice 明确提示 15 场训练入口；
+- `createM5PlayableWorld` 增加不变量：训练管理员若不再能从出生点交互，初始化直接失败；
+- S41 browser acceptance 增加 PC `E` 和 mobile tap 打开 15 场列表的真实入口断言。
+
+验证与交付：
+
+- PR #66 head：`721dca21c998561021f261cd597663e63c4595a5`；
+- GitHub Actions：run `35936533115`，synthetic job success；
+- main merge：`fb738eec6d519bccd5c06f46b87d02282a26de6e`；
+- repaired standalone：`lapis-m7-1-training-manager-fixed.html`；
+- bytes：`122,549,933`；
+- SHA-256：`15a8414ca3264a217447209b1fd6ff4c6649c31dcb8c4b09558e4c271b83c5db`；
+- fixed-hash installer baseline：`c42f37b06f27a6ee0b14e6fea6129cf89956a3e1c7a37c1172a28577f6cdae88`；
+- embedded private entries：`3,908`。
+
+**人工门边界：** 用户已明确授权将该修复合入 main 并更新项目文档，但尚未明确表示已重新试玩并接受修复版 standalone，因此不得记录为 `USER-ACCEPTED`。下一步只需要对这份修复版做人工复验。
+
 ### 5.9 PR 合并规则
 
 - S1–S19 已关闭，不再往旧分支追加 M5.1 runtime 改动。
@@ -555,3 +590,4 @@ CI 不运行原安装器、`NeoDark.exe`、未知 DLL、兼容注入或 Frida �
 - **2026-09-19 v3.3：用户真实试玩判定 M5 Playability Gate 未通过。确认 NPC visual 尚无 pointer hit target、点击会落入地图移动路径；HUD 仍偏开发壳且未按原版结构收敛。启动 M5.1 S20–S24：原版 UI 考古、HUD 恢复、NPC pointer/hitbox、对话/任务 runtime、真实玩家输入验收。同步纳入 2026-09-18 外部深调资料（村庄设施/训练场双入口/任务技能表/2.1 差分线索），并继续严格区分 fixed-hash 2.2 事实与同源历史候选。**
 - **2026-09-22 v3.6：M7 S30–S34 工程收口。19 怪物、双职业前七阶段 14 技能×6级、15 训练战、Recovery、Developer Preset、M7 SaveV2 和 mobile/exit 统一接线；run `35690650510` 与 S17 evidence run 全绿。固定哈希 Drive 分片静态生成 private-original standalone，SHA-256 `6ba49699...cc782b`。M7 Engineering Gate 通过，Human Playability Gate 等待用户试玩；PR #42 不合并 main。**
 - **2026-09-23 v3.7：M7 Human Playability Gate 正式关闭。S34 五项用户试玩修复完成后，最终 run `35834469240` success；最终 private playtest HTML 为 122,226,459 bytes / SHA-256 `862eceb4...e409`，private pack 3,771/3,771 校验通过。用户明确批准合并；旧 worker PR #43–#46 经审计关闭为 superseded；PR #42 合并至 main，形成新稳定基线 `6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。下一里程碑等待与用户确认后再写入计划。**
+- **2026-09-24 v3.8：M7.1 S35–S41 工程收口后，用户试玩发现 15 场训练主入口不可发现。根因是训练管理员与出生点 Manhattan distance 4 > interaction radius 2。PR #66 将入口移至真实 Map 1 可走格 `(20,24)`，出生即可 E/轻点打开 15 场列表；run `35936533115` success，merge `fb738eec...de6e`。修复版 standalone 为 122,549,933 bytes / SHA-256 `15a8414c...c5db`。工程修复已合并，Human Playability Gate 等待用户复验。**
