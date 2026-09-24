@@ -264,6 +264,9 @@
 - [x] 世界训练管理员复用原 15 场 registry；PC/Mobile/键盘 interaction authority 保持统一。
 - [x] 主场景 fullscreen 直接入口接入。
 - [x] PR #59 已并入 M7.1 集成线。
+- [x] 2026-09-24 用户试玩发现 15 场主入口不可发现；根因为管理员初始距离出生点 4 格、交互半径仅 2。
+- [x] PR #66 将管理员放到出生点可交互范围内，标签改为“训练管理员 · 15关”，增加出生提示和 spawn-interaction invariant；run `35936533115` 全绿。
+- [x] PR #66 已合并 `main`，merge SHA `fb738eec6d519bccd5c06f46b87d02282a26de6e`。
 
 ### S40 Camera / Minimap / Range / Battle Presentation
 - [x] Range 改为 battle-state 自动呈现，无独立 Range toggle / Space 必要步骤。
@@ -282,6 +285,7 @@
 
 ## M7.1 下一步
 
-- [ ] 从已合并 `main` 生成新的 M7.1 private standalone handoff。
-- [ ] 用户亲自试玩：训练管理员 → 15 场训练 → EXP/升级/技能点 → 双职业技能 → camera/minimap → 退出确认 → Save/Load。
-- [ ] 用户明确通过后追加 `USER-ACCEPTED` evidence；未通过则以当前 main 为新修复基线继续开独立 PR。
+- [x] 已生成训练管理员入口修复版 private standalone handoff：`lapis-m7-1-training-manager-fixed.html`，SHA-256 `15a8414ca3264a217447209b1fd6ff4c6649c31dcb8c4b09558e4c271b83c5db`。
+- [ ] 用户亲自试玩修复版：出生点可见/可交互“训练管理员 · 15关” → 打开 15 场列表 → EXP/升级/技能点 → 双职业技能 → camera/minimap → 退出确认 → Save/Load。
+- [ ] 用户明确通过后追加 `USER-ACCEPTED` evidence；未通过则以 `main@fb738eec6d519bccd5c06f46b87d02282a26de6e` 为新修复基线继续开独立 PR。
+- [ ] 若需要重新声明 fixed-hash private-original browser acceptance，仍必须补可观察的成功 private-original run；本次修复仅复用已验证 private pack 重新打包。
