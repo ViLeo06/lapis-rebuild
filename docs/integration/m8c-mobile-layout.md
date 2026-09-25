@@ -26,6 +26,7 @@ Establish the mobile-first layout foundation without rewriting HUD/gameplay/came
 
 - Full Web CI is running on fixed code head `b735bf605e0b5bcc126226f80bcb592bc1910022` for both push and PR events.
 - Parser/synthetic setup and locked dependencies + typecheck + unit tests + production build are already PASS on the fixed head.
+- The exact CI-produced standalone artifact was rechecked at 412x915 with touch: `.battle-player` is 190x92, the minimap test point resolves to `CANVAS`, and touch changes camera x from about 683 to 979 with `MANUAL_VIEW` mode.
 - Chromium integration/offline suite is still running.
 
 ## Remaining
@@ -68,10 +69,10 @@ Establish the mobile-first layout foundation without rewriting HUD/gameplay/came
 
 ## Potential conflicts
 
-- Worker 2 may also touch `web/index.html` while building the PWA shell.
+- Confirmed Worker 2 also changes `web/index.html` and `web/src/m4-main.ts`. Main-session resolution must preserve Worker 2's manifest/PWA registration plus Worker 3's `interactive-widget=resizes-content` viewport metadata and `installMobileLayout()` startup hook.
 - Worker 6 may add overlapping mobile/platform Playwright coverage.
 - No changes were made to `web/src/main.ts`, `web/src/scene.ts`, `web/src/battle.ts`, `Plan.md`, `Backlog.md`, or `AGENTS.md`.
 
 ## Next exact step
 
-Wait for the fixed-head Chromium integration/offline jobs to finish. If green, finalize this note as DONE and close Worker 3 without further product-scope changes.
+Wait for the fixed-head Chromium integration/offline jobs to finish. If green, finalize this note as DONE, record the CI totals, and close Worker 3 without further product-scope changes. If the suite fails, inspect the concrete final-head failure before changing code.
