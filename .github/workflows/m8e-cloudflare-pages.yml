@@ -1,0 +1,68 @@
+name: M8E Cloudflare Pages static smoke
+
+on:
+  push:
+    branches: ['codex/m8e-cloudflare-pages']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pages-static-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Locked install and production build
+        working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Static dist smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f web/dist/index.html
+          test -f web/dist/_headers
+
+          asset="$(find web/dist/assets -type f -print -quit)"
+          test -n "$asset"
+
+          python3 -m http.server 4174 --bind 127.0.0.1 --directory web/dist >"$RUNNER_TEMP/m8e-http.log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for _ in {1..20}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4174/ -o "$RUNNER_TEMP/m8e-index.html"; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/m8e-http.log"
+            exit 1
+          fi
+
+          asset_path="${asset#web/dist/}"
+          curl --fail --silent --show-error "http://127.0.0.1:4174/$asset_path" -o /dev/null
+
+          grep -q '<div id="app"></div>' "$RUNNER_TEMP/m8e-index.html"
+          grep -q 'Cache-Control: public, max-age=31536000, immutable' web/dist/_headers
