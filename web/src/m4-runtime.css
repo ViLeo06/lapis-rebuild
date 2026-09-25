@@ -50,3 +50,35 @@ body.m4-active .game-menu button,#m4-dialogue-root button{touch-action:manipulat
   body.m4-active .menu-panel button{min-height:44px}
   .npc-dialogue-actions button{min-width:96px;min-height:44px;padding:8px 10px}
 }
+
+
+/* M8.0 visual viewport sizing and safe-area anchors. */
+body.m4-active{
+  width:var(--lapis-viewport-width,100vw);
+  height:var(--lapis-viewport-height,100dvh);
+  min-height:0;
+}
+body.m4-active main,
+body.m4-active .world,
+body.m4-active #canvas-host{
+  width:var(--lapis-viewport-width,100vw)!important;
+  height:var(--lapis-viewport-height,100dvh)!important;
+  min-height:0!important;
+}
+body.m4-inventory-open .inventory-panel{
+  left:max(12px,var(--lapis-safe-left))!important;
+  top:calc(72px + var(--lapis-safe-top))!important;
+  width:min(420px,calc(var(--lapis-usable-width) - 24px))!important;
+  max-height:calc(var(--lapis-viewport-height) - 84px - var(--lapis-safe-top) - var(--lapis-safe-bottom))!important;
+}
+.npc-dialogue{
+  left:max(8px,var(--lapis-safe-left));
+  right:max(8px,var(--lapis-safe-right));
+  bottom:max(6px,var(--lapis-safe-bottom));
+}
+@media(max-width:700px){
+  .npc-dialogue{left:max(5px,var(--lapis-safe-left));right:max(5px,var(--lapis-safe-right));bottom:max(5px,var(--lapis-safe-bottom))}
+}
+@media(hover:none) and (pointer:coarse){
+  .npc-dialogue-actions button{min-height:44px;min-width:96px;touch-action:manipulation}
+}
