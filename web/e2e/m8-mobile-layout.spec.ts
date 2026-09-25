@@ -57,7 +57,8 @@ test('M8 narrow portrait preserves compact battle-player footprint',async({page}
   const battleState:GameShellState={
     mode:'battle',
     player:{name:'Mobile',className:'大祭司',portraitLabel:'巫',level:56,hp:501,hpMax:688,mp:119,mpMax:169,gold:0},
-    battle:{targetName:'训练敌人',targetHp:81,targetHpMax:175,action:20,actionMax:20,ready:true,paused:false,skills:[],statuses:[]},
+    field:{mapId:0,mapName:'Synthetic fixture'},
+    battle:{phase:'active',readiness:20,readinessMax:20,ready:true,paused:false,targetName:'训练敌人',targetHp:81,targetHpMax:175,canAttack:true,canRest:true,canReturn:true,skills:[],statuses:[]},
     menu:{open:false,canSave:false,canLoad:false,devEnabled:true},
     diagnostics:{open:false,mapSelector:'0000',rawTiming:'-',actionSlot:'00',direction:'E',bounds:'-',magicRes:'-',provenance:'M8 layout fixture'},
   };
