@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v3.8｜更新：2026-09-24｜Web-first  
+> 版本：v4.0｜更新：2026-09-26｜Mobile-first Web/PWA  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -8,7 +8,12 @@
 
 ### 0.1 当前检查点
 
-主线保持 **Vite + TypeScript + Phaser + Python 静态转换工具链**。Godot 工程只保留参考，不继续双线开发。
+主线保持 **Vite + TypeScript + Phaser + Python 静态转换工具链**。交付模式已切换为 **Mobile-first Web/PWA**，Cloudflare Pages 为首选部署目标；standalone 单 HTML 仅保留历史兼容/旧测试用途，不再作为主要交付。Godot 工程只保留参考，不继续双线开发。
+
+- 2026-09-26 M8.0 Mobile-first Offline Web Foundation 已完成首轮工程收口。PR #69–#74 六个 Worker 的 Resource Manifest、PWA App Shell、Mobile Layout、IndexedDB Save Store、Cloudflare Pages 准备和 Platform Acceptance 已由集成 PR #75 吸收并合入 `main`。
+- M8.0 集成 PR #75 head `017dc629af6094ce27946ada0c05191d05ca88d7`：Cloudflare Pages static smoke run `36188231126` success；Web and parser validation run `36188231235` success，其中 parser、typecheck、unit、production build、Chromium integration/offline 全部通过；`private-original` 按 PR 条件 skipped，不记作通过。
+- M8.0 主线 merge commit：`5f7896ffa89726a0ab864b5a9f5034047ce4fd04`。后续开发从该 main 新建分支。
+- Worker 执行模式同时升级：并行 Worker 默认只使用 GitHub/CI/在线工具；禁止使用 Desktop Commander 或用户本地电脑作为开发执行环境。仅主 Session 在明确集成排障/恢复未上传成果时可例外。
 
 - `main` 已收口 PR #2/#3/#4/#5，以及第一波并行考古 PR #7–#11（S1 Encounter、S2 Enemy AI、S3 Damage、S4 Quest/NPC、S5 Visual）。
 - M0/G0：完成。安装包、精确 payload、全量静态展开、哈希和主要解析器均可复现。
@@ -175,7 +180,7 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-**M7.1 工程收口与训练管理员入口修复已合入。当前稳定功能基线为 `main@fb738eec6d519bccd5c06f46b87d02282a26de6e`；其后仅有文档收口提交。**
+**M8.0 Web/PWA Foundation 已合入。当前稳定功能基线为 `main@5f7896ffa89726a0ab864b5a9f5034047ce4fd04`。**
 
 - M7/S34 历史线已关闭；M7.1 S35–S41、最终集成 PR #63/#64 与 follow-up PR #66 均已合入 `main`。
 - 后续功能工作必须从当前 `main` 新建分支，不复用已关闭的 S30–S41 worker/fix 分支。
@@ -191,7 +196,7 @@ S4 已到达明确的 client evidence boundary：
 
 **证据固化 → 资源转换 → Web 诊断 → Web 可玩切片 → 行为校准 → 核心系统 → 双职业完整化 → 战斗内容扩展 → Web 发布 → 可选联网**
 
-终端用户目标是打开现代桌面浏览器即可体验；不要求安装原 Windows 客户端、Godot、Node、Python 或 VM。私人单文件 HTML 是当前最快的人机联合验收载体。
+终端用户目标是通过固定网址在手机和桌面现代浏览器直接体验，并可安装为 PWA；不要求安装原 Windows 客户端、Godot、Node、Python 或 VM。主要验收载体改为标准 production Web/PWA 构建，后续由 Cloudflare Pages 提供固定入口；standalone 单 HTML 不再作为主要交付。
 
 ### 1.2 MVP 验收
 
