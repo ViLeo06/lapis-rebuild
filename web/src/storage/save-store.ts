@@ -46,8 +46,8 @@ export function validateStoredSaveV2(raw:unknown):SaveV2{
   if(!record(raw))throw new CorruptSaveError();
   if(raw.kind!==SAVE_KIND||raw.version!==CURRENT_SAVE_VERSION)throw new CorruptSaveError('Stored value is not SaveV2');
   if(typeof raw.pack!=='string'||!raw.pack||typeof raw.character!=='string'||!raw.character)throw new CorruptSaveError('Stored SaveV2 identity is invalid');
-  if(!Number.isInteger(raw.mapId)||(raw.mapId as number)<0||!Number.isFinite(raw.x)||!Number.isFinite(raw.y))throw new CorruptSaveError('Stored SaveV2 position is invalid');
-  if(!Number.isInteger(raw.gold)||(raw.gold as number)<0)throw new CorruptSaveError('Stored SaveV2 gold is invalid');
+  if(typeof raw.mapId!=='number'||!Number.isInteger(raw.mapId)||raw.mapId<0||typeof raw.x!=='number'||!Number.isFinite(raw.x)||typeof raw.y!=='number'||!Number.isFinite(raw.y))throw new CorruptSaveError('Stored SaveV2 position is invalid');
+  if(typeof raw.gold!=='number'||!Number.isInteger(raw.gold)||raw.gold<0)throw new CorruptSaveError('Stored SaveV2 gold is invalid');
   if(!record(raw.inventory)||!record(raw.questFlags)||!record(raw.progression)||!Array.isArray(raw.rewardReceipts))throw new CorruptSaveError('Stored SaveV2 payload is incomplete');
   if(typeof raw.savedAt!=='string'||!Number.isFinite(Date.parse(raw.savedAt)))throw new CorruptSaveError('Stored SaveV2 timestamp is invalid');
   return cloneSave(raw as unknown as SaveV2);
