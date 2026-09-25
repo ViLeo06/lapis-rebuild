@@ -54,7 +54,9 @@ export function validateStoredSaveV2(raw:unknown):SaveV2{
 }
 
 export class SaveStoreAdapter implements SaveStore{
-  constructor(private readonly openDatabase:SaveStoreDatabaseFactory){}
+  private readonly openDatabase:SaveStoreDatabaseFactory;
+
+  constructor(openDatabase:SaveStoreDatabaseFactory){this.openDatabase=openDatabase;}
 
   async save(slot:string,save:SaveV2):Promise<void>{
     const key=validSlot(slot);
@@ -89,7 +91,10 @@ export class SaveStoreAdapter implements SaveStore{
 }
 
 class IndexedDbDatabase implements SaveStoreDatabase{
-  constructor(private readonly db:IDBDatabase,private readonly storeName:string){}
+  private readonly db:IDBDatabase;
+  private readonly storeName:string;
+
+  constructor(db:IDBDatabase,storeName:string){this.db=db;this.storeName=storeName;}
 
   get(slot:string):Promise<unknown>{
     return new Promise((resolve,reject)=>{
