@@ -1,6 +1,23 @@
 # Backlog
 
-> 2026-09-23 | Web-first | Plan v3.7 | M7 engineering + human playability gates passed | active: next milestone definition
+> 2026-09-26 | Mobile-first Web/PWA | Plan v4.0 | M8.0 foundation merged | active: post-M8.0 integration and next content round
+
+## M8.0 Web/PWA Foundation — 已收口
+
+- [x] Worker 1：Resource Manifest / content hash contract。
+- [x] Worker 2：PWA App Shell / Service Worker / offline shell。
+- [x] Worker 3：Mobile-first viewport / safe-area / orientation foundation。
+- [x] Worker 4：IndexedDB-backed SaveV2 storage adapter。
+- [x] Worker 5：Cloudflare Pages deployment preparation + static smoke。
+- [x] Worker 6：Desktop/mobile/production platform acceptance harness。
+- [x] 集成 PR #75 合并 `main`，merge commit `5f7896ffa89726a0ab864b5a9f5034047ce4fd04`。
+- [x] Cloudflare Pages static smoke run `36188231126` success。
+- [x] Web and parser validation run `36188231235` success；parser/typecheck/unit/build/Chromium integration/offline 全通过。
+- [x] PR #69–#74 已由 #75 吸收，不再单独合并。
+- [x] `AGENTS.md` 已明确：后续并行 Worker 默认禁止 Desktop Commander / 用户本地电脑；GitHub/CI/在线工具为事实来源。
+- [ ] 真实 Cloudflare Pages 首次部署、域名绑定、私有素材托管仍需单独授权。
+- [ ] 后续第二轮：private asset pack 导入 / 增量内容更新 / save export-import / 手机真机 PWA 安装验收。
+- [ ] 后续内容里程碑：第一章完整冒险链 / 更完整世界与剧情内容。
 
 ## 已完成基线
 
