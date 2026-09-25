@@ -1,6 +1,8 @@
 import './ui/game-shell.css';
 import './m4-runtime.css';
 import './ui/m7-training.css';
+import './pwa-shell.ts';
+import {installMobileLayout} from './view/mobile-layout.ts';
 import {LabScene} from './scene.ts';
 import {installM4Runtime} from './m4-runtime-integration.ts';
 
@@ -25,6 +27,9 @@ declare global{
     };
   }
 }
+
+const mobileLayout=installMobileLayout();
+window.addEventListener('beforeunload',()=>mobileLayout.destroy(),{once:true});
 
 const forceM4=new URLSearchParams(location.search).get('m4')==='1';
 const enableM4=!navigator.webdriver||forceM4;

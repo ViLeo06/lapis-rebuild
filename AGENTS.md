@@ -91,10 +91,18 @@ Python 3.12 负责：安装包静态拆解、旧格式解析、资源转换、�
 - 不直接向 `main` 提交。
 - 功能分支开发，通过 PR 集成。
 - 未经负责人明确批准不合并 `main`。
-- 当前阶段：**M7 Combat Content Expansion 已完成工程与用户试玩验收并合并 main**。执行计划为 `Plan.md v3.7`；稳定基线为 `main@6094aae3c4ff0a04af5dd4376f2b59b8b342d430`。下一里程碑尚未启动，必须从该 main 新建功能分支；已关闭的 S30–S34 worker 分支仅作历史证据，不继续追加共享运行时改动。
+- 当前阶段：**M8.0 Mobile-first Offline Web Foundation**。标准交付改为多文件 Web/PWA，Cloudflare Pages 为首选部署目标；standalone 单 HTML 仅作历史兼容/旧测试资产，不再是主要交付方式。实时稳定基线与阶段状态以 `Plan.md` 为准。
 - 临时诊断/修复分支可使用 `codex/*`；验证后只做非 force 快进/正常 PR 集成。
 - 同一路径修改前读取最新 blob SHA，避免覆盖并发更新。
 - commit 保持小而清楚：`feat/fix/test/docs/refactor/chore`。
+
+### Worker 执行环境约束
+
+- 默认 **禁止 Worker 使用 Desktop Commander / Remote Desktop Commander 或用户本地电脑作为开发执行环境**。
+- Worker 应优先使用 GitHub、CI 和当前 ChatGPT 可直接访问的云端/在线工具完成代码、测试、PR 和交接。
+- 不得为普通 Worker 任务在用户桌面创建 clone、worktree、临时脚本、测试产物或说明文件；本地电脑不得成为项目状态的事实来源。
+- 只有主 Session 在集成排障、恢复未上传成果或用户明确授权本地检查时，才可临时使用 Desktop Commander；使用后仍必须把有效成果、状态和证据同步回 GitHub。
+- 后续所有并行 Worker 提示词都必须显式重复这一约束，避免仅依赖本文件被读取。
 
 ## 7. 资产和版权
 
@@ -113,7 +121,7 @@ Debug Panel 是核心研发工具，早期不得为“界面简洁”删除。�
 **人工视觉门禁新增规则：**
 
 - 角色像素解码、方向映射、anchor/bounds、地图 z-order/遮挡、MagicRes placement 等视觉语义变化，不能只依赖 E2E。
-- 每次相关重大变更后生成私人离线 HTML，至少人工检查剑士/巫师八方向、站立/走路/攻击切换和明显切片/抖动。
+- 每次相关重大变更后使用标准 production Web/PWA 构建进行人工检查，至少检查剑士/巫师八方向、站立/走路/攻击切换和明显切片/抖动；不再要求生成 standalone 单 HTML。
 - 用户截图/手感反馈属于高价值验证输入；若与自动测试冲突，先把问题当真实缺陷调查，不用“CI通过”否定人工观察。
 
 ## 9. 当前已验证事实，禁止回退
@@ -160,7 +168,7 @@ Debug Panel 是核心研发工具，早期不得为“界面简洁”删除。�
 
 修改解析器：运行 synthetic parser tests，并在可用时用 fixed-hash 私有原资源做全量/目标 smoke。
 
-修改 Web：至少 typecheck、unit tests、production build、Chromium E2E、离线单 HTML。
+修改 Web：至少 typecheck、unit tests、standard production build、Chromium E2E；涉及 PWA/离线能力时追加 production dist 的 PWA/offline 验收。standalone 单 HTML 不再是 M8 主门禁。
 
 关键检查点：真实 30 分钟 wall-clock soak 与快速逻辑测试分别记录；不能互相冒充。
 
