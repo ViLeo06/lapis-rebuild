@@ -52,6 +52,22 @@ for(const profile of [
   });
 }
 
+test('M8 narrow portrait preserves compact battle-player footprint',async({page})=>{
+  await page.setViewportSize({width:412,height:915});
+  const battleState:GameShellState={
+    mode:'battle',
+    player:{name:'Mobile',className:'大祭司',portraitLabel:'巫',level:56,hp:501,hpMax:688,mp:119,mpMax:169,gold:0},
+    battle:{targetName:'训练敌人',targetHp:81,targetHpMax:175,action:20,actionMax:20,ready:true,paused:false,skills:[],statuses:[]},
+    menu:{open:false,canSave:false,canLoad:false,devEnabled:true},
+    diagnostics:{open:false,mapSelector:'0000',rawTiming:'-',actionSlot:'00',direction:'E',bounds:'-',magicRes:'-',provenance:'M8 layout fixture'},
+  };
+  await page.setContent(`<!doctype html><html data-lapis-orientation="portrait" data-lapis-layout="compact" style="--lapis-safe-top:0px;--lapis-safe-right:0px;--lapis-safe-bottom:0px;--lapis-safe-left:0px;--lapis-viewport-width:412px;--lapis-viewport-height:915px"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html,body{margin:0;overflow:hidden}${css}</style></head><body>${renderGameShell(battleState)}</body></html>`);
+  const player=await rect(page,'.battle-player');
+  expect(player.top).toBeGreaterThanOrEqual(197);
+  expect(player.height).toBeLessThanOrEqual(120);
+  expect(player.bottom).toBeLessThan(330);
+});
+
 test.describe('M8 coarse-touch landscape controls',()=>{
   test.use({viewport:{width:844,height:390},hasTouch:true,isMobile:true});
   test('primary field controls keep a 44px touch target',async({page})=>{

@@ -878,6 +878,7 @@
 @media(max-width:560px){
   .top-command-strip{height:calc(52px + var(--lapis-safe-top));padding-top:calc(4px + var(--lapis-safe-top));padding-left:max(5px,var(--lapis-safe-left));padding-right:max(82px,calc(82px + var(--lapis-safe-right)))}
   .field-fullscreen-button{top:calc(4px + var(--lapis-safe-top));right:max(5px,var(--lapis-safe-right));height:44px}
+  .battle-player{top:calc(198px + var(--lapis-safe-top));right:max(5px,var(--lapis-safe-right));bottom:auto}
   .small-map-plate{left:max(5px,var(--lapis-safe-left));top:calc(58px + var(--lapis-safe-top))}
   .quest-tracker{right:max(5px,var(--lapis-safe-right));top:calc(58px + var(--lapis-safe-top))}
   .player-plate{left:max(5px,var(--lapis-safe-left));bottom:max(5px,var(--lapis-safe-bottom));max-width:var(--lapis-usable-width)}
