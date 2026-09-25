@@ -810,3 +810,90 @@
   .battle-player .hud-meter-line{font-size:7px}
   .battle-stat-row{font-size:7px}
 }
+
+
+/* M8.0 mobile-first viewport / safe-area foundation. */
+:root{
+  --lapis-safe-top:env(safe-area-inset-top,0px);
+  --lapis-safe-right:env(safe-area-inset-right,0px);
+  --lapis-safe-bottom:env(safe-area-inset-bottom,0px);
+  --lapis-safe-left:env(safe-area-inset-left,0px);
+  --lapis-viewport-width:100vw;
+  --lapis-viewport-height:100dvh;
+  --lapis-viewport-offset-left:0px;
+  --lapis-viewport-offset-top:0px;
+  --lapis-usable-width:calc(var(--lapis-viewport-width) - var(--lapis-safe-left) - var(--lapis-safe-right));
+  --lapis-usable-height:calc(var(--lapis-viewport-height) - var(--lapis-safe-top) - var(--lapis-safe-bottom));
+}
+@supports not (height:100dvh){:root{--lapis-viewport-height:100vh}}
+.lapis-game-shell,.game-stage{
+  width:var(--lapis-viewport-width,100vw);
+  height:var(--lapis-viewport-height,100dvh);
+  min-height:0;
+}
+.world-viewport{min-height:0}
+.top-command-strip{
+  height:calc(32px + var(--lapis-safe-top));
+  padding-top:calc(2px + var(--lapis-safe-top));
+  padding-left:max(6px,var(--lapis-safe-left));
+  padding-right:max(82px,calc(82px + var(--lapis-safe-right)));
+}
+.field-fullscreen-button{top:calc(2px + var(--lapis-safe-top));right:max(6px,var(--lapis-safe-right))}
+.small-map-plate{left:max(8px,var(--lapis-safe-left));top:calc(38px + var(--lapis-safe-top))}
+.quest-tracker{right:max(8px,var(--lapis-safe-right));top:calc(38px + var(--lapis-safe-top))}
+.player-plate{left:max(8px,var(--lapis-safe-left));bottom:max(6px,var(--lapis-safe-bottom))}
+.field-bottom-center{left:calc(296px + var(--lapis-safe-left));right:calc(286px + var(--lapis-safe-right));bottom:max(6px,var(--lapis-safe-bottom))}
+.field-bottom-right{right:max(8px,var(--lapis-safe-right));bottom:max(6px,var(--lapis-safe-bottom))}
+.interaction-prompt{bottom:calc(76px + var(--lapis-safe-bottom))}
+.game-notice{top:calc(38px + var(--lapis-safe-top))}
+.battle-player{right:max(8px,var(--lapis-safe-right));bottom:max(6px,var(--lapis-safe-bottom))}
+.target-plate{right:max(8px,var(--lapis-safe-right));top:calc(38px + var(--lapis-safe-top))}
+.battle-state{right:max(8px,var(--lapis-safe-right));top:calc(100px + var(--lapis-safe-top))}
+.command-deck{left:max(8px,var(--lapis-safe-left));right:calc(294px + var(--lapis-safe-right));bottom:max(6px,var(--lapis-safe-bottom));width:auto;max-width:650px}
+.developer-diagnostics{right:max(8px,var(--lapis-safe-right));top:max(8px,var(--lapis-safe-top));max-height:calc(var(--lapis-viewport-height) - 16px - var(--lapis-safe-top) - var(--lapis-safe-bottom))}
+.game-menu{padding:var(--lapis-safe-top) var(--lapis-safe-right) var(--lapis-safe-bottom) var(--lapis-safe-left)}
+
+@media(max-width:900px){
+  .top-command-strip{height:calc(30px + var(--lapis-safe-top));padding-top:calc(2px + var(--lapis-safe-top));padding-left:max(5px,var(--lapis-safe-left))}
+  .field-fullscreen-button{right:max(6px,var(--lapis-safe-right))}
+  .small-map-plate{left:max(6px,var(--lapis-safe-left));top:calc(36px + var(--lapis-safe-top))}
+  .quest-tracker{right:max(6px,var(--lapis-safe-right));top:calc(36px + var(--lapis-safe-top))}
+  .player-plate{left:max(6px,var(--lapis-safe-left));bottom:max(5px,var(--lapis-safe-bottom))}
+  .field-bottom-center{left:calc(266px + var(--lapis-safe-left));right:calc(244px + var(--lapis-safe-right));bottom:max(5px,var(--lapis-safe-bottom))}
+  .field-bottom-right{right:max(6px,var(--lapis-safe-right));bottom:max(5px,var(--lapis-safe-bottom))}
+  .interaction-prompt{bottom:calc(69px + var(--lapis-safe-bottom))}
+  .game-notice{top:calc(36px + var(--lapis-safe-top))}
+  .battle-player{right:max(6px,var(--lapis-safe-right));bottom:max(5px,var(--lapis-safe-bottom))}
+  .target-plate{right:max(6px,var(--lapis-safe-right));top:calc(36px + var(--lapis-safe-top))}
+  .battle-state{right:max(6px,var(--lapis-safe-right));top:calc(98px + var(--lapis-safe-top))}
+  .command-deck{left:max(6px,var(--lapis-safe-left));right:calc(250px + var(--lapis-safe-right));bottom:max(5px,var(--lapis-safe-bottom));width:auto}
+}
+@media(max-width:700px){
+  .field-bottom-center{left:calc(238px + var(--lapis-safe-left));right:calc(216px + var(--lapis-safe-right))}
+  .field-bottom-right{right:max(5px,var(--lapis-safe-right))}
+  .battle-player{right:max(5px,var(--lapis-safe-right))}
+  .target-plate,.battle-state{right:max(5px,var(--lapis-safe-right))}
+  .command-deck{left:max(5px,var(--lapis-safe-left));right:calc(216px + var(--lapis-safe-right));width:auto}
+}
+@media(max-width:560px){
+  .top-command-strip{height:calc(52px + var(--lapis-safe-top));padding-top:calc(4px + var(--lapis-safe-top));padding-left:max(5px,var(--lapis-safe-left));padding-right:max(82px,calc(82px + var(--lapis-safe-right)))}
+  .field-fullscreen-button{top:calc(4px + var(--lapis-safe-top));right:max(5px,var(--lapis-safe-right));height:44px}
+  .small-map-plate{left:max(5px,var(--lapis-safe-left));top:calc(58px + var(--lapis-safe-top))}
+  .quest-tracker{right:max(5px,var(--lapis-safe-right));top:calc(58px + var(--lapis-safe-top))}
+  .player-plate{left:max(5px,var(--lapis-safe-left));bottom:max(5px,var(--lapis-safe-bottom));max-width:var(--lapis-usable-width)}
+  .interaction-prompt{bottom:calc(70px + var(--lapis-safe-bottom));max-width:calc(var(--lapis-usable-width) - 10px)}
+  .game-notice{top:calc(58px + var(--lapis-safe-top))}
+  .target-plate{right:max(5px,var(--lapis-safe-right));top:calc(58px + var(--lapis-safe-top))}
+  .battle-state{right:max(5px,var(--lapis-safe-right));top:calc(120px + var(--lapis-safe-top))}
+  .command-deck{left:max(5px,var(--lapis-safe-left));right:max(5px,var(--lapis-safe-right));bottom:max(5px,var(--lapis-safe-bottom));width:auto;max-width:none}
+  .developer-diagnostics{left:max(5px,var(--lapis-safe-left));right:max(5px,var(--lapis-safe-right));top:calc(58px + var(--lapis-safe-top));width:auto;max-height:calc(var(--lapis-viewport-height) - 64px - var(--lapis-safe-top) - var(--lapis-safe-bottom))}
+}
+@media(hover:none) and (pointer:coarse){
+  .top-command-strip{height:calc(52px + var(--lapis-safe-top));padding-top:calc(4px + var(--lapis-safe-top))}
+  .top-command-button:not(:disabled),.field-fullscreen-button,.game-menu button,.interaction-prompt,.battle-command{min-height:44px}
+  .field-fullscreen-button{top:calc(4px + var(--lapis-safe-top));height:44px}
+  .small-map-plate,.quest-tracker{top:calc(58px + var(--lapis-safe-top))}
+  .game-notice{top:calc(58px + var(--lapis-safe-top))}
+  .target-plate{top:calc(58px + var(--lapis-safe-top))}
+  .battle-state{top:calc(120px + var(--lapis-safe-top))}
+}
