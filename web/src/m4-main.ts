@@ -1,6 +1,7 @@
 import './ui/game-shell.css';
 import './m4-runtime.css';
 import './ui/m7-training.css';
+import './pwa-shell.ts';
 import {LabScene} from './scene.ts';
 import {installM4Runtime} from './m4-runtime-integration.ts';
 
