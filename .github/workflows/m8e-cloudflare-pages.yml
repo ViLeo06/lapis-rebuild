@@ -3,6 +3,12 @@ name: M8E Cloudflare Pages static smoke
 on:
   push:
     branches: ['codex/m8e-cloudflare-pages']
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'docs/deployment/cloudflare-pages.md'
+      - '.github/workflows/m8e-cloudflare-pages.yml'
   workflow_dispatch:
 
 permissions:
