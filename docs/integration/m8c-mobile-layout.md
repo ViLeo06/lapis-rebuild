@@ -1,10 +1,11 @@
 # M8.0 Worker 3 — Mobile-first Layout Foundation
 
-STATUS: PARTIAL
+STATUS: DONE
 
 Base SHA: `e1ed76ea34034865a678a65e67782575db4e1c3b`
 Branch: `codex/m8c-mobile-layout`
-Current code HEAD: `b735bf605e0b5bcc126226f80bcb592bc1910022`
+Validated code HEAD: `b735bf605e0b5bcc126226f80bcb592bc1910022`
+Closeout branch HEAD: use the live `codex/m8c-mobile-layout` branch ref / PR #72 head; the final commit is note-only.
 
 ## Scope
 
@@ -24,15 +25,12 @@ Establish the mobile-first layout foundation without rewriting HUD/gameplay/came
 
 ## In progress
 
-- Full Web CI is running on fixed code head `b735bf605e0b5bcc126226f80bcb592bc1910022` for both push and PR events.
-- Parser/synthetic setup and locked dependencies + typecheck + unit tests + production build are already PASS on the fixed head.
-- The exact CI-produced standalone artifact was rechecked at 412x915 with touch: `.battle-player` is 190x92, the minimap test point resolves to `CANVAS`, and touch changes camera x from about 683 to 979 with `MANUAL_VIEW` mode.
-- Chromium integration/offline suite is still running.
+- None. Worker 3 implementation and validation are complete.
 
 ## Remaining
 
-- Confirm the fixed-head Chromium integration/offline suite is green.
-- If green, mark this note `STATUS: DONE`, record final CI totals and final branch HEAD, and leave PR #72 open for main-session integration.
+- None for Worker 3.
+- Leave PR #72 open for main-session integration.
 - Do not merge `main`.
 
 ## Files changed
@@ -53,8 +51,9 @@ Establish the mobile-first layout foundation without rewriting HUD/gameplay/came
 - First code-head Worker 3 M8 Playwright: 6/6 PASS.
 - First code-head full Chromium suite: 91 passed / 9 skipped / 1 failed; the sole failure was the M8-introduced narrow battle-player overlay regression described above.
 - Fixed-head `b735bf605e0b5bcc126226f80bcb592bc1910022`: parser/synthetic PASS; typecheck + unit tests + production build PASS.
-- Fixed-head full Chromium suite: IN PROGRESS.
-- FULL E2E: IN PROGRESS.
+- Fixed-head full Chromium integration/offline suite: PASS — `93 passed / 9 skipped`.
+- GitHub Actions run `36132001600`: workflow `success`; synthetic job `success`; private-original job `skipped` by design.
+- FULL E2E: PASS for the repository synthetic Chromium integration/offline suite on validated code HEAD `b735bf605e0b5bcc126226f80bcb592bc1910022`.
 
 ## Known limitations
 
@@ -75,4 +74,4 @@ Establish the mobile-first layout foundation without rewriting HUD/gameplay/came
 
 ## Next exact step
 
-Wait for the fixed-head Chromium integration/offline jobs to finish. If green, finalize this note as DONE, record the CI totals, and close Worker 3 without further product-scope changes. If the suite fails, inspect the concrete final-head failure before changing code.
+Main session: review PR #72, resolve only the documented Worker 2 / Worker 6 integration overlaps, run the integrated platform suite, and preserve Worker 3 behavior.
