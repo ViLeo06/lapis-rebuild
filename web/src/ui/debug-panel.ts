@@ -1,4 +1,0 @@
-import type {DiagnosticsState} from './types.ts';
-import {escapeHtml} from './ui-utils.ts';
-function row(label:string,value:string|undefined):string{return `<div class="diagnostic-row"><span>${escapeHtml(label)}</span><code>${escapeHtml(value||'--')}</code></div>`;}
-export function renderDebugPanel(debug:DiagnosticsState):string{return `<details class="developer-diagnostics"${debug.open?' open':''} id="developer-diagnostics" data-ui="debug-panel"><summary>Developer / Diagnostics <span>开发者信息</span></summary><div class="diagnostic-grid"><section><h3>场景 / 地图</h3>${row('map selector',debug.mapSelector)}${row('action slot',debug.actionSlot)}${row('direction',debug.direction)}${row('anchor / bounds',debug.bounds)}</section><section><h3>动画 / 特效</h3>${row('ANI raw timing',debug.rawTiming)}${row('MagicRes inspector',debug.magicRes)}</section><section class="provenance-block"><h3>Provenance</h3><p>${escapeHtml(debug.provenance||'未提供')}</p></section></div></details>`;}
