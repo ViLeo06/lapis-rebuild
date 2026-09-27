@@ -129,4 +129,9 @@ Initial Worker 5 branch is expected to keep baseline typecheck/build compatibili
 
 - Initial Worker 5 CI attempt exposed a harness error: the platform smoke ran without the repository-standard synthetic `game-data` fixture, so Vite returned HTML fallback where the game expected JSON. This was an acceptance-harness failure, not a product PASS/FAIL result.
 - The workflow was corrected to run `python3 tools/testing/make_web_fixture.py --out web/public/game-data` before typecheck/unit/build and platform smoke.
-- A new CI run is required on the corrected head before Worker 5 can report its own scaffold as green.
+- Corrected Worker 5 validation run `36298368254`: **SUCCESS** on head `9144b024faa76b233b86248ee03d323f85d99c13`.
+  - locked install / typecheck / unit / production build: PASS;
+  - unit suite: 352 pass / 0 fail / 4 skip; the four skips are the Worker 5 incremental/repair acceptance tests because Worker 2 is not yet present on the tested PR tree;
+  - existing M8 platform smoke: 2 passed;
+  - M8.1 distribution black-box suite: 4 skipped because Worker 3 production wiring is not yet present and no authorized Pages URL exists.
+- This green run proves the Worker 5 acceptance scaffold is healthy. It **does not** convert blocked dependency tests or the M8.1 Engineering/Human gates to PASS.
