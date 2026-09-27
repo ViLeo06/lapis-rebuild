@@ -26,6 +26,8 @@ jobs:
           node-version: '22.16.0'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Build synthetic public game-data fixture
+        run: python3 tools/testing/make_web_fixture.py --out web/public/game-data
       - name: Locked install, typecheck, unit and production build
         working-directory: web
         run: |
