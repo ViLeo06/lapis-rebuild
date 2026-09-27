@@ -6,7 +6,7 @@ STATUS: **ENGINEERING DONE / AWAITING_RELEASE_AUTHORIZATION**
 - Branch: `codex/m8-1d-pages-release`
 - PR: #81 — https://github.com/ViLeo06/lapis-rebuild/pull/81
 - PR base: `codex/m8-1-distribution-playtest-integration`
-- Validated final head: `66725e48e32c55775ff1f9181fd6571d818bd3f6`
+- Validated implementation head: `66725e48e32c55775ff1f9181fd6571d818bd3f6`
 - Release-gate run: `36298222660` — **SUCCESS**
 - Real Cloudflare deployment: **NOT AUTHORIZED**
 
@@ -41,7 +41,7 @@ No changes are made to `m4-main.ts`, `pwa-shell.ts`, `service-worker.js`, `Plan.
 
 ## Validation
 
-GitHub Actions run `36298222660` passed all Worker 4 release gates on final validated head `66725e48e32c55775ff1f9181fd6571d818bd3f6`:
+GitHub Actions run `36298222660` passed all Worker 4 release gates on implementation head `66725e48e32c55775ff1f9181fd6571d818bd3f6`:
 
 - locked `npm ci --ignore-scripts`: PASS
 - unit tests: PASS
@@ -55,7 +55,7 @@ GitHub Actions run `36298222660` passed all Worker 4 release gates on final vali
 - required update-safe `_headers`: PASS
 - private/original leakage and unlisted Full Pack rejection gate: PASS
 
-The final head is green and PR #81 is ready for review. Any later documentation-only closeout commit must rerun the same release gate before handoff.
+The closing documentation commit is expected to rerun the same workflow; the PR should only be marked ready after that final head is green.
 
 ## Conflict audit
 
