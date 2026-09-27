@@ -18,6 +18,15 @@ test('first run offers full download and local pack import without developer ter
   assert.doesNotMatch(html, /Manifest|SHA-256|IndexedDB/);
 });
 
+test('first run without a public full-pack download only offers local import', () => {
+  const snapshot: DistributionSnapshot = { state: 'NO_PACK', canDownloadFullPack: false };
+  const view = getDistributionViewModel(snapshot);
+  assert.deepEqual(view.actions, ['importFullPack']);
+  const html = renderDistributionPanelMarkup(snapshot);
+  assert.doesNotMatch(html, /下载完整资源/);
+  assert.match(html, /导入完整资源包/);
+});
+
 test('installed and offline-ready states keep a direct enter-game path', () => {
   assert.deepEqual(
     getDistributionViewModel({ state: 'READY', installedVersion: 'v1' }).actions,

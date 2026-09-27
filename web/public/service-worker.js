@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lapis-app-shell-v2';
+const CACHE_NAME = 'lapis-app-shell-v3';
 const ASSET_DB_NAME = 'lapis-asset-store';
 const ASSET_DB_VERSION = 1;
 const ASSET_BLOB_STORE = 'blobs';
@@ -137,7 +137,15 @@ async function assetStoreFirst(request, url) {
   }
 
   try {
-    return await fetch(request);
+    const response = await fetch(request);
+    const contentType = response.headers.get('content-type') || '';
+    if (response.ok && contentType.includes('text/html')) {
+      return new Response('Game asset is not installed', {
+        status: 404,
+        headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store'},
+      });
+    }
+    return response;
   } catch {
     return Response.error();
   }

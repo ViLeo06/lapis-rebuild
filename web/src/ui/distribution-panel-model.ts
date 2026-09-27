@@ -32,6 +32,7 @@ export interface DistributionSnapshot {
   targetVersion?: string;
   progress?: DistributionProgress;
   message?: string;
+  canDownloadFullPack?: boolean;
 }
 
 export interface DistributionViewModel {
@@ -100,7 +101,9 @@ export function formatDistributionBytes(value: number | undefined): string {
 function actionsFor(snapshot: DistributionSnapshot): readonly DistributionActionKey[] {
   switch (snapshot.state) {
     case 'NO_PACK':
-      return ['downloadFullPack', 'importFullPack'];
+      return snapshot.canDownloadFullPack === false
+        ? ['importFullPack']
+        : ['downloadFullPack', 'importFullPack'];
     case 'READY':
       return ['enterGame', 'checkUpdate', 'repair'];
     case 'UPDATE_AVAILABLE':
@@ -112,7 +115,9 @@ function actionsFor(snapshot: DistributionSnapshot): readonly DistributionAction
     case 'ERROR':
       return snapshot.installedVersion
         ? ['enterGame', 'checkUpdate', 'repair']
-        : ['downloadFullPack', 'importFullPack'];
+        : snapshot.canDownloadFullPack === false
+          ? ['importFullPack']
+          : ['downloadFullPack', 'importFullPack'];
     default:
       return [];
   }

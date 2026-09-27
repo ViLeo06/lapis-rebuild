@@ -111,6 +111,7 @@ test('M8.1 Pages preview without public content keeps the install panel open', a
   const response=await page.goto('/?m4=1',{waitUntil:'domcontentloaded'});
   expect(response?.ok()).toBeTruthy();
   await expect(page.getByRole('button',{name:/导入完整资源包/})).toBeVisible();
+  await expect(page.getByRole('button',{name:/下载完整资源/})).toHaveCount(0);
   await expect(page.locator('#canvas-host canvas')).toHaveCount(0);
   expect(failures.pageErrors).toEqual([]);
 });

@@ -183,10 +183,15 @@ function initialSnapshot(
     };
   }
   if(release?.content){
-    return{state:'NO_PACK',targetVersion:release.content.version};
+    return{
+      state:'NO_PACK',
+      targetVersion:release.content.version,
+      canDownloadFullPack:Boolean(release.content.fullPackPath),
+    };
   }
   return{
     state:'NO_PACK',
+    canDownloadFullPack:false,
     message:releaseReadFailed
       ?'暂时无法读取在线资源信息，可以稍后重试或导入本地完整资源包。'
       :'当前站点尚未配置公开资源包，可以导入本地完整资源包。',
@@ -342,7 +347,11 @@ export async function installDistributionRuntime(options:{
     const currentInstall=await store.getInstalled(target.contentPack);
     if(!currentInstall){
       installed=undefined;
-      context.setSnapshot({state:'NO_PACK',targetVersion:target.version});
+      context.setSnapshot({
+        state:'NO_PACK',
+        targetVersion:target.version,
+        canDownloadFullPack:Boolean(current.content.fullPackPath),
+      });
       return;
     }
     installed=currentInstall;
@@ -493,12 +502,11 @@ export async function installDistributionRuntime(options:{
     options.startGame();
   }else if(
     !release?.content&&
-    (release?.release.channel==='ci'||release?.release.channel==='local')
+    (navigator.webdriver||location.hostname==='127.0.0.1'||location.hostname==='localhost')
   ){
-    // CI/local legacy fixture mode auto-boots the synthetic game-data fixture.
-    // Real Cloudflare preview/production releases with no public content must
-    // keep the install/import panel open instead of booting into missing
-    // /game-data resources.
+    // Browser automation/local fixture mode auto-boots the synthetic game-data fixture.
+    // Public hosts never auto-boot solely because release metadata is missing or stale;
+    // they keep the install/import panel open until verified resources exist.
     options.startGame();
     panel.close();
   }
