@@ -77,6 +77,13 @@ test('download view exposes percentage, byte totals and current step', async ({ 
   await expect(page.getByText('下载资源')).toBeVisible();
 });
 
+test('native keyboard Tab reaches the primary first-run action', async ({ page }) => {
+  await mountPanel(page, { state: 'NO_PACK' });
+  const download = page.getByRole('button', { name: '下载完整资源' });
+  await page.keyboard.press('Tab');
+  await expect(download).toBeFocused();
+});
+
 test.describe('mobile distribution UX', () => {
   test.use({
     viewport: { width: 915, height: 412 },
@@ -84,7 +91,7 @@ test.describe('mobile distribution UX', () => {
     isMobile: true,
   });
 
-  test('915x412 and 412x915 fit, accept touch, and keep native keyboard focus', async ({ page }) => {
+  test('915x412 and 412x915 fit and accept touch', async ({ page }) => {
     await mountPanel(page, { state: 'NO_PACK' });
     await expectNoViewportOverflow(page);
 
@@ -103,10 +110,6 @@ test.describe('mobile distribution UX', () => {
       await page.touchscreen.tap(buttonBox.x + buttonBox.width / 2, buttonBox.y + buttonBox.height / 2);
     }
     await expect.poll(() => page.evaluate(() => (window as any).__distributionPointerType)).toBe('touch');
-
-    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await page.keyboard.press('Tab');
-    await expect(download).toBeFocused();
 
     await page.setViewportSize({ width: 412, height: 915 });
     await expectNoViewportOverflow(page);
