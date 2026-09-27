@@ -502,7 +502,7 @@ export async function installDistributionRuntime(options:{
     options.startGame();
   }else if(
     !release?.content&&
-    (navigator.webdriver||location.hostname==='127.0.0.1'||location.hostname==='localhost')
+    (location.hostname==='127.0.0.1'||location.hostname==='localhost')
   ){
     // Browser automation/local fixture mode auto-boots the synthetic game-data fixture.
     // Public hosts never auto-boot solely because release metadata is missing or stale;
