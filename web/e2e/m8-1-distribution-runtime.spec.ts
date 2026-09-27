@@ -88,3 +88,30 @@ test('M8.1 integrated Full Pack persists separately and serves an installed asse
 
   expect(failures.pageErrors).toEqual([]);
 });
+
+test('M8.1 Pages preview without public content keeps the install panel open', async ({page}) => {
+  const failures=captureRuntimeFailures(page);
+  await page.route('**/release-metadata.json', async route => {
+    await route.fulfill({
+      status:200,
+      contentType:'application/json',
+      body:JSON.stringify({
+        schema:1,
+        release:{
+          channel:'preview',
+          commit:'d8fa4e683d25017c33e548dffdede2f0e03e06b9',
+          branch:'codex/m8-1-distribution-playtest-integration',
+          url:'https://preview.example.pages.dev/',
+        },
+        content:null,
+      }),
+    });
+  });
+
+  const response=await page.goto('/?m4=1',{waitUntil:'domcontentloaded'});
+  expect(response?.ok()).toBeTruthy();
+  await expect(page.getByRole('button',{name:/导入完整资源包/})).toBeVisible();
+  await expect(page.locator('#canvas-host canvas')).toHaveCount(0);
+  expect(failures.pageErrors).toEqual([]);
+});
+

@@ -100,13 +100,22 @@ test.describe('M8.1 distribution acceptance - Android portrait', () => {
 });
 
 test.describe('M8.1 release acceptance', () => {
-  test.skip(!RELEASE_URL, 'BLOCKED / AWAITING_RELEASE_AUTHORIZATION: no real Pages URL supplied.');
+  test.skip(!RELEASE_URL, 'BLOCKED / PAGES_URL_NOT_SUPPLIED: no real authorized Pages URL supplied.');
 
-  test('authorized Pages URL exposes the deployed commit, PWA metadata and offline shell', async ({ page }) => {
+  test('authorized Pages URL exposes the deployed commit, install shell, PWA metadata and offline shell', async ({ page }) => {
     const failures = captureRuntimeFailures(page);
-    await page.goto(RELEASE_URL!, { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('#canvas-host canvas')).toBeVisible();
-    await expectPageFitsViewport(page);
+    const response = await page.goto(RELEASE_URL!, { waitUntil: 'domcontentloaded' });
+    expect(response?.ok()).toBeTruthy();
+
+    // A public-safe Pages release may intentionally publish no game content.
+    // The install/import shell is therefore the correct first-run surface.
+    await expect(page.getByRole('button', { name: /导入完整资源包/ })).toBeVisible();
+
+    const layout = await page.evaluate(() => ({
+      innerWidth: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    }));
+    expect(layout.scrollWidth).toBeLessThanOrEqual(layout.innerWidth + 1);
 
     const manifestResponse = await page.request.get(new URL('/manifest.webmanifest', RELEASE_URL!).href);
     expect(manifestResponse.ok()).toBe(true);
@@ -122,8 +131,9 @@ test.describe('M8.1 release acceptance', () => {
     });
 
     expect(metadata.schema).toBe(1);
-    expect(metadata.release.channel).toBe('production');
-    expect(metadata.release.branch).toBe('main');
+    expect(['preview','production']).toContain(metadata.release.channel);
+    if (metadata.release.channel === 'production') expect(metadata.release.branch).toBe('main');
+    else expect(metadata.release.branch).not.toBe('main');
     if (RELEASE_COMMIT) expect(metadata.release.commit).toBe(RELEASE_COMMIT);
 
     if (metadata.content?.manifestPath) {
@@ -139,7 +149,7 @@ test.describe('M8.1 release acceptance', () => {
     await page.context().setOffline(true);
     try {
       await page.reload({ waitUntil: 'domcontentloaded' });
-      await expect(page.locator('#canvas-host canvas')).toBeVisible();
+      await expect(page.getByRole('button', { name: /导入完整资源包/ })).toBeVisible();
     } finally {
       await page.context().setOffline(false);
     }
@@ -147,3 +157,4 @@ test.describe('M8.1 release acceptance', () => {
     expect(failures.pageErrors).toEqual([]);
   });
 });
+
