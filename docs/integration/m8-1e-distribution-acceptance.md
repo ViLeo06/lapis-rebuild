@@ -65,7 +65,8 @@ Additional Worker 5 evidence assets:
   - first-run player-facing wording check;
   - Android landscape `915×412` panel/touch check;
   - Android portrait `412×915` + rotation check;
-  - real Pages URL smoke gated by `M81_PAGES_URL`.
+  - while Worker 3 is absent the UI checks are explicitly skipped; once the Worker 3 module exists on the tested integration tree, missing production-page wiring is a hard FAIL rather than a skip;
+  - real Pages URL smoke gated by `M81_PAGES_URL`, with optional deployed-commit assertion via `M81_PAGES_COMMIT`.
 - `web/e2e/fixtures/m8-1/acceptance-scenarios.json`
   - shared scenario counts and gate labels.
 
@@ -122,3 +123,10 @@ Until the user explicitly confirms this device test, status remains **NOT-YET-AC
 ## Tests / validation
 
 Initial Worker 5 branch is expected to keep baseline typecheck/build compatibility. Distribution-chain tests that require W1–W4 remain skipped/blocked until those implementations are integrated. Final DoD is not satisfied until integrated-tree typecheck, unit, build, platform E2E, Pack E2E, incremental E2E, offline E2E, and mobile E2E have real execution evidence.
+
+
+## Worker 5 CI history
+
+- Initial Worker 5 CI attempt exposed a harness error: the platform smoke ran without the repository-standard synthetic `game-data` fixture, so Vite returned HTML fallback where the game expected JSON. This was an acceptance-harness failure, not a product PASS/FAIL result.
+- The workflow was corrected to run `python3 tools/testing/make_web_fixture.py --out web/public/game-data` before typecheck/unit/build and platform smoke.
+- A new CI run is required on the corrected head before Worker 5 can report its own scaffold as green.
