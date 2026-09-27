@@ -1,220 +1,223 @@
-# Cloudflare Pages deployment contract
+# Cloudflare Pages release contract
 
-Status: **M8.0 deployment preparation only**  
-Verified against Cloudflare Pages official documentation on **2026-09-25**.
+Status: **M8.1 ENGINEERING READY / AWAITING_RELEASE_AUTHORIZATION**  
+Verified against Cloudflare Pages official documentation on **2026-09-27**.
 
-This document defines the intended deployment contract for the standard multi-file Web build. It does **not** authorize or perform a public deployment.
+This document is the M8.1 release contract for the standard multi-file Web/PWA build. It defines what the repository and CI must guarantee before a real Cloudflare Pages project is connected. It does **not** authorize account mutation, public deployment, DNS changes, or publication of private/original game assets.
 
-## 1. Deployment model
+## 1. Release model
 
-Preferred target: **Cloudflare Pages with GitHub integration**.
+Target: **Cloudflare Pages with GitHub integration**.
 
-Repository:
+- Repository: `ViLeo06/lapis-rebuild`
+- Production branch: `main`
+- Pages root directory: `web`
+- Build command: `npm run build`
+- Build output: `dist`
 
-`ViLeo06/lapis-rebuild`
+Git-integrated Pages builds the production branch automatically and can build non-production branches as preview deployments. Pull requests originating from the same connected repository can receive preview URLs.
 
-Production branch when a real Pages project is later authorized:
-
-`main`
-
-Cloudflare Pages Git integration can build a connected GitHub repository automatically, create preview deployments for non-production branches, and create pull-request preview URLs for PRs originating from the connected repository.
+The project intentionally remains on Pages for M8.1 because M8.0 already prepared and validated this static Web/PWA path. Cloudflare currently recommends Workers for many new projects, but that does not invalidate the existing Pages static-hosting contract.
 
 Official references:
 
 - https://developers.cloudflare.com/pages/get-started/git-integration/
 - https://developers.cloudflare.com/pages/configuration/git-integration/
 - https://developers.cloudflare.com/pages/configuration/preview-deployments/
+- https://developers.cloudflare.com/pages/configuration/build-configuration/
 
-## 2. Build location
+## 2. Production and preview rules
 
-Cloudflare Pages project root directory:
+After authorization:
 
-`web`
+- `main` is the only production branch.
+- non-production branches are preview-only;
+- branch/PR previews must never overwrite production;
+- preview URLs are evidence for integration testing, not production URLs;
+- the deployed commit must be recorded from Pages/GitHub status before a release is called production.
 
-Reason:
+Recommended Pages branch control:
 
-- the Vite application, lockfile, TypeScript config and build scripts are all under `web/`;
-- setting the Pages root directory to `web` avoids adding repository-root wrapper scripts only for hosting.
+- production deployments: enabled for `main`;
+- preview deployments: enabled for repository branches used by active PRs;
+- fork PR previews: do not rely on them, because Pages does not create the same preview URL flow for fork-origin PRs.
 
-## 3. Install and build
+Cloudflare Git integration cannot later be converted into a Direct Upload project. That is accepted for this project; any future migration would be a separate decision.
 
-Dependency install is handled by the Pages build environment from `web/package-lock.json`.
+## 3. Build and Node contract
 
-Build command:
+The application already lives under `web/` and uses the repository lockfile.
+
+Required release build:
+
+`npm ci --ignore-scripts`
+
+then:
 
 `npm run build`
 
-Current `web/package.json` resolves that to:
-
-`tsc --noEmit && vite build`
-
-Build output directory:
-
-`dist`
-
-The output directory is relative to the configured Pages root directory, so the deployed artifact is `web/dist/`.
-
-Cloudflare's current Vite guidance uses `npm run build` and `dist`; the project already matches that convention, so M8.0 does not replace or wrap the existing Vite build.
-
-Official references:
-
-- https://developers.cloudflare.com/pages/framework-guides/deploy-a-vite3-project/
-- https://developers.cloudflare.com/pages/configuration/build-configuration/
-
-## 4. Node.js version
-
-Current project requirement:
+Current application engine requirement:
 
 `node >=22.12.0`
 
-Cloudflare Pages build image v3 currently provides Node.js 22 by default and documents `NODE_VERSION`, `.node-version`, and `.nvmrc` as supported overrides.
+The release gate uses Node `22.16.0`. Before real project creation, re-check the current Pages build image and pin `NODE_VERSION` only if the Pages default no longer satisfies the repository engine.
 
-No Node pin is required for the first deployment because the current Pages v3 default satisfies this repository's engine constraint.
+## 4. Release metadata
 
-If reproducibility later requires an explicit pin, configure it in the Pages build environment rather than introducing a hosting-only package-manager wrapper. Re-check the current Pages build image before creating the real project.
+Every production Vite build must emit:
 
-Official reference:
+`/release-metadata.json`
 
-- https://developers.cloudflare.com/pages/configuration/build-image/
+The file is generated during `vite build` and has schema 1:
 
-## 5. Environment variables
+```json
+{
+  "schema": 1,
+  "release": {
+    "channel": "production",
+    "commit": "<git commit>",
+    "branch": "main",
+    "url": "https://<project>.pages.dev"
+  },
+  "content": null
+}
+```
 
-Application-required production environment variables:
+Cloudflare supplies `CF_PAGES_COMMIT_SHA`, `CF_PAGES_BRANCH` and `CF_PAGES_URL`. GitHub CI falls back to the corresponding GitHub environment variables and marks the channel as `ci`.
 
-**None currently required for the static game shell.**
+When a **public-safe** content release is intentionally attached, the following non-secret build variables may describe it:
 
-Cloudflare automatically exposes Pages build metadata such as `CF_PAGES`, `CF_PAGES_BRANCH`, `CF_PAGES_COMMIT_SHA`, and `CF_PAGES_URL`.
+- `LAPIS_PUBLIC_CONTENT_PACK`
+- `LAPIS_PUBLIC_CONTENT_VERSION`
+- `LAPIS_PUBLIC_MANIFEST_PATH`
+- `LAPIS_PUBLIC_FULL_PACK_PATH` (optional)
 
-Do not add secrets, tokens, private asset URLs or signed Drive URLs to repository files.
+Only same-origin absolute paths such as `/distribution/...` are accepted. Absolute external URLs, query strings, signed Drive URLs and `/game-data/` paths are rejected by the metadata generator.
 
-If future private content loading needs credentials, that work requires a separate design and authorization boundary; it is outside M8.0 Worker 5.
+## 5. Public Resource Manifest and Full Pack layout
 
-Official reference:
+Public-safe distribution uses versioned paths:
 
-- https://developers.cloudflare.com/pages/configuration/build-configuration/
+- Resource Manifest: `/distribution/manifests/<contentPack>/<version>/resource-manifest.json`
+- Full Pack: `/distribution/packs/lapis-full-<contentPack>-<version>.lapispak`
 
-## 6. SPA fallback
+The Full Pack and incremental updater must share the same Resource Manifest/hash authority. Worker 4 does not build or parse the archive; Worker 1 owns that contract.
 
-Do **not** add a redundant `_redirects` catch-all only for SPA fallback at this stage.
+A public Full Pack is allowed only when it is explicitly listed in:
 
-Cloudflare Pages currently treats a deployment without a top-level `404.html` as a single-page application and routes unmatched navigation paths to the root application.
+`web/release-public-assets.json`
 
-The current Vite build does not intentionally publish a top-level `404.html`.
+The release sanity gate rejects every unlisted `.lapispak`.
 
-If a future release adds a real `404.html`, re-check routing because that changes Pages' automatic SPA behavior.
+The default allowlist is empty. Therefore M8.1 can merge release infrastructure without accidentally publishing a pack.
 
-Official reference:
+## 6. Private/original asset boundary
 
-- https://developers.cloudflare.com/pages/configuration/serving-pages/
+Public Pages must never contain private/original client resources.
 
-## 7. Cache headers
+The gate rejects:
 
-Cloudflare Pages already provides CDN/browser cache behavior and recommends avoiding unnecessary custom cache rules.
+- `web/public/game-data/` material if it somehow reaches `dist`;
+- raw/original extensions such as `.spr`, `.ani`, `.sgr`, `.lib`, `.tdg`, executables/DLLs and generic raw archives;
+- any `.lapispak` not explicitly allowlisted as public-safe.
 
-For Vite-generated fingerprinted files under `/assets/*`, this branch adds:
+Still forbidden:
 
-`web/public/_headers`
+- original/private Full Pack on public Pages;
+- Drive signed URLs;
+- secrets, API tokens, cookies or credentials;
+- assuming a private GitHub repository makes Pages output private.
 
-with an immutable one-year browser-cache rule. Vite copies `public/` files into the production output, so Pages receives `dist/_headers`.
+Private/original Full Packs may use the same Worker 1 file format, but must remain in the project-approved private distribution path.
 
-The rule is intentionally limited to fingerprinted Vite assets. It does not apply long-lived immutable caching to:
+## 7. Update-safe cache rules
 
-- `index.html`
-- service workers
-- Web App Manifest files
-- future resource manifests
-- private game asset packs
+`web/public/_headers` is copied into `dist/_headers`.
+
+M8.1 rules:
+
+- `/assets/*`: one-year immutable cache for Vite fingerprinted files;
+- `/distribution/packs/*`: one-year immutable cache because pack filenames are versioned;
+- `/distribution/manifests/*`: `no-cache, must-revalidate`;
+- `/release-metadata.json`: `no-store`;
+- `/index.html`, `/service-worker.js`, `/manifest.webmanifest`: `no-cache, must-revalidate`.
+
+This prevents the update pointer/shell from being stuck behind an immutable cache while retaining efficient caching for content-addressed/versioned payloads.
+
+Cloudflare Pages also provides ETag-based revalidation for normal static assets.
 
 Official references:
 
 - https://developers.cloudflare.com/pages/configuration/headers/
 - https://developers.cloudflare.com/pages/configuration/serving-pages/
 
-## 8. Wrangler
+## 8. SPA/PWA behavior
 
-Wrangler is **not required** for this M8.0 Git-integrated Pages deployment path.
+Do not add a redundant catch-all `_redirects` rule solely for SPA fallback. The project still relies on Pages static SPA behavior and the existing PWA service worker.
 
-Therefore this worker does not add `wrangler.toml`, `wrangler.json`, or `wrangler.jsonc`.
+Worker 4 does not modify:
 
-If the project later needs Pages Functions, CLI-driven deployments or advanced Pages configuration, re-evaluate Wrangler from the then-current official documentation instead of pre-creating unused configuration.
+- `web/public/service-worker.js`
+- `web/src/pwa-shell.ts`
+- `web/src/m4-main.ts`
 
-Official references:
+PWA/offline behavioral acceptance remains Worker 5/Main Integration responsibility.
 
-- https://developers.cloudflare.com/pages/get-started/git-integration/
-- https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+## 9. GitHub release gate
 
-## 9. Preview deployments
+`.github/workflows/m8-1d-pages-release.yml` validates the release artifact without deploying it.
 
-Expected behavior after a real Pages project is authorized and connected:
-
-- pushes to the configured production branch update the production deployment;
-- non-production branches can receive preview deployments;
-- pull requests originating from the same connected repository can receive unique preview URLs;
-- preview deployments do not replace the production deployment.
-
-Cloudflare Pages currently sends `X-Robots-Tag: noindex` on preview URLs by default.
-
-Official references:
-
-- https://developers.cloudflare.com/pages/configuration/preview-deployments/
-- https://developers.cloudflare.com/pages/configuration/serving-pages/
-
-## 10. Private asset policy
-
-The public Pages build must contain only repository-approved/public-safe assets.
-
-The repository already ignores:
-
-`web/public/game-data/`
-
-That boundary must remain in place.
-
-Do not:
-
-- copy the full original client asset pack into Git;
-- upload private Drive assets to Pages;
-- embed signed/private download URLs in the build;
-- change `.gitignore` to expose private generated packs;
-- treat a private GitHub repository as proof that a Pages deployment is private.
-
-Long-term private asset-pack delivery is a separate M8+ capability and requires its own authorization, storage and access-control design.
-
-## 11. First-deployment authorization boundary
-
-This branch intentionally stops before any external deployment action.
-
-A later authorized first deployment may:
-
-1. create/connect a Cloudflare Pages project;
-2. select the GitHub repository;
-3. set production branch to `main`;
-4. set root directory to `web`;
-5. set build command to `npm run build`;
-6. set output directory to `dist`;
-7. confirm no private asset pack is present;
-8. inspect the first preview/production build before any custom-domain work.
-
-Still requires separate authorization:
-
-- Cloudflare login/account mutation;
-- project creation;
-- API token creation;
-- DNS changes;
-- custom-domain binding;
-- paid resources;
-- public upload of original/private game assets.
-
-## 12. Local/repository validation contract
-
-Worker 5 validates only the deployment artifact contract:
+It must prove:
 
 - locked dependency install;
-- production Vite build;
-- `dist/index.html` exists;
-- `dist/_headers` exists;
-- a normal static HTTP server can serve the root document;
-- at least one generated `dist/assets/*` file can be fetched.
+- unit tests;
+- production build;
+- `dist/index.html`, `dist/_headers`, Web App Manifest and `release-metadata.json` exist;
+- static root and generated Vite asset can be fetched;
+- a synthetic schema-1 Resource Manifest can be fetched from the static host;
+- required cache rules are present;
+- release metadata identifies the tested commit;
+- public release sanity passes;
+- no private/original asset leakage is detected.
 
-A dedicated branch-only GitHub Actions workflow performs this smoke in an environment that has repository checkout and dependency network access.
+This workflow is a release **gate**, not a Cloudflare credentialed deployment job.
 
-Full desktop/mobile/PWA acceptance remains Worker 6's responsibility.
+## 10. First production deployment checklist
+
+### Engineering preflight
+
+- [ ] target commit is on `main`;
+- [ ] Worker 4 release gate is green for that commit/integration tree;
+- [ ] Main Integration typecheck/unit/build/PWA/offline gates are green;
+- [ ] `web/release-public-assets.json` contains only deliberately public-safe Full Packs;
+- [ ] no private/original asset artifact is present in `dist`;
+- [ ] release metadata content coordinates match the intended public release, or `content` is deliberately `null`.
+
+### Requires explicit user authorization
+
+- [ ] create/connect the Cloudflare Pages project;
+- [ ] authorize Cloudflare GitHub access to `ViLeo06/lapis-rebuild`;
+- [ ] set production branch `main`;
+- [ ] set root `web`, build `npm run build`, output `dist`;
+- [ ] configure non-secret public content variables if a public-safe content pack is being published;
+- [ ] trigger/observe the first production deployment;
+- [ ] record project name, production URL, deployed commit and build result.
+
+### Post-deploy smoke
+
+- [ ] production URL returns the app shell;
+- [ ] `/manifest.webmanifest` loads;
+- [ ] `/release-metadata.json` reports the deployed `main` commit;
+- [ ] target public Resource Manifest loads if configured;
+- [ ] PWA/offline acceptance is run by the M8.1 acceptance worker;
+- [ ] Android human playtest is completed before M8.1 is called fully accepted.
+
+## 11. Current external status
+
+No Cloudflare account/project mutation was authorized in this Worker session.
+
+Therefore:
+
+`AWAITING_RELEASE_AUTHORIZATION`
+
+No production project name or URL is claimed.
