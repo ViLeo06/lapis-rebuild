@@ -61,14 +61,25 @@ function object(value:unknown):value is Record<string,unknown>{
   return !!value&&typeof value==='object'&&!Array.isArray(value);
 }
 
-function publicPath(value:unknown,label:string):string{
-  if(typeof value!=='string'||!value.startsWith('/')||value.startsWith('//')||
-      value.includes('\\')||value.includes('?')||value.includes('#')){
+function publicResourceReference(value:unknown,label:string):string{
+  if(typeof value!=='string')throw new Error(`Invalid ${label}`);
+  if(value.startsWith('/')){
+    if(value.startsWith('//')||value.includes('\\')||value.includes('?')||value.includes('#')){
+      throw new Error(`Invalid ${label}`);
+    }
+    const parts=value.slice(1).split('/');
+    if(parts.some(part=>!part||part==='.'||part==='..')||parts.includes('game-data')){
+      throw new Error(`Invalid ${label}`);
+    }
+    return value;
+  }
+  let parsed:URL;
+  try{parsed=new URL(value);}catch{throw new Error(`Invalid ${label}`);}
+  if(parsed.protocol!=='https:'||parsed.username||parsed.password||parsed.search||parsed.hash||
+      parsed.pathname.split('/').includes('game-data')){
     throw new Error(`Invalid ${label}`);
   }
-  const parts=value.slice(1).split('/');
-  if(parts.some(part=>!part||part==='.'||part==='..'))throw new Error(`Invalid ${label}`);
-  return value;
+  return parsed.toString();
 }
 
 export function validateReleaseMetadata(raw:unknown):ReleaseMetadata{
@@ -82,10 +93,10 @@ export function validateReleaseMetadata(raw:unknown):ReleaseMetadata{
         typeof raw.content.version!=='string'||!TOKEN.test(raw.content.version)){
       throw new Error('Invalid release content identity');
     }
-    const manifestPath=publicPath(raw.content.manifestPath,'manifest path');
+    const manifestPath=publicResourceReference(raw.content.manifestPath,'manifest path');
     const fullPackPath=raw.content.fullPackPath===null||raw.content.fullPackPath===undefined
       ?null
-      :publicPath(raw.content.fullPackPath,'full pack path');
+      :publicResourceReference(raw.content.fullPackPath,'full pack path');
     content={
       contentPack:raw.content.contentPack,
       version:raw.content.version,
