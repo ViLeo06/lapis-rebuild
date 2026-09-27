@@ -46,23 +46,6 @@ export function publicReleasePath(value: string, label: string): string {
   return value;
 }
 
-export function publicReleaseReference(value: string, label: string): string {
-  if (value.startsWith('/')) return publicReleasePath(value, label);
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error(`${label} must be a same-origin absolute path or clean HTTPS URL`);
-  }
-  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.search || parsed.hash) {
-    throw new Error(`${label} must be a same-origin absolute path or clean HTTPS URL`);
-  }
-  if (parsed.pathname.split('/').includes('game-data')) {
-    throw new Error(`${label} must not point at private game-data`);
-  }
-  return parsed.toString();
-}
-
 function publicUrl(value: string | null): string | null {
   if (!value) return null;
   const parsed = new URL(value);
@@ -100,14 +83,14 @@ export function buildReleaseMetadata(
     if (!TOKEN.test(contentPack)) throw new Error('Invalid public contentPack');
     if (!TOKEN.test(version)) throw new Error('Invalid public content version');
 
-    const checkedManifestPath = publicReleaseReference(manifestPath, 'LAPIS_PUBLIC_MANIFEST_PATH');
+    const checkedManifestPath = publicReleasePath(manifestPath, 'LAPIS_PUBLIC_MANIFEST_PATH');
     if (!checkedManifestPath.endsWith('/resource-manifest.json')) {
       throw new Error('LAPIS_PUBLIC_MANIFEST_PATH must end with /resource-manifest.json');
     }
 
     let checkedFullPackPath: string | null = null;
     if (fullPackPath) {
-      checkedFullPackPath = publicReleaseReference(fullPackPath, 'LAPIS_PUBLIC_FULL_PACK_PATH');
+      checkedFullPackPath = publicReleasePath(fullPackPath, 'LAPIS_PUBLIC_FULL_PACK_PATH');
       if (!checkedFullPackPath.endsWith('.lapispak')) {
         throw new Error('LAPIS_PUBLIC_FULL_PACK_PATH must end with .lapispak');
       }
