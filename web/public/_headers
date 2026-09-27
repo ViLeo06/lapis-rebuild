@@ -1,2 +1,20 @@
+/index.html
+  Cache-Control: no-cache, must-revalidate
+
+/service-worker.js
+  Cache-Control: no-cache, must-revalidate
+
+/manifest.webmanifest
+  Cache-Control: no-cache, must-revalidate
+
+/release-metadata.json
+  Cache-Control: no-store
+
+/distribution/manifests/*
+  Cache-Control: no-cache, must-revalidate
+
+/distribution/packs/*
+  Cache-Control: public, max-age=31536000, immutable
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

@@ -1,0 +1,121 @@
+name: M8.1 Pages release gate
+
+on:
+  push:
+    branches:
+      - codex/m8-1d-pages-release
+      - codex/m8-1-distribution-playtest-integration
+      - main
+  pull_request:
+    branches:
+      - codex/m8-1-distribution-playtest-integration
+      - main
+    paths:
+      - 'web/**'
+      - 'docs/deployment/cloudflare-pages.md'
+      - 'docs/integration/m8-1d-pages-release.md'
+      - '.github/workflows/m8-1d-pages-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pages-release-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Locked install
+        working-directory: web
+        run: npm ci --ignore-scripts
+
+      - name: Unit tests
+        working-directory: web
+        run: npm test
+
+      - name: Production build
+        working-directory: web
+        run: npm run build
+
+      - name: Public release artifact sanity
+        working-directory: web
+        run: node --experimental-strip-types scripts/release-sanity.ts --root dist --policy release-public-assets.json
+
+      - name: Validate release metadata
+        working-directory: web
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync} from 'node:fs';
+          const metadata = JSON.parse(readFileSync('dist/release-metadata.json', 'utf8'));
+          if (metadata.schema !== 1) throw new Error('release metadata schema mismatch');
+          if (metadata.release.channel !== 'ci') throw new Error('expected CI release channel');
+          if (metadata.release.commit !== process.env.GITHUB_SHA) throw new Error('release commit mismatch');
+          if (metadata.content !== null) throw new Error('CI release must not invent a public Full Pack');
+          NODE
+
+      - name: Static hosting and manifest smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f web/dist/index.html
+          test -f web/dist/_headers
+          test -f web/dist/manifest.webmanifest
+          test -f web/dist/release-metadata.json
+
+          mkdir -p web/dist/__m8-1-release-smoke
+          cat > web/dist/__m8-1-release-smoke/resource-manifest.json <<'JSON'
+          {
+            "schema": 1,
+            "contentPack": "public-smoke",
+            "version": "m8-1-ci",
+            "assets": []
+          }
+          JSON
+
+          asset="$(find web/dist/assets -type f -print -quit)"
+          test -n "$asset"
+
+          python3 -m http.server 4174 --bind 127.0.0.1 --directory web/dist >"$RUNNER_TEMP/m8-1-pages-http.log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          ready=0
+          for _ in {1..20}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4174/ -o "$RUNNER_TEMP/m8-1-index.html"; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            cat "$RUNNER_TEMP/m8-1-pages-http.log"
+            exit 1
+          fi
+
+          curl --fail --silent --show-error http://127.0.0.1:4174/manifest.webmanifest -o "$RUNNER_TEMP/m8-1-webmanifest.json"
+          curl --fail --silent --show-error http://127.0.0.1:4174/release-metadata.json -o "$RUNNER_TEMP/m8-1-release-metadata.json"
+          curl --fail --silent --show-error http://127.0.0.1:4174/__m8-1-release-smoke/resource-manifest.json -o "$RUNNER_TEMP/m8-1-resource-manifest.json"
+
+          asset_path="${asset#web/dist/}"
+          curl --fail --silent --show-error "http://127.0.0.1:4174/$asset_path" -o /dev/null
+
+          grep -q '<div id="app"></div>' "$RUNNER_TEMP/m8-1-index.html"
+          grep -q 'Cache-Control: no-store' web/dist/_headers
+          grep -q '/distribution/manifests/\*' web/dist/_headers
+          grep -q '/distribution/packs/\*' web/dist/_headers
+          grep -q 'Cache-Control: public, max-age=31536000, immutable' web/dist/_headers
