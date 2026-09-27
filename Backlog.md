@@ -1,6 +1,33 @@
 # Backlog
 
-> 2026-09-26 | Mobile-first Web/PWA | Plan v4.0 | M8.0 foundation merged | active: post-M8.0 integration and next content round
+> 2026-09-27 | Mobile-first Web/PWA | Plan v4.1 | M8.1 active | active: real web distribution + playtest
+
+## M8.1 Real Web Distribution & Playtest — 进行中
+
+- baseline：`main@51907f41365edb4be393579f3814d8e23116dd6e`
+- integration branch：`codex/m8-1-distribution-playtest-integration`
+- [ ] Worker 1 — Full Pack Format / Builder / Verifier：`codex/m8-1a-full-pack-contract`
+- [ ] Worker 2 — AssetStore / Incremental Update / Repair：`codex/m8-1b-incremental-asset-store`
+- [ ] Worker 3 — First-run / Install / Update UX：`codex/m8-1c-install-update-ux`
+- [ ] Worker 4 — Cloudflare Pages Release / Public-safe Distribution：`codex/m8-1d-pages-release`
+- [ ] Worker 5 — M8.1 Acceptance / E2E / Real-device Gate：`codex/m8-1e-distribution-acceptance`
+- [x] Main Supervisor：每小时检查 GitHub branch / PR / CI / DoD / conflicts；不替 Worker 重做，不合并 main。
+- [ ] Full Pack：新玩家可一次安装完整资源包；Full Pack 与 Incremental Update 共享 Resource Manifest / size / SHA-256 authority。
+- [ ] Incremental Update：已安装设备只下载 changed/new assets；失败时旧 installed version 继续可用。
+- [ ] Asset Repair：只修复 missing/corrupt entries，不重新下载完整包。
+- [ ] 玩家 UX：首次安装、导入完整包、检查更新、下载进度、修复资源、offline-ready 状态可理解且移动端可用。
+- [ ] Public/private boundary：公开 Pages 不含 private/original asset pack；private pack 保持相同格式但不自动公网发布。
+- [ ] Engineering Gate：typecheck + unit + production build + Chromium/PWA/offline + Full Pack + incremental update + mobile acceptance。
+- [ ] Release Gate：真实 Cloudflare Pages project / production URL 仍需用户单独明确授权；未授权时状态保持 `AWAITING_RELEASE_AUTHORIZATION`。
+- [ ] Human Gate：Android 真机完成首次安装 → 游戏 → 战斗 → Save → 重开 Load → 增量更新 → 离线启动，并由用户明确确认。
+- [ ] 最终集成顺序：W1 → W2 → W3 → W4 → W5；全部 Gate 满足后再申请 main 合并授权。
+
+### M8.1 Scheduled Tasks 预算
+
+- Main Supervisor：1 个每小时循环任务。
+- Worker +30：W1/W2/W3/W4/W5 各 1 个。
+- Worker +60：W1/W2/W4/W5 各 1 个；W3 不分配第二保险。
+- 计划总占用：10 / 10。Worker 的一次性任务由各自 Session 在接单开工后创建。
 
 ## M8.0 Web/PWA Foundation — 已收口
 
