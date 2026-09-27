@@ -22,14 +22,17 @@ Therefore Pack / AssetStore / Update / Distribution UI / Release behavior is **n
 
 ## Live dependency update — 2026-09-27
 
-The dependency branches have progressed since Worker 5 started:
+Main Integration re-checked GitHub after the ordered W1→W4 integration:
 
-- Worker 1 `codex/m8-1a-full-pack-contract`: still 0 commits ahead of baseline; no Full Pack implementation/PR is available yet.
-- Worker 2 PR #79: AssetStore / incremental update / repair implementation exists; Worker 5 added an independent acceptance oracle that activates automatically once `update-engine.ts` is present on the tested tree.
-- Worker 3 PR #80: distribution panel implementation and its component-level mobile tests exist; Worker 5 keeps a separate black-box production-page check that only activates after Main Integration wires the panel.
-- Worker 4 PR #81: release contract exists; GitHub Actions release gate is green. Real Cloudflare deployment remains `AWAITING_RELEASE_AUTHORIZATION`.
+- Worker 1 PR #82 merged into `codex/m8-1-distribution-playtest-integration` at `a3449c728c0e0e781adb41186a7b13dcc6cf2644`.
+- Worker 2 PR #79 merged at `b71dec19875abdb5e8ab011f21567fa463208fa8`.
+- Worker 3 PR #80 merged at `ed23f75416ec864b0eeccba6bbe03c6d66df7058`.
+- Worker 4 PR #81 merged at `df6556580bbec8bb986fdfc3e7f10838c6505c8a`.
+- Current integration head observed by Main Integration: `73782a8caafce8f2bd1e7360ec41e6171d8b5e06`.
+- M8.1 Full Pack and Pages release contract workflows on the integration head are green; the repository-wide Web/Chromium regression is still running and must finish before Engineering Acceptance can be called PASS.
+- Real Cloudflare Pages creation/connection/public deployment/DNS/private-original publication remain `AWAITING_RELEASE_AUTHORIZATION`.
 
-Worker 5 PR #78 is intentionally Draft while the Full Pack and integrated distribution path are incomplete.
+Worker 5 PR #78 remains Draft while its acceptance workflow is re-evaluated against the now-integrated W1–W4 tree. This documentation update intentionally triggers that pull-request validation; skipped dependency checks are not converted to PASS.
 
 Additional Worker 5 evidence assets:
 
@@ -50,13 +53,13 @@ Additional Worker 5 evidence assets:
 
 | Area | Required evidence | Current status |
 |---|---|---|
-| Full Pack | valid install; corrupt/hash/incomplete rejection | BLOCKED — waiting W1 integration |
-| Incremental | V1→V2; 95 unchanged / 3 changed / 2 new; only 5 requests; removed retirement; failure keeps V1 | BLOCKED — waiting W2 integration |
-| Repair | one corrupt/missing asset causes one repair request | BLOCKED — waiting W2 integration |
-| Offline | installed resources survive disconnect + reload and game boots | BLOCKED — waiting integrated W1/W2/W3 + PWA wiring |
-| SaveV2 | save → reload/load → asset update → same SaveV2 still loads | BLOCKED — waiting integrated distribution path |
-| Mobile | 915×412 and 412×915; no overflow; touch; rotation | PARTIAL — M8.0 platform harness exists; M8.1 distribution panel pending W3 |
-| Release | real URL, deployed commit, manifest, PWA, offline shell | BLOCKED / AWAITING_RELEASE_AUTHORIZATION |
+| Full Pack | valid install; corrupt/hash/incomplete rejection | INTEGRATED — W1 landed; Worker 5 integrated-tree evidence pending |
+| Incremental | V1→V2; 95 unchanged / 3 changed / 2 new; only 5 requests; removed retirement; failure keeps V1 | INTEGRATED — W2 landed; Worker 5 rerun pending |
+| Repair | one corrupt/missing asset causes one repair request | INTEGRATED — W2 landed; Worker 5 rerun pending |
+| Offline | installed resources survive disconnect + reload and game boots | INTEGRATED DEPENDENCIES — black-box evidence pending |
+| SaveV2 | save → reload/load → asset update → same SaveV2 still loads | INTEGRATED DEPENDENCIES — acceptance evidence pending |
+| Mobile | 915×412 and 412×915; no overflow; touch; rotation | INTEGRATED — W3 landed; production wiring must pass black-box acceptance |
+| Release | real URL, deployed commit, manifest, PWA, offline shell | ENGINEERING CONTRACT PASS / AWAITING_RELEASE_AUTHORIZATION |
 | Human Android | 14-step playtest below | NOT-YET-ACCEPTED |
 
 ## Added Worker 5 assets
