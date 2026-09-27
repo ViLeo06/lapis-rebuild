@@ -4,8 +4,8 @@ Worker: 1 only. Branch: `codex/m8-1a-full-pack-contract`.
 Baseline: `51907f41365edb4be393579f3814d8e23116dd6e`.
 PR: [#82](https://github.com/ViLeo06/lapis-rebuild/pull/82).
 PR base: `codex/m8-1-distribution-playtest-integration`.
-Status: **IMPLEMENTED / PACK_CI_PASS / WAITING_FULL_WEB_CI**.
-The PR remains draft until the already-running full Web regression is checked.
+Status: **DONE / PACK_CI_PASS / FULL_WEB_CI_PASS / READY_FOR_INTEGRATION**.
+PR #82 is ready for Main Integration review; Worker 1 is complete and does not merge it.
 This is NOT an M8.1 release/human acceptance claim.
 
 ## Delivered
@@ -77,20 +77,27 @@ SHA-256: `f327bd671b6261f92c3b1d67f41da5e4fc8386b20c040f059d0ac20060a8fbe8`.
 The earlier CI artifact also matched the cloud-generated sample byte-for-byte.
 This fixture is NOT a playable original-asset Full Pack.
 
-### IN PROGRESS: full repository Web/parser regression
+### PASS: full repository Web/parser regression
 
 [Run 36298739353](https://github.com/ViLeo06/lapis-rebuild/actions/runs/36298739353)
-tests `3b5fdd838402968ae228cb44ee105650041e67bd`.
-At this handoff checkpoint:
-- parser tests + synthetic game fixture: PASS;
-- locked dependencies, typecheck, COMPLETE unit suite and production build: PASS;
-- standalone synthetic preview: PASS;
-- full Chromium integration/offline step: **IN_PROGRESS**, not recorded as PASS;
-- private-original job: **SKIPPED**, not evidence of private-asset validation.
+completed **success** on runtime/source commit `3b5fdd838402968ae228cb44ee105650041e67bd`.
 
-The earlier run on `ad1adef` was superseded by the source-safety fix; do not use it as
-final full-regression evidence. Do not confuse the one-test browser reader smoke with
-the complete repository E2E matrix.
+| Full regression step | Result |
+| --- | --- |
+| Parser tests + synthetic game fixture | PASS |
+| Locked dependencies | PASS |
+| Repository typecheck | PASS |
+| Complete unit suite | PASS |
+| Production build | PASS |
+| Standalone synthetic preview | PASS |
+| Chromium integration + offline tests | PASS |
+| Artifact upload | PASS |
+| private-original job | SKIPPED by design; not private-asset evidence |
+
+Later Worker 1 commits only changed the dedicated W1 CI workflow and this handoff;
+`compare 3b5fdd8...HEAD` shows no later runtime, builder, reader or test-source changes.
+Therefore the successful full regression remains valid for the shipped W1 implementation.
+The earlier run on `ad1adef` remains superseded and is not used as final evidence.
 
 ### Additional cloud-sandbox checks (not Android evidence)
 
@@ -112,18 +119,15 @@ v1 ceilings: 512 MiB archive, 128 MiB asset, 8 MiB manifest, 20,000 ZIP members.
 ZIP64/DEFLATE are intentionally unsupported. Main must apply the documented limits and
 trusted-target-manifest policy; this is not a generic ZIP extractor.
 
-## Remaining action / recovery
+## Final handoff / recovery
 
-1. Read the latest branch/PR and run `36298739353` before doing anything else.
-2. If full Web regression passes, record its final result/artifact counts here and mark
-   PR #82 ready for review. Do not rewrite the already-passing W1 implementation.
-3. If it fails, read the failing job evidence; fix only W1-owned regressions or report
-   a concrete unrelated blocker. Do not replace other Workers' implementations.
-4. Compare any newer commits before reusing a CI result. CI pins the exact commits
-   above; workflow-only/documentation-only deltas must remain explicit.
+Worker 1 DoD is satisfied and no further W1 implementation is pending.
+PR #82 may be integrated by Main in the specified order. If future integration conflicts
+occur, preserve this contract/API and re-run the same dedicated Full Pack gate plus the
+integration tree; do not recreate the Worker branch or implementation.
 
-Scheduled +30/+60 one-shot recovery tasks are set. No additional loop/watchdog was made.
-No main or integration merge is authorized or performed by W1.
+The originally scheduled +30/+60 one-shot recovery tasks may report ALREADY_DONE.
+No additional loop/watchdog is required. No main or integration merge was performed by W1.
 
 W1 does not activate resources or fetch updates. Full integrated installation, incremental
 update/repair, offline game boot and SaveV2 survival remain W2/Main/W5 acceptance.
