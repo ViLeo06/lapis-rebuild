@@ -118,5 +118,5 @@ jobs:
           grep -q 'Cache-Control: no-store' web/dist/_headers
           grep -q '/distribution/manifests/\*' web/dist/_headers
           grep -q '/distribution/packs/\*' web/dist/_headers
-          grep -q '/distribution/assets/\\*' web/dist/_headers
+          grep -q '/distribution/assets/\*' web/dist/_headers
           grep -q 'Cache-Control: public, max-age=31536000, immutable' web/dist/_headers
