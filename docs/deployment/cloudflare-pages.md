@@ -99,7 +99,7 @@ Only same-origin absolute paths such as `/distribution/...` are accepted. Absolu
 Public-safe distribution uses versioned paths:
 
 - Resource Manifest: `/distribution/manifests/<contentPack>/<version>/resource-manifest.json`
-- Full Pack: `/distribution/packs/lapis-full-<contentPack>-<version>.lapispak`
+- Full Pack: `/distribution/packs/lapis-full-<contentPack>-<version>.lapispak`\n- Incremental assets: `/distribution/assets/<contentPack>/<version>/<manifest-entry-path>`
 
 The Full Pack and incremental updater must share the same Resource Manifest/hash authority. Worker 4 does not build or parse the archive; Worker 1 owns that contract.
 
@@ -107,7 +107,7 @@ A public Full Pack is allowed only when it is explicitly listed in:
 
 `web/release-public-assets.json`
 
-The release sanity gate rejects every unlisted `.lapispak`.
+The release sanity gate rejects every unlisted `.lapispak`. For each allowlisted version it also requires every incremental file named by the same Resource Manifest, verifies size/SHA-256, and rejects extra files under that versioned incremental root.
 
 The default allowlist is empty. Therefore M8.1 can merge release infrastructure without accidentally publishing a pack.
 
@@ -137,7 +137,7 @@ Private/original Full Packs may use the same Worker 1 file format, but must rema
 M8.1 rules:
 
 - `/assets/*`: one-year immutable cache for Vite fingerprinted files;
-- `/distribution/packs/*`: one-year immutable cache because pack filenames are versioned;
+- `/distribution/packs/*`: one-year immutable cache because pack filenames are versioned;\n- `/distribution/assets/*`: one-year immutable cache because the path is versioned and each file is pinned by the Resource Manifest;
 - `/distribution/manifests/*`: `no-cache, must-revalidate`;
 - `/release-metadata.json`: `no-store`;
 - `/index.html`, `/service-worker.js`, `/manifest.webmanifest`: `no-cache, must-revalidate`.
