@@ -1,0 +1,51 @@
+name: M8.1 Worker 5 validation
+on:
+  pull_request:
+    branches: ['codex/m8-1-distribution-playtest-integration']
+    paths:
+      - 'web/**'
+      - 'docs/integration/m8-1e-distribution-acceptance.md'
+      - '.github/workflows/m8-1e-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: m8-1e-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Locked install, typecheck, unit and production build
+        working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Install Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Existing platform smoke
+        working-directory: web
+        run: npm run test:platform:smoke
+      - name: M8.1 distribution black-box acceptance
+        working-directory: web
+        run: npx playwright test e2e/m8-1-distribution-acceptance.spec.ts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: m8-1e-acceptance-results
+          path: web/test-results/
+          retention-days: 7
+          if-no-files-found: warn
