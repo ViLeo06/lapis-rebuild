@@ -1,7 +1,8 @@
+import {createHash} from 'node:crypto';
 import {extname, join, relative, resolve, sep} from 'node:path';
 import {readFile, readdir} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-import {validateResourceManifest} from '../src/resource-manifest.ts';
+import {validateResourceManifest, type ResourceManifest} from '../src/resource-manifest.ts';
 
 export type PublicSafeFullPack = {
   path: string;
@@ -24,7 +25,11 @@ export type ReleaseAuditIssue = {
     | 'MISSING_FULL_PACK'
     | 'MISSING_MANIFEST'
     | 'INVALID_MANIFEST'
-    | 'MISSING_RELEASE_METADATA';
+    | 'MISSING_RELEASE_METADATA'
+    | 'MISSING_INCREMENTAL_ASSET'
+    | 'UNLISTED_INCREMENTAL_ASSET'
+    | 'INCREMENTAL_ASSET_SIZE_MISMATCH'
+    | 'INCREMENTAL_ASSET_HASH_MISMATCH';
   path?: string;
   message: string;
 };
@@ -84,6 +89,57 @@ function validatePolicy(raw: unknown): PublicReleasePolicy {
   }
 
   return candidate as PublicReleasePolicy;
+}
+
+async function validateIncrementalAssets(
+  root: string,
+  fileSet: Set<string>,
+  files: string[],
+  policyEntry: PublicSafeFullPack,
+  manifest: ResourceManifest,
+  issues: ReleaseAuditIssue[],
+): Promise<void> {
+  const assetRoot = `distribution/assets/${policyEntry.contentPack}/${policyEntry.version}/`;
+  const expected = new Set(manifest.assets.map(asset => assetRoot + asset.path));
+
+  for (const asset of manifest.assets) {
+    const publicPath = assetRoot + asset.path;
+    if (!fileSet.has(publicPath)) {
+      issues.push({
+        code: 'MISSING_INCREMENTAL_ASSET',
+        path: publicPath,
+        message: 'Every manifest asset must be present in the public incremental asset tree',
+      });
+      continue;
+    }
+    const bytes = await readFile(join(root, publicPath));
+    if (bytes.byteLength !== asset.size) {
+      issues.push({
+        code: 'INCREMENTAL_ASSET_SIZE_MISMATCH',
+        path: publicPath,
+        message: `Incremental asset size mismatch: expected ${asset.size}, got ${bytes.byteLength}`,
+      });
+      continue;
+    }
+    const sha256 = createHash('sha256').update(bytes).digest('hex');
+    if (sha256 !== asset.sha256) {
+      issues.push({
+        code: 'INCREMENTAL_ASSET_HASH_MISMATCH',
+        path: publicPath,
+        message: 'Incremental asset SHA-256 does not match the allowlisted Resource Manifest',
+      });
+    }
+  }
+
+  for (const path of files) {
+    if (path.startsWith(assetRoot) && !expected.has(path)) {
+      issues.push({
+        code: 'UNLISTED_INCREMENTAL_ASSET',
+        path,
+        message: 'Public incremental asset is not listed by the allowlisted Resource Manifest',
+      });
+    }
+  }
 }
 
 export async function auditReleaseRoot(rootPath: string, policyPath: string): Promise<ReleaseAuditIssue[]> {
@@ -147,14 +203,16 @@ export async function auditReleaseRoot(rootPath: string, policyPath: string): Pr
       continue;
     }
 
+    let manifest: ResourceManifest;
     try {
-      const manifest = validateResourceManifest(JSON.parse(await readFile(join(root, entry.manifestPath), 'utf8')));
+      manifest = validateResourceManifest(JSON.parse(await readFile(join(root, entry.manifestPath), 'utf8')));
       if (manifest.contentPack !== entry.contentPack || manifest.version !== entry.version) {
         issues.push({
           code: 'INVALID_MANIFEST',
           path: entry.manifestPath,
           message: 'Resource Manifest identity does not match public release allowlist',
         });
+        continue;
       }
     } catch (error) {
       issues.push({
@@ -162,7 +220,10 @@ export async function auditReleaseRoot(rootPath: string, policyPath: string): Pr
         path: entry.manifestPath,
         message: error instanceof Error ? error.message : String(error),
       });
+      continue;
     }
+
+    await validateIncrementalAssets(root, fileSet, files, entry, manifest, issues);
   }
 
   return issues;
