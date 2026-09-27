@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import {
   bootProductionApp,
@@ -7,6 +9,9 @@ import {
 
 const RELEASE_URL = process.env.M81_PAGES_URL?.trim();
 const RELEASE_COMMIT = process.env.M81_PAGES_COMMIT?.trim().toLowerCase();
+const distributionPanelModuleAvailable = existsSync(
+  fileURLToPath(new URL('../src/ui/distribution-panel.ts', import.meta.url)),
+);
 
 async function distributionUiPresent(page: Page): Promise<boolean> {
   const names = [
@@ -24,9 +29,15 @@ async function distributionUiPresent(page: Page): Promise<boolean> {
 
 async function requireDistributionUi(page: Page): Promise<void> {
   await bootProductionApp(page);
-  if (!(await distributionUiPresent(page))) {
-    test.skip(true, 'M8.1 distribution UI is not integrated on this branch yet.');
+  const present = await distributionUiPresent(page);
+  if (!distributionPanelModuleAvailable) {
+    test.skip(true, 'M8.1 distribution UI implementation is not present on this tested tree yet.');
+    return;
   }
+  expect(
+    present,
+    'Worker 3 distribution panel exists on this tree but Main Integration has not wired it into the production page.',
+  ).toBe(true);
 }
 
 async function expectTouchTargets(page: Page): Promise<void> {
