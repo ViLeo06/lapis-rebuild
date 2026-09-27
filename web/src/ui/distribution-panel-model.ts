@@ -94,7 +94,7 @@ export function formatDistributionBytes(value: number | undefined): string {
     index += 1;
   }
   const digits = amount >= 100 ? 0 : amount >= 10 ? 1 : 2;
-  return amount.toFixed(digits).replace(/\.0+$/, '') + ' ' + units[index];
+  return String(Number(amount.toFixed(digits))) + ' ' + units[index];
 }
 
 function actionsFor(snapshot: DistributionSnapshot): readonly DistributionActionKey[] {
