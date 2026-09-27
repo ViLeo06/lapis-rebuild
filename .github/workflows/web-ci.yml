@@ -199,6 +199,46 @@ jobs:
           npm ci --ignore-scripts
           if [ "${{ steps.private_source.outputs.mode }}" = "installer" ]; then npm run build; fi
           npx playwright install --with-deps chromium
+      - name: Build authorized M8.1 Cloudflare Full Pack
+        if: steps.private_source.outputs.mode == 'installer'
+        working-directory: web
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/m8-1-cloudflare-release"
+          PACK_ID="ybcs-2-2"
+          PACK_VERSION="m8-1-20260927"
+          mkdir -p "$OUT"
+          npm run resource-manifest:generate -- \
+            --root public/game-data \
+            --output "$OUT/resource-manifest.json" \
+            --content-pack "$PACK_ID" \
+            --version "$PACK_VERSION"
+          npm run full-pack:build -- \
+            --root public/game-data \
+            --manifest "$OUT/resource-manifest.json" \
+            --output "$OUT/lapis-full-$PACK_ID-$PACK_VERSION.lapispak" \
+            --content-pack "$PACK_ID" \
+            --version "$PACK_VERSION" \
+            --visibility private-original
+          npm run full-pack:verify -- \
+            --pack "$OUT/lapis-full-$PACK_ID-$PACK_VERSION.lapispak" \
+            --manifest "$OUT/resource-manifest.json" \
+            --content-pack "$PACK_ID" \
+            --version "$PACK_VERSION"
+          sha256sum "$OUT/lapis-full-$PACK_ID-$PACK_VERSION.lapispak" > "$OUT/SHA256SUMS.txt"
+          du -h "$OUT/lapis-full-$PACK_ID-$PACK_VERSION.lapispak"
+
+      - name: Publish authorized M8.1 Cloudflare Full Pack
+        if: steps.private_source.outputs.mode == 'installer'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: m8-1-authorized-cloudflare-full-pack
+          path: ${{ runner.temp }}/m8-1-cloudflare-release/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+
       - name: Private standalone preview
         if: steps.private_source.outputs.mode == 'installer'
         run: python3 tools/package_web_preview.py --dist web/dist --pack web/public/game-data --out "$RUNNER_TEMP/lapis-private.html"
