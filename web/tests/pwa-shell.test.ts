@@ -15,7 +15,7 @@ test('web app manifest defines an installable standalone shell', async () => {
 
 test('service worker keeps shell cache explicit and serves installed game assets from AssetStore', async () => {
   const source = await read('../public/service-worker.js');
-  assert.match(source, /lapis-app-shell-v2/);
+  assert.match(source, /lapis-app-shell-v3/);
   assert.match(source, /\.\/assets\//);
   assert.match(source, /request\.mode === 'navigate'/);
   assert.match(source, /precacheBuiltAssets/);

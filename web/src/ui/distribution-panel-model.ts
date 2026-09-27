@@ -127,7 +127,9 @@ function summaryFor(snapshot: DistributionSnapshot): string {
   if (snapshot.message) return snapshot.message;
   switch (snapshot.state) {
     case 'NO_PACK':
-      return '需要先安装游戏资源。可以在线下载完整资源，也可以导入已有的完整资源包。';
+      return snapshot.canDownloadFullPack === false
+        ? '当前发行没有提供可下载的完整资源包，请导入本地完整资源包。'
+        : '需要先安装游戏资源。可以在线下载完整资源，也可以导入已有的完整资源包。';
     case 'CHECKING':
       return '正在检查资源版本，请稍候。';
     case 'DOWNLOADING':
