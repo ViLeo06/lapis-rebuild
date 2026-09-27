@@ -196,12 +196,22 @@ export class AssetStoreAdapter implements AssetStore{
 }
 
 class IndexedDbAssetStoreDatabase implements AssetStoreDatabase{
+  private readonly db:IDBDatabase;
+  private readonly blobStore:string;
+  private readonly manifestStore:string;
+  private readonly installStore:string;
+
   constructor(
-    private readonly db:IDBDatabase,
-    private readonly blobStore:string,
-    private readonly manifestStore:string,
-    private readonly installStore:string,
-  ){}
+    db:IDBDatabase,
+    blobStore:string,
+    manifestStore:string,
+    installStore:string,
+  ){
+    this.db=db;
+    this.blobStore=blobStore;
+    this.manifestStore=manifestStore;
+    this.installStore=installStore;
+  }
 
   private read(storeName:string,key:IDBValidKey):Promise<unknown>{
     return new Promise((resolve,reject)=>{
