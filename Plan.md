@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v4.0｜更新：2026-09-26｜Mobile-first Web/PWA  
+> 版本：v4.1｜更新：2026-09-27｜Mobile-first Web/PWA  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -9,6 +9,11 @@
 ### 0.1 当前检查点
 
 主线保持 **Vite + TypeScript + Phaser + Python 静态转换工具链**。交付模式已切换为 **Mobile-first Web/PWA**，Cloudflare Pages 为首选部署目标；standalone 单 HTML 仅保留历史兼容/旧测试用途，不再作为主要交付。Godot 工程只保留参考，不继续双线开发。
+
+- 2026-09-27 **M8.1 Real Web Distribution & Playtest 已启动**。统一稳定 baseline 为 `main@51907f41365edb4be393579f3814d8e23116dd6e`，统一集成分支为 `codex/m8-1-distribution-playtest-integration`。本轮采用 5 个并行 Worker：W1 Full Pack Contract、W2 AssetStore/Incremental Update、W3 Install/Update UX、W4 Cloudflare Pages Release、W5 Distribution Acceptance。
+- M8.1 目标是形成固定 Web/PWA 入口、完整资源包与增量更新并存的发行体系：新玩家可一次安装 Full Pack，已有资源的设备只下载 changed/new assets；SaveV2 与大型 AssetStore 继续分层。
+- M8.1 Main Supervisor 已按每小时循环启用；每个 Worker 开工后在自己的 Session 创建分配的 +30 / +60 一次性续跑任务。GitHub / CI / 项目文档仍是唯一工程事实源。
+- M8.1 真实 Cloudflare Pages project 创建、GitHub 连接、公开部署、DNS 与 private/original assets 公网发布仍需单独明确授权；在获得授权前，W4 只能推进工程准备并标记 `AWAITING_RELEASE_AUTHORIZATION`。
 
 - 2026-09-26 M8.0 Mobile-first Offline Web Foundation 已完成首轮工程收口。PR #69–#74 六个 Worker 的 Resource Manifest、PWA App Shell、Mobile Layout、IndexedDB Save Store、Cloudflare Pages 准备和 Platform Acceptance 已由集成 PR #75 吸收并合入 `main`。
 - M8.0 集成 PR #75 head `017dc629af6094ce27946ada0c05191d05ca88d7`：Cloudflare Pages static smoke run `36188231126` success；Web and parser validation run `36188231235` success，其中 parser、typecheck、unit、production build、Chromium integration/offline 全部通过；`private-original` 按 PR 条件 skipped，不记作通过。
@@ -180,7 +185,7 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-**M8.0 Web/PWA Foundation 已合入。当前稳定功能基线为 `main@5f7896ffa89726a0ab864b5a9f5034047ce4fd04`。**
+**M8.1 Real Web Distribution & Playtest 已开工。当前稳定 baseline 为 `main@51907f41365edb4be393579f3814d8e23116dd6e`；统一集成分支为 `codex/m8-1-distribution-playtest-integration`。**
 
 - M7/S34 历史线已关闭；M7.1 S35–S41、最终集成 PR #63/#64 与 follow-up PR #66 均已合入 `main`。
 - 后续功能工作必须从当前 `main` 新建分支，不复用已关闭的 S30–S41 worker/fix 分支。
