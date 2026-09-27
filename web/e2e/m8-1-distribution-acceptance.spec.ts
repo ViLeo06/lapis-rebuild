@@ -61,8 +61,8 @@ test.describe('M8.1 distribution acceptance - first run UX', () => {
     const failures = captureRuntimeFailures(page);
     await requireDistributionUi(page);
 
-    await expect(page.getByRole('button', { name: /下载完整资源/ })).toBeVisible();
     await expect(page.getByRole('button', { name: /导入完整资源包/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /下载完整资源/ })).toHaveCount(0);
 
     const visibleText = await page.locator('body').innerText();
     expect(visibleText).not.toMatch(/\bSHA-?256\b/i);
