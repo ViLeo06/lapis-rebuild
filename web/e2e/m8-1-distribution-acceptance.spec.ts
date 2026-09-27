@@ -29,6 +29,9 @@ async function distributionUiPresent(page: Page): Promise<boolean> {
 
 async function requireDistributionUi(page: Page): Promise<void> {
   await bootProductionApp(page);
+  if (distributionPanelModuleAvailable) {
+    await page.evaluate(() => (window as any).lapisDistribution?.open());
+  }
   const present = await distributionUiPresent(page);
   if (!distributionPanelModuleAvailable) {
     test.skip(true, 'M8.1 distribution UI implementation is not present on this tested tree yet.');
