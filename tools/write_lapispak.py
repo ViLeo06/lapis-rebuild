@@ -45,7 +45,11 @@ def write_pack(root_name: str, manifest_name: str, output_name: str) -> None:
                     raise ValueError(f"Symlink source forbidden: {relative}")
             if not source.resolve(strict=True).is_relative_to(root):
                 raise ValueError("Source escapes root")
-            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            if not stat.S_ISREG(source.lstat().st_mode):
+                raise ValueError(f"Not a regular file: {relative}")
+            # O_NONBLOCK also prevents a FIFO swap from hanging before fstat.
+            flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+                     | getattr(os, "O_NONBLOCK", 0))
             fd = os.open(source, flags)
             with os.fdopen(fd, "rb") as stream:
                 info = os.fstat(stream.fileno())

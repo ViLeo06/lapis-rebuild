@@ -198,6 +198,11 @@ test('production builder: deterministic roundtrip, standard zip interoperability
     await writeFile(resolve(root, 'real.txt'), SYNTHETIC_FILES['maps/demo.json']);
     await symlink(resolve(root, 'real.txt'), resolve(root, manifest.assets[0].path));
     await assert.rejects(buildFullPack({root, manifest, output: resolve(failureDir, name), visibility: 'public-safe'}), /Symlink/);
+    // A FIFO must reject before opening/reading, rather than hang the build.
+    await rm(resolve(root, manifest.assets[0].path));
+    execFileSync('python3', ['-S', '-c', 'import os,sys; os.mkfifo(sys.argv[1])', resolve(root, manifest.assets[0].path)]);
+    await assert.rejects(buildFullPack({root, manifest, output: resolve(failureDir, name), visibility: 'public-safe'}), /Not a regular file/);
+    assert.deepEqual(await readdir(failureDir), []);
     // Explicit policy guards, including public-safe (publication belongs to W4).
     const publicOutput = fileURLToPath(new URL(`../public/${name}`, import.meta.url));
     await assert.rejects(buildFullPack({root, manifest, output: publicOutput, visibility: 'public-safe'}), /publication/);
