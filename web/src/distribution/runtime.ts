@@ -492,8 +492,12 @@ export async function installDistributionRuntime(options:{
     await serviceWorkerReadyForAssets();
     options.startGame();
   }else if(!release?.content){
-    // CI/local legacy fixture mode remains bootable while the distribution panel is exercised.
+    // CI/local legacy fixture mode auto-boots the game and must not leave the
+    // modal distribution layer intercepting normal gameplay input. Dedicated
+    // distribution acceptance re-opens the panel explicitly through the
+    // integration API.
     options.startGame();
+    panel.close();
   }
 
   return runtime;
