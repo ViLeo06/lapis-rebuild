@@ -6,6 +6,7 @@ import {
 } from './helpers/platform-acceptance.ts';
 
 const RELEASE_URL = process.env.M81_PAGES_URL?.trim();
+const RELEASE_COMMIT = process.env.M81_PAGES_COMMIT?.trim().toLowerCase();
 
 async function distributionUiPresent(page: Page): Promise<boolean> {
   const names = [
@@ -87,11 +88,48 @@ test.describe('M8.1 distribution acceptance - Android portrait', () => {
 test.describe('M8.1 release acceptance', () => {
   test.skip(!RELEASE_URL, 'BLOCKED / AWAITING_RELEASE_AUTHORIZATION: no real Pages URL supplied.');
 
-  test('authorized Pages URL boots the production game shell', async ({ page }) => {
+  test('authorized Pages URL exposes the deployed commit, PWA metadata and offline shell', async ({ page }) => {
     const failures = captureRuntimeFailures(page);
     await page.goto(RELEASE_URL!, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('#canvas-host canvas')).toBeVisible();
     await expectPageFitsViewport(page);
+
+    const manifestResponse = await page.request.get(new URL('/manifest.webmanifest', RELEASE_URL!).href);
+    expect(manifestResponse.ok()).toBe(true);
+
+    const metadata = await page.evaluate(async () => {
+      const response = await fetch('./release-metadata.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error('release-metadata.json fetch failed: ' + response.status);
+      return await response.json() as {
+        schema: number;
+        release: { channel: string; commit: string | null; branch: string | null; url: string | null };
+        content: null | { manifestPath: string };
+      };
+    });
+
+    expect(metadata.schema).toBe(1);
+    expect(metadata.release.channel).toBe('production');
+    expect(metadata.release.branch).toBe('main');
+    if (RELEASE_COMMIT) expect(metadata.release.commit).toBe(RELEASE_COMMIT);
+
+    if (metadata.content?.manifestPath) {
+      const resourceManifest = await page.request.get(new URL(metadata.content.manifestPath, RELEASE_URL!).href);
+      expect(resourceManifest.ok()).toBe(true);
+    }
+
+    await page.waitForFunction(async () => {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      return Boolean(registration?.active);
+    });
+
+    await page.context().setOffline(true);
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await expect(page.locator('#canvas-host canvas')).toBeVisible();
+    } finally {
+      await page.context().setOffline(false);
+    }
+
     expect(failures.pageErrors).toEqual([]);
   });
 });
