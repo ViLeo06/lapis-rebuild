@@ -1,6 +1,6 @@
 # M8.1 Worker 2 — AssetStore / Incremental Update / Repair
 
-STATUS: IMPLEMENTED — CI validation pending
+STATUS: IMPLEMENTATION COMPLETE — REQUIRED WORKER GATES PASS; FULL WEB CI REGRESSION IN PROGRESS
 
 ## Scope
 
@@ -152,10 +152,24 @@ Public-safe and private/original packs may use the same storage/update contract,
 
 ## Validation
 
-Pending PR CI. Required Worker 2 gate:
+Implementation/tested HEAD: `4376a0f103a3c31325c02e357b0dd72b1146d29d`
 
-- `npm run typecheck`
-- `npm test`
-- `npm run build`
+GitHub Actions run: `36298221485` — `Web and parser validation`.
 
-No claim of final PASS is made until GitHub CI reports the branch/PR result.
+Required Worker 2 gate is PASS on the implementation/tested HEAD:
+
+- locked `npm ci --ignore-scripts`: PASS
+- `npm run typecheck`: PASS
+- `npm test`: PASS
+- `npm run build`: PASS
+
+The same CI step also completed parser/synthetic-pack setup and standalone synthetic preview build successfully.
+
+Supplemental isolated verification after the strip-types compatibility fix:
+
+- strict TypeScript compilation of ResourceManifest + Worker 2 source: PASS
+- Worker 2 focused Node tests: 9/9 PASS
+
+At the time of this note update, the repository-wide Chromium integration/offline step in run `36298221485` is still running. It is broader than the Worker 2 minimum DoD, so it is recorded as `IN PROGRESS`, not PASS. The +30/+60 resume tasks must re-check this run and update the note if it finishes or exposes a Worker 2 regression.
+
+`private-original` is skipped because this worker does not request private-original validation and must not publish or execute original client assets.
