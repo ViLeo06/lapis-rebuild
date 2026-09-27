@@ -20,6 +20,32 @@ At Worker 5 start, all four dependency branches existed but were still identical
 
 Therefore Pack / AssetStore / Update / Distribution UI / Release behavior is **not allowed to be reported PASS yet**.
 
+## Live dependency update — 2026-09-27
+
+The dependency branches have progressed since Worker 5 started:
+
+- Worker 1 `codex/m8-1a-full-pack-contract`: still 0 commits ahead of baseline; no Full Pack implementation/PR is available yet.
+- Worker 2 PR #79: AssetStore / incremental update / repair implementation exists; Worker 5 added an independent acceptance oracle that activates automatically once `update-engine.ts` is present on the tested tree.
+- Worker 3 PR #80: distribution panel implementation and its component-level mobile tests exist; Worker 5 keeps a separate black-box production-page check that only activates after Main Integration wires the panel.
+- Worker 4 PR #81: release contract exists; GitHub Actions release gate is green. Real Cloudflare deployment remains `AWAITING_RELEASE_AUTHORIZATION`.
+
+Worker 5 PR #78 is intentionally Draft while the Full Pack and integrated distribution path are incomplete.
+
+Additional Worker 5 evidence assets:
+
+- `web/tests/m8-1-distribution-chain-acceptance.test.ts`
+  - V1→V2 asserts 95 unchanged / 3 changed / 2 new and exactly 5 fetches;
+  - network failure keeps V1 installed;
+  - SHA mismatch keeps V1 installed;
+  - one corrupt asset causes exactly one repair fetch.
+  - These tests skip rather than fake PASS until Worker 2 is present on the tested tree.
+- `.github/workflows/m8-1e-acceptance.yml`
+  - locked install, typecheck, unit, production build;
+  - existing platform smoke;
+  - Worker 5 M8.1 black-box Playwright acceptance;
+  - artifact upload for evidence.
+- Authorized release E2E accepts `M81_PAGES_URL` and optional `M81_PAGES_COMMIT`; it verifies app boot, Web App Manifest, `release-metadata.json`, deployed main commit when supplied, configured Resource Manifest, active Service Worker, and offline reload.
+
 ## Acceptance matrix
 
 | Area | Required evidence | Current status |
