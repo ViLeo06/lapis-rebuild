@@ -13,6 +13,7 @@ test('M8.1 integrated Full Pack persists separately and serves an installed asse
 
   await bootProductionApp(page);
   await page.waitForFunction(() => Boolean((window as any).lapisM4 && (window as any).lapisDistribution));
+  await page.evaluate(() => (window as any).lapisDistribution.open());
 
   const before=await page.evaluate(async () => {
     const runtime=(window as any).lapisM4;
