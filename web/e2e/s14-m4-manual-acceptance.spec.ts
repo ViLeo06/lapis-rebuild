@@ -23,6 +23,17 @@ async function legacyPause(page:Page){
   await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
 }
 
+async function captureActiveBattleEvidence(page:Page,path:string){
+  const state=await snap(page);
+  const shouldPause=state.inBattleView&&state.phase==='active';
+  if(shouldPause)await legacyPause(page);
+  try{
+    await page.screenshot({path,fullPage:true});
+  }finally{
+    if(shouldPause)await legacyPause(page);
+  }
+}
+
 async function m4Action(page:Page,action:string){
   await page.evaluate((value)=>{
     const button=document.querySelector<HTMLButtonElement>(`[data-action="${value}"]`);
@@ -93,7 +104,7 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
   expect(entered.damagePolicy.provenance).toBe('RECONSTRUCTION_POLICY');
   await expect(page.locator('[data-ui="battle-hud"]')).toBeVisible();
   checkpoints.entered={m4:await m4(page),scene:entered};
-  await page.screenshot({path:'test-results/s14-03-swordsman-battle.png',fullPage:true});
+  await captureActiveBattleEvidence(page,'test-results/s14-03-swordsman-battle.png');
 
   let capturedMove=false;
   let capturedAttack=false;
@@ -106,6 +117,9 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
     if(!target)break;
 
     if(state.target!==target.id)await selectLiveTarget(page,target.id);
+
+    // Full-page evidence capture is paused separately. Keep path planning on
+    // the live battle state so reachable[] reflects the player-visible state.
     const current=await snap(page);
     const live=current.enemies.find(enemy=>enemy.id===target.id&&enemy.hp>0)!;
     const distance=Math.max(Math.abs(live.cell[0]-current.battleCell[0]),Math.abs(live.cell[1]-current.battleCell[1]));
@@ -114,7 +128,7 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
       if(!capturedAttack){
         await page.waitForTimeout(120);
         checkpoints.firstAttack=await snap(page);
-        await page.screenshot({path:'test-results/s14-05-swordsman-attack.png',fullPage:true});
+        await captureActiveBattleEvidence(page,'test-results/s14-05-swordsman-attack.png');
         capturedAttack=true;
       }
       continue;
@@ -131,7 +145,7 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
     await expect.poll(async()=>JSON.stringify((await snap(page)).battleCell),{timeout:10000}).not.toBe(from);
     if(!capturedMove){
       checkpoints.firstMove=await snap(page);
-      await page.screenshot({path:'test-results/s14-04-swordsman-move.png',fullPage:true});
+      await captureActiveBattleEvidence(page,'test-results/s14-04-swordsman-move.png');
       capturedMove=true;
     }
   }

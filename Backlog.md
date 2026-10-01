@@ -1,6 +1,38 @@
 # Backlog
 
-> 2026-09-26 | Mobile-first Web/PWA | Plan v4.0 | M8.0 foundation merged | active: post-M8.0 integration and next content round
+> 2026-10-01 | Mobile-first Web/PWA | Plan v4.2 | M8.1 engineering closeout PASS | external release/human gates pending
+
+## M8.1 Real Web Distribution & Playtest — 工程已收口 / 外部门待完成
+
+- baseline：`main@51907f41365edb4be393579f3814d8e23116dd6e`
+- integration branch：`codex/m8-1-distribution-playtest-integration`
+- runtime-tested engineering head：`a78402da29919604611bbd28db6c86d1777e6118`
+- acceptance closeout merge：`0dc246c4c377a42dacce6bcc05db21e511fd9db2`
+- [x] Worker 1 — Full Pack Format / Builder / Verifier：PR #82 已合入。
+- [x] Worker 2 — AssetStore / Incremental Update / Repair：PR #79 已合入。
+- [x] Worker 3 — First-run / Install / Update UX：PR #80 已合入。
+- [x] Worker 4 — Cloudflare Pages Release / Public-safe Distribution：PR #81 已合入。
+- [x] Worker 5 — M8.1 Acceptance / E2E / Real-device Gate scaffold：PR #78 已合入。
+- [x] Closeout W1 — first-run/local Full Pack regression：PR #83 已合入，merge `17ec5eb7b1bbc34fb65e8b762a2d9d097ba03d8d`。
+- [x] Closeout W2 — legacy/offline E2E regression：PR #86 已合入，merge `f38f3ddf22aa33d19361d2c2e812e7c94b05b991`。
+- [x] Closeout W4 — Pages release state：PR #85 已合入，merge `a78402da29919604611bbd28db6c86d1777e6118`。
+- [x] Closeout W3 — final engineering acceptance：PR #84 已合入，merge `0dc246c4c377a42dacce6bcc05db21e511fd9db2`。
+- [x] Full Pack：新玩家可本地导入完整资源包；Full Pack 与 Incremental Update 共享 Resource Manifest / size / SHA-256 authority。
+- [x] Incremental Update：已安装设备只处理 changed/new assets；失败时旧 installed version 保持可用。
+- [x] Asset Repair：只修复 missing/corrupt entries，不重新下载完整包。
+- [x] 玩家 UX：首次安装/导入、更新、修复、进度、offline-ready 与移动端流程已接入并通过工程验证。
+- [x] Public/private boundary：公开 Pages shell 不包含 private/original Full Pack；R2 / 付费对象存储已放弃。
+- [x] Engineering Gate：run `36831841132` SUCCESS；Chromium/offline **107 passed / 11 skipped / 0 failed**；Full Pack `36831841127`、Pages release `36831841113`、Pages static smoke `36831841123` 均 SUCCESS。
+- [ ] Release Gate：公开发行已授权，但真实 Cloudflare Pages project/GitHub account connection 与可验证 Pages URL 尚未完成；状态 `RELEASE_AUTHORIZED / PAGES_ACCOUNT_CONNECTION_PENDING`。
+- [ ] Human Gate：Android 真机完成首次导入 → 游戏 → 战斗 → Save → 重开 Load → 增量更新 → 离线启动，并由用户明确确认；当前 `ANDROID_HUMAN_GATE: NOT-YET-ACCEPTED`。
+- [ ] PR #77：保持 Draft；仅在 Release Gate + Human Gate 完成并得到用户最终 main merge 授权后进入 `main`。
+
+### M8.1 Closeout 控制
+
+- GitHub / CI / 项目文档继续作为唯一工程事实源。
+- Worker/closeout 工程工作已完成，不再重复创建旧 Worker branch/PR。
+- 不恢复 Cloudflare R2，不公开 private/original Full Pack。
+- 后续只剩真实 Pages account-side 连接、公开 URL 验证与 Android Human Gate；不得用工程 CI 代替用户真机验收。
 
 ## M8.0 Web/PWA Foundation — 已收口
 

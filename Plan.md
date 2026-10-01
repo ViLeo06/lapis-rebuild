@@ -1,6 +1,6 @@
 # 《佣兵传说》复刻项目计划
 
-> 版本：v4.0｜更新：2026-09-26｜Mobile-first Web/PWA  
+> 版本：v4.2｜更新：2026-10-01｜Mobile-first Web/PWA  
 > 用途：个人怀旧、研究、非商业复刻。第一优先级：剑士、巫师。  
 > 执行规则：`AGENTS.md`；任务：`Backlog.md`；证据：`docs/evidence-ledger.md`。
 
@@ -9,6 +9,11 @@
 ### 0.1 当前检查点
 
 主线保持 **Vite + TypeScript + Phaser + Python 静态转换工具链**。交付模式已切换为 **Mobile-first Web/PWA**，Cloudflare Pages 为首选部署目标；standalone 单 HTML 仅保留历史兼容/旧测试用途，不再作为主要交付。Godot 工程只保留参考，不继续双线开发。
+
+- 2026-10-01 **M8.1 Real Web Distribution & Playtest 工程收口完成**。原 W1–W5 已全部进入统一集成线；Closeout PR #83（first-run/local Full Pack）、#86（legacy/offline E2E）、#85（Pages release state）、#84（engineering acceptance）均已合入 `codex/m8-1-distribution-playtest-integration`。
+- M8.1 最终工程验证基于 runtime-tested head `a78402da29919604611bbd28db6c86d1777e6118`：Web and parser validation run `36831841132` SUCCESS，Chromium/offline **107 passed / 11 skipped / 0 failed**；Full Pack run `36831841127` SUCCESS；Pages release run `36831841113` SUCCESS；Pages static smoke run `36831841123` SUCCESS。PR #84 随后以文档-only merge `0dc246c4c377a42dacce6bcc05db21e511fd9db2` 记录 `ENGINEERING_GATE: PASS`。
+- 当前发行架构固定为 **Cloudflare Pages Web/PWA shell + local Full Pack import**。Full Pack 与 Incremental Update 共用 Resource Manifest / size / SHA-256 authority；浏览器本地 AssetStore 负责持久化资源，R2 / 付费对象存储方案已明确放弃。
+- Release 与 Human Gate 继续独立于工程 Gate：公开发行已获授权，但真实 Cloudflare Pages project/GitHub account connection 与可验证 Pages URL 尚未完成，状态保持 `RELEASE_AUTHORIZED / PAGES_ACCOUNT_CONNECTION_PENDING`；Android 14 步真机验收保持 `ANDROID_HUMAN_GATE: NOT-YET-ACCEPTED`。PR #77 继续保持 Draft，不在这两个外部门完成前合并 `main`。
 
 - 2026-09-26 M8.0 Mobile-first Offline Web Foundation 已完成首轮工程收口。PR #69–#74 六个 Worker 的 Resource Manifest、PWA App Shell、Mobile Layout、IndexedDB Save Store、Cloudflare Pages 准备和 Platform Acceptance 已由集成 PR #75 吸收并合入 `main`。
 - M8.0 集成 PR #75 head `017dc629af6094ce27946ada0c05191d05ca88d7`：Cloudflare Pages static smoke run `36188231126` success；Web and parser validation run `36188231235` success，其中 parser、typecheck、unit、production build、Chromium integration/offline 全部通过；`private-original` 按 PR 条件 skipped，不记作通过。
@@ -180,7 +185,7 @@ S4 已到达明确的 client evidence boundary：
 
 ### 0.6 下一步
 
-**M8.0 Web/PWA Foundation 已合入。当前稳定功能基线为 `main@5f7896ffa89726a0ab864b5a9f5034047ce4fd04`。**
+**M8.1 Real Web Distribution & Playtest 已开工。当前稳定 baseline 为 `main@51907f41365edb4be393579f3814d8e23116dd6e`；统一集成分支为 `codex/m8-1-distribution-playtest-integration`。**
 
 - M7/S34 历史线已关闭；M7.1 S35–S41、最终集成 PR #63/#64 与 follow-up PR #66 均已合入 `main`。
 - 后续功能工作必须从当前 `main` 新建分支，不复用已关闭的 S30–S41 worker/fix 分支。

@@ -1,4 +1,9 @@
-const CACHE_NAME = 'lapis-app-shell-v1';
+const CACHE_NAME = 'lapis-app-shell-v3';
+const ASSET_DB_NAME = 'lapis-asset-store';
+const ASSET_DB_VERSION = 1;
+const ASSET_BLOB_STORE = 'blobs';
+const ASSET_MANIFEST_STORE = 'manifests';
+const ASSET_INSTALL_STORE = 'installed';
 
 const scoped = (relative) => new URL(relative, self.registration.scope).href;
 const APP_SHELL = [
@@ -8,13 +13,18 @@ const APP_SHELL = [
   scoped('./icons/lapis-app.svg'),
 ];
 
+const assetPrefix = new URL('./assets/', self.registration.scope).pathname;
+const iconPrefix = new URL('./icons/', self.registration.scope).pathname;
+const manifestPath = new URL('./manifest.webmanifest', self.registration.scope).pathname;
+const gameDataPrefix = new URL('./game-data/', self.registration.scope).pathname;
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      await cache.addAll(APP_SHELL);
-      await precacheBuiltAssets(cache);
-    }),
-  );
+  event.waitUntil((async () => {
+    await self.skipWaiting();
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(APP_SHELL);
+    await precacheBuiltAssets(cache);
+  })());
 });
 
 async function precacheBuiltAssets(cache) {
@@ -31,17 +41,15 @@ async function precacheBuiltAssets(cache) {
 }
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
       keys.filter((key) => key.startsWith('lapis-app-shell-') && key !== CACHE_NAME)
         .map((key) => caches.delete(key)),
-    )),
-  );
+    );
+    await self.clients.claim();
+  })());
 });
-
-const assetPrefix = new URL('./assets/', self.registration.scope).pathname;
-const iconPrefix = new URL('./icons/', self.registration.scope).pathname;
-const manifestPath = new URL('./manifest.webmanifest', self.registration.scope).pathname;
 
 const isSafeShellAsset = (url) =>
   url.origin === self.location.origin && (
@@ -50,10 +58,107 @@ const isSafeShellAsset = (url) =>
     url.pathname === manifestPath
   );
 
+const isGameDataRequest = (url) =>
+  url.origin === self.location.origin && url.pathname.startsWith(gameDataPrefix);
+
+function openAssetDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(ASSET_DB_NAME, ASSET_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(ASSET_BLOB_STORE)) db.createObjectStore(ASSET_BLOB_STORE);
+      if (!db.objectStoreNames.contains(ASSET_MANIFEST_STORE)) db.createObjectStore(ASSET_MANIFEST_STORE);
+      if (!db.objectStoreNames.contains(ASSET_INSTALL_STORE)) db.createObjectStore(ASSET_INSTALL_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('AssetStore open failed'));
+    request.onblocked = () => reject(new Error('AssetStore open blocked'));
+  });
+}
+
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('AssetStore read failed'));
+  });
+}
+
+async function installedAsset(path) {
+  const db = await openAssetDatabase();
+  try {
+    const installsTx = db.transaction(ASSET_INSTALL_STORE, 'readonly');
+    const installs = await idbRequest(installsTx.objectStore(ASSET_INSTALL_STORE).getAll());
+    const candidates = (Array.isArray(installs) ? installs : [])
+      .filter((item) => item && item.manifest && Array.isArray(item.manifest.assets))
+      .sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+
+    for (const install of candidates) {
+      const entry = install.manifest.assets.find((candidate) => candidate && candidate.path === path);
+      if (!entry || typeof entry.sha256 !== 'string') continue;
+      const blobTx = db.transaction(ASSET_BLOB_STORE, 'readonly');
+      const record = await idbRequest(blobTx.objectStore(ASSET_BLOB_STORE).get(entry.sha256));
+      if (!record || !(record.blob instanceof Blob) || record.blob.size !== entry.size) continue;
+      return { entry, blob: record.blob, version: install.version };
+    }
+    return null;
+  } finally {
+    db.close();
+  }
+}
+
+async function assetStoreFirst(request, url) {
+  let path;
+  try {
+    path = decodeURIComponent(url.pathname.slice(gameDataPrefix.length));
+  } catch {
+    return fetch(request);
+  }
+  if (!path || path.startsWith('/') || path.includes('\\') ||
+      path.split('/').some((part) => !part || part === '.' || part === '..')) {
+    return fetch(request);
+  }
+
+  try {
+    const stored = await installedAsset(path);
+    if (stored) {
+      return new Response(stored.blob, {
+        status: 200,
+        headers: {
+          'Content-Type': stored.entry.mediaType || stored.blob.type || 'application/octet-stream',
+          'Content-Length': String(stored.blob.size),
+          'Cache-Control': 'no-store',
+          'X-Lapis-Asset-Version': String(stored.version || ''),
+          'X-Lapis-Asset-Sha256': stored.entry.sha256,
+        },
+      });
+    }
+  } catch {
+    // IndexedDB failures fall through to the ordinary network fixture/path.
+  }
+
+  try {
+    const response = await fetch(request);
+    const contentType = response.headers.get('content-type') || '';
+    if (response.ok && contentType.includes('text/html')) {
+      return new Response('Game asset is not installed', {
+        status: 404,
+        headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store'},
+      });
+    }
+    return response;
+  } catch {
+    return Response.error();
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
+  if (isGameDataRequest(url)) {
+    event.respondWith(assetStoreFirst(event.request, url));
+    return;
+  }
   if (event.request.mode === 'navigate') {
     event.respondWith(networkFirstNavigation(event.request));
     return;

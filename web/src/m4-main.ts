@@ -5,6 +5,7 @@ import './pwa-shell.ts';
 import {installMobileLayout} from './view/mobile-layout.ts';
 import {LabScene} from './scene.ts';
 import {installM4Runtime} from './m4-runtime-integration.ts';
+import {installDistributionRuntime} from './distribution/runtime.ts';
 
 declare global{
   interface Window{
@@ -35,6 +36,7 @@ const forceM4=new URLSearchParams(location.search).get('m4')==='1';
 const enableM4=!navigator.webdriver||forceM4;
 let installed=false;
 let liveScene:LabScene|undefined;
+let gameBootstrapStarted=false;
 
 // The Phaser ESM bundle does not expose the UMD-only global game registry.
 // Capture the actual scene instance at construction time, but install M4 only
@@ -72,7 +74,16 @@ window.addEventListener('lapis-ready',()=>{
   };
 });
 
-// Register the M4 bridge before starting the legacy Phaser bootstrap. Vite is
-// configured to inline this dynamic import so standalone delivery remains one
-// JavaScript chunk and one packaged HTML file.
-void import('./main.ts');
+function startGameBootstrap():void{
+  if(gameBootstrapStarted)return;
+  gameBootstrapStarted=true;
+  void import('./main.ts');
+}
+
+// Main Integration owns the shared startup seam. A configured public release
+// waits for installed resources; CI/local fixture mode remains bootable while
+// the distribution panel is exercised. The runtime never publishes resources.
+void installDistributionRuntime({startGame:startGameBootstrap}).catch(error=>{
+  console.warn('M8.1 distribution runtime initialization failed',error);
+  startGameBootstrap();
+});

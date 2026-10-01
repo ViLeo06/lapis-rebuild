@@ -1,0 +1,65 @@
+name: M8.1 Full Pack contract
+on:
+  push:
+    branches: ['codex/**']
+    paths:
+      - 'web/src/distribution/full-pack.ts'
+      - 'web/src/resource-manifest.ts'
+      - 'web/scripts/full-pack*.ts'
+      - 'web/tests/full-pack.test.ts'
+      - 'web/tests/fixtures/full-pack-fixture.ts'
+      - 'web/e2e/m8-1a-full-pack-reader.spec.ts'
+      - 'tools/write_lapispak.py'
+      - '.github/workflows/m8-1a-full-pack.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/src/distribution/full-pack.ts'
+      - 'web/src/resource-manifest.ts'
+      - 'web/scripts/full-pack*.ts'
+      - 'web/tests/full-pack.test.ts'
+      - 'web/tests/fixtures/full-pack-fixture.ts'
+      - 'web/e2e/m8-1a-full-pack-reader.spec.ts'
+      - 'tools/write_lapispak.py'
+      - '.github/workflows/m8-1a-full-pack.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: m8-1a-pack-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: {persist-credentials: false}
+      - name: Locked install, typecheck, unit and production build
+        working-directory: web
+        run: |
+          npm ci --ignore-scripts
+          npm run typecheck
+          npm run test:full-pack
+          npm run build
+      - name: Synthetic-only deterministic archive and roundtrip
+        working-directory: web
+        run: npm run full-pack:smoke -- --output "$RUNNER_TEMP/m8-1a-synthetic"
+      - name: Chromium Blob reader smoke (no production wiring)
+        working-directory: web
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:e2e -- e2e/m8-1a-full-pack-reader.spec.ts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: m8-1a-synthetic-full-pack
+          path: ${{ runner.temp }}/m8-1a-synthetic/
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: m8-1a-browser-reader-results
+          path: web/test-results/
+          retention-days: 3
+          if-no-files-found: warn

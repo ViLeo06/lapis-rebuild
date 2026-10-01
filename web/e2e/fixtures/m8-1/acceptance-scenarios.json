@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "purpose": "M8.1 distribution acceptance scenario authority",
+  "incrementalV1ToV2": {
+    "v1AssetCount": 100,
+    "unchanged": 95,
+    "changed": 3,
+    "new": 2,
+    "expectedAssetRequests": 5
+  },
+  "repairSingleCorruption": {
+    "corruptAssets": 1,
+    "expectedAssetRequests": 1
+  },
+  "failureSafety": [
+    "sha-mismatch",
+    "network-failure",
+    "partial-download",
+    "storage-failure"
+  ],
+  "mobileViewports": [
+    { "width": 915, "height": 412, "orientation": "landscape" },
+    { "width": 412, "height": 915, "orientation": "portrait" }
+  ],
+  "releaseWithoutAuthorization": "BLOCKED / AWAITING_RELEASE_AUTHORIZATION",
+  "humanGateBeforeAndroidPlaytest": "NOT-YET-ACCEPTED"
+}

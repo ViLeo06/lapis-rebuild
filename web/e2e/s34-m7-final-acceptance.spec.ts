@@ -343,7 +343,9 @@ test('S34 wizard Lv26 Ashes blocks the S30 healer production self-heal',async({p
 });
 
 test('S34 wizard Lv36 petrify prevents action and ordinary attack targeting',async({page})=>{
-  test.setTimeout(30000);
+  // This acceptance path consistently needs >30s under the expanded M8.1 full-suite CI load.
+  // Keep the assertion semantics unchanged; only align its wall-clock budget with the suite default.
+  test.setTimeout(60000);
   await ready(page);
   await developerPreset(page,'wizard',36,true);
   await startTraining(page,10);

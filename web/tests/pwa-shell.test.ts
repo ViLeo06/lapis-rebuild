@@ -13,15 +13,24 @@ test('web app manifest defines an installable standalone shell', async () => {
   assert.ok(manifest.icons.some((icon: { sizes?: string }) => icon.sizes === 'any'));
 });
 
-test('service worker caches only explicit app-shell paths and build assets', async () => {
+test('service worker keeps shell cache explicit and serves installed game assets from AssetStore', async () => {
   const source = await read('../public/service-worker.js');
-  assert.match(source, /lapis-app-shell-v1/);
+  assert.match(source, /lapis-app-shell-v3/);
   assert.match(source, /\.\/assets\//);
   assert.match(source, /request\.mode === 'navigate'/);
   assert.match(source, /precacheBuiltAssets/);
   assert.match(source, /cache\.addAll/);
-  assert.doesNotMatch(source, /game-data/);
-  assert.doesNotMatch(source, /skipWaiting/);
+
+  const shellStart = source.indexOf('const APP_SHELL');
+  const shellEnd = source.indexOf('];', shellStart);
+  const shellBlock = source.slice(shellStart, shellEnd + 2);
+  assert.doesNotMatch(shellBlock, /game-data/);
+
+  assert.match(source, /gameDataPrefix/);
+  assert.match(source, /lapis-asset-store/);
+  assert.match(source, /indexedDB\.open/);
+  assert.match(source, /skipWaiting/);
+  assert.match(source, /clients\.claim/);
 });
 
 test('PWA registration is production-only and never forces a refresh', async () => {

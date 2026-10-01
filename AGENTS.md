@@ -91,7 +91,7 @@ Python 3.12 负责：安装包静态拆解、旧格式解析、资源转换、�
 - 不直接向 `main` 提交。
 - 功能分支开发，通过 PR 集成。
 - 未经负责人明确批准不合并 `main`。
-- 当前阶段：**M8.0 Mobile-first Offline Web Foundation**。标准交付改为多文件 Web/PWA，Cloudflare Pages 为首选部署目标；standalone 单 HTML 仅作历史兼容/旧测试资产，不再是主要交付方式。实时稳定基线与阶段状态以 `Plan.md` 为准。
+- 当前阶段：**M8.1 Real Web Distribution & Playtest**。标准交付为多文件 Web/PWA；M8.1 在 M8.0 基础上增加 Full Pack 完整资源包、Incremental Update、AssetStore/Repair、首次安装/更新 UX 与真实发行验收。Cloudflare Pages 仍为首选部署目标；standalone 单 HTML 仅作历史兼容/旧测试资产，不再是主要交付方式。实时稳定基线与阶段状态以 `Plan.md` 为准。
 - 临时诊断/修复分支可使用 `codex/*`；验证后只做非 force 快进/正常 PR 集成。
 - 同一路径修改前读取最新 blob SHA，避免覆盖并发更新。
 - commit 保持小而清楚：`feat/fix/test/docs/refactor/chore`。
@@ -103,6 +103,15 @@ Python 3.12 负责：安装包静态拆解、旧格式解析、资源转换、�
 - 不得为普通 Worker 任务在用户桌面创建 clone、worktree、临时脚本、测试产物或说明文件；本地电脑不得成为项目状态的事实来源。
 - 只有主 Session 在集成排障、恢复未上传成果或用户明确授权本地检查时，才可临时使用 Desktop Commander；使用后仍必须把有效成果、状态和证据同步回 GitHub。
 - 后续所有并行 Worker 提示词都必须显式重复这一约束，避免仅依赖本文件被读取。
+
+### M8.1 发行边界
+
+- Full Pack 与 Incremental Update 必须共享 Resource Manifest / size / SHA-256 authority，避免维护两套资源真相。
+- SaveV2 与大型 AssetStore 分层；地图、角色、怪物、音频等 Blob 不得塞入 SaveV2。
+- 更新流程必须先 staging + verify，再切换 installed version；失败不得破坏上一版可用资源。
+- public/safe pack 与 private/original pack 可以使用相同包格式，但 private/original pack 不得自动提交 Git 或上传公开 Pages。
+- 真实 Cloudflare Pages project 创建、GitHub 连接、公开部署、DNS、付费资源与 private/original assets 公网发布仍需用户单独明确授权。
+- Worker 不得把未授权的公开部署写成 PASS；应明确标记 `AWAITING_RELEASE_AUTHORIZATION` / `BLOCKED`。
 
 ## 7. 资产和版权
 
