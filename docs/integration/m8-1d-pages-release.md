@@ -1,30 +1,72 @@
 # M8.1 Worker 4 — Cloudflare Pages Release / Public-safe Distribution
 
-STATUS: **ENGINEERING DONE / AWAITING_RELEASE_AUTHORIZATION**
+STATUS: **CLOSEOUT ENGINEERING PASS / RELEASE AUTHORIZED / PAGES ACCOUNT CONNECTION PENDING**
 
-- Baseline: `51907f41365edb4be393579f3814d8e23116dd6e`
-- Branch: `codex/m8-1d-pages-release`
-- PR: #81 — https://github.com/ViLeo06/lapis-rebuild/pull/81
+- M8.1 closeout baseline: `cd1ce8d136d37357ce06720f9e0f7bc75c4c807c`
+- Closeout branch: `codex/m8-1d-pages-release-closeout`
+- Original Worker 4 branch: `codex/m8-1d-pages-release`
+- Original PR: #81 — merged into `codex/m8-1-distribution-playtest-integration`
 - PR base: `codex/m8-1-distribution-playtest-integration`
-- Validated implementation head: `66725e48e32c55775ff1f9181fd6571d818bd3f6`
-- Release-gate run: `36298222660` — **SUCCESS**
-- Real Cloudflare deployment: **NOT AUTHORIZED**
+- Current integration PR: #77
+- Current integration release-gate run: `36326945088` — **SUCCESS**
+- Current distribution decision: **Cloudflare Pages shell + local Full Pack import**
+- Cloudflare R2 / paid object-storage path: **ABANDONED by user decision**
+- Real Pages URL: **NOT YET RECORDED**
+- Human Android gate: **NOT-YET-ACCEPTED**
 
-## Scope
+## Closeout scope
 
-Worker 4 promotes the M8.0 Pages preparation into a release contract and CI gate without mutating a real Cloudflare account.
+This recovery pass does not reimplement Worker 4. It verifies that the current M8.1 integration tree still satisfies the Pages/public-release contract after Workers 1–5 and distribution-runtime changes landed, and updates stale release documentation to the current approved distribution decision.
 
-## Delivered
+Worker 4 remains responsible for:
 
-- M8.1 Pages production/preview branch contract.
-- Build/release metadata emitted as `dist/release-metadata.json`.
-- Update-safe cache headers for shell pointers, resource manifests and versioned payloads.
-- Explicit public-safe Full Pack allowlist contract.
-- Public release sanity scanner that rejects raw/original leakage and unlisted `.lapispak` files.
-- GitHub release gate covering locked install, unit, production build, static fetch, metadata, Resource Manifest fetch and private-asset leakage checks.
-- Deployment checklist and external authorization boundary.
+- Pages production/preview release contract;
+- release metadata emitted by production builds;
+- update-safe cache rules;
+- public-safe release allowlist and leakage gate;
+- static Pages/release smoke workflow;
+- deployment checklist and release-status handoff.
 
-## Files
+## Current engineering result
+
+The current integration baseline `cd1ce8d...` still passes **M8.1 Pages release gate**:
+
+- run `36326945088`: SUCCESS;
+- locked dependency install: PASS;
+- unit suite: PASS;
+- production build/typecheck: PASS;
+- public release artifact sanity: PASS;
+- release metadata validation: PASS;
+- static root and generated asset fetch: PASS;
+- Web App Manifest fetch: PASS;
+- schema-1 Resource Manifest fetch: PASS;
+- required update-safe headers: PASS;
+- private/original leakage gate: PASS.
+
+The integration tree also extends the original Worker 4 contract with:
+
+- `/distribution/assets/*` immutable caching;
+- public incremental-asset presence/size/SHA-256 validation;
+- rejection of unlisted incremental assets.
+
+These changes are already covered by the green current release gate and therefore do not require a Worker 4 code rewrite.
+
+## Distribution decision now in force
+
+The active M8.1 delivery model is:
+
+1. **Cloudflare Pages** hosts only the public Web/PWA shell.
+2. The private/original Full Pack is **not** hosted on public Pages.
+3. First-run players import the verified Full Pack locally.
+4. Imported resources live in the browser-local M8.1 AssetStore.
+5. Incremental update/repair remains part of the M8.1 runtime contract.
+6. Cloudflare R2 and other paid object-storage hosting are not part of the current plan.
+
+The public-safe Full Pack allowlist remains empty unless a future pack is deliberately approved for public distribution.
+
+## Files / ownership
+
+Worker 4 owned or validates:
 
 - `.github/workflows/m8-1d-pages-release.yml`
 - `docs/deployment/cloudflare-pages.md`
@@ -37,54 +79,34 @@ Worker 4 promotes the M8.0 Pages preparation into a release contract and CI gate
 - `web/tests/release-sanity.test.ts`
 - `web/vite.config.ts`
 
-No changes are made to `m4-main.ts`, `pwa-shell.ts`, `service-worker.js`, `Plan.md`, `Backlog.md` or `AGENTS.md`.
-
-## Validation
-
-GitHub Actions run `36298222660` passed all Worker 4 release gates on implementation head `66725e48e32c55775ff1f9181fd6571d818bd3f6`:
-
-- locked `npm ci --ignore-scripts`: PASS
-- unit tests: PASS
-- production `npm run build` / typecheck: PASS
-- public release artifact sanity: PASS
-- `release-metadata.json` commit/channel validation: PASS
-- static root fetch: PASS
-- Web App Manifest fetch: PASS
-- synthetic schema-1 Resource Manifest fetch: PASS
-- generated Vite asset fetch: PASS
-- required update-safe `_headers`: PASS
-- private/original leakage and unlisted Full Pack rejection gate: PASS
-
-The closing documentation commit is expected to rerun the same workflow; the PR should only be marked ready after that final head is green.
-
-## Conflict audit
-
-At the time of validation, integration branch `codex/m8-1-distribution-playtest-integration` was four commits ahead of the common baseline and changed only:
-
-- `AGENTS.md`
-- `Backlog.md`
-- `Plan.md`
-- `docs/integration/m8-1-kickoff.md`
-
-Worker 4 does not modify those files. No direct file overlap was found.
+This closeout pass does not modify `m4-main.ts`, `pwa-shell.ts`, `service-worker.js`, `Plan.md`, `Backlog.md` or `AGENTS.md`.
 
 ## Public/private boundary
 
-The default Full Pack allowlist is empty. A future public-safe pack must be explicitly listed with its versioned Resource Manifest. Private/original packs remain forbidden on public Pages.
+Public Pages must not contain private/original client resources.
 
-Recommended public paths:
+The default public Full Pack allowlist remains empty. Any future public-safe pack must be explicitly allowlisted and must use the same Resource Manifest authority as the incremental asset tree.
 
-- `/distribution/manifests/<contentPack>/<version>/resource-manifest.json`
-- `/distribution/packs/lapis-full-<contentPack>-<version>.lapispak`
+Private/original Full Packs may use the Worker 1 archive format, but remain local/private and are imported by the player rather than published through Pages.
 
-Worker 1 owns the archive format and pack verifier. Main Integration should populate the public allowlist only for an explicitly approved public-safe pack.
+## External release status
 
-## External status
+The user explicitly authorized the M8.1 public web release path on **2026-09-27**. Therefore the old status `AWAITING_RELEASE_AUTHORIZATION` is obsolete.
 
-`AWAITING_RELEASE_AUTHORIZATION`
+Current status:
 
-No Cloudflare project, production URL, DNS record, token, secret or public private-asset upload is created by this worker. Do not report the Release/Human gate as PASS until a real Pages deployment is explicitly authorized and Worker 5/Main Integration completes the release + Android acceptance path.
+`RELEASE_AUTHORIZED / PAGES_ACCOUNT_CONNECTION_PENDING`
 
-## Handoff
+A production or preview Pages URL must not be claimed until the authenticated Cloudflare project/GitHub connection has actually produced a deployment and the deployed commit is verified.
 
-Main Integration may merge PR #81 into `codex/m8-1-distribution-playtest-integration` after its final head is green, then wire Worker 1–3 distribution functionality against the documented release paths. Do not merge `main` from this Worker.
+No R2 dependency, Cloudflare token, secret, private/original asset upload, or production URL is introduced by this Worker.
+
+## Remaining gate
+
+Worker 4 engineering is ready for integration closeout. M8.1 as a whole is still not fully accepted until:
+
+- a real Pages URL is connected and its deployed commit is verified;
+- Main/acceptance smoke passes against that URL;
+- the user completes the Android human playtest.
+
+Do not merge `main` from this Worker.
