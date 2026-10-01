@@ -508,6 +508,10 @@ export async function installDistributionRuntime(options:{
       (
         releaseReadFailed&&
         (location.hostname==='127.0.0.1'||location.hostname==='localhost')
+      )||
+      (
+        location.protocol==='file:'&&
+        Boolean((window as Window&{__LAPIS_PACK__?:Record<string,string>}).__LAPIS_PACK__)
       )
     )
   ){
