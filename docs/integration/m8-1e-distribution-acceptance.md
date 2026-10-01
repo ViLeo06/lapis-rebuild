@@ -35,6 +35,13 @@ Ownership / dependency routing:
 
 `ENGINEERING_GATE: FAIL`
 
+Closeout dependency/evidence update after the initial audit:
+
+- Worker 1 PR #83 remains open at `be787a6754ae993ea3d717a861878041d9e8da95`; its Pages-preview fix passes the focused M8.1 acceptance workflow, but Worker 3 additionally handed back the standalone `file://` regression because the current condition does not explicitly cover the embedded `window.__LAPIS_PACK__` path.
+- Worker 2 PR #86 is now open at `0aef511efd4ace9490395381123c8deb9c41bc4c`. It classifies S14 and S33 as test-harness/timing regressions and keeps the real product requirements intact; it explicitly routes the offline standalone failure to Worker 1.
+- Worker 3 PR #84 head `6d695ac7426ee3718ec5f6f87d62b535f3bb4d72` passed M8.1 Worker 5 validation run `36819058779`: locked install/typecheck/unit/production build PASS, platform smoke **2/2 PASS**, distribution black-box **3 PASS / 1 authorization-gated Pages test skipped**. This proves the acceptance harness is healthy, not the complete repository gate.
+- A rerun of Web/parser run `36326945153` on unchanged integration HEAD has again passed parser/typecheck/unit/build/standalone-build stages and is rerunning the Chromium stage. Because it does not contain W1/W2 fixes, it is diagnostic evidence only.
+
 A dedicated green Full Pack/Pages/static-smoke result is not sufficient to override a failed repository-wide Web and parser validation run. Final PASS requires a new complete run on the latest Integration HEAD with the closeout regressions resolved without skip/meaningless assertion relaxation.
 
 ## Current dependency snapshot
