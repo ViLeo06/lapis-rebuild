@@ -502,11 +502,19 @@ export async function installDistributionRuntime(options:{
     options.startGame();
   }else if(
     !release?.content&&
-    (location.hostname==='127.0.0.1'||location.hostname==='localhost')
+    (
+      release?.release.channel==='ci'||
+      release?.release.channel==='local'||
+      (
+        releaseReadFailed&&
+        (location.hostname==='127.0.0.1'||location.hostname==='localhost')
+      )
+    )
   ){
-    // Browser automation/local fixture mode auto-boots the synthetic game-data fixture.
-    // Public hosts never auto-boot solely because release metadata is missing or stale;
-    // they keep the install/import panel open until verified resources exist.
+    // Explicit CI/local metadata keeps the synthetic fixture bootable. When
+    // release metadata cannot be read at all, localhost keeps the legacy test
+    // harness usable. Preview/production metadata with content:null must keep
+    // the local Full Pack import gate open, independent of browser automation.
     options.startGame();
     panel.close();
   }
