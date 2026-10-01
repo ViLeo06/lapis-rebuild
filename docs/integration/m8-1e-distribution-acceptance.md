@@ -9,6 +9,34 @@
 
 Worker 5 owns acceptance fixtures, E2E/validation coverage, final acceptance evidence, and the Android human-playtest checklist. It does **not** replace Worker 1–4 production implementations.
 
+## M8.1 closeout engineering audit — 2026-10-01
+
+Worker 3 re-opened Engineering Acceptance against the current integration truth rather than the historical green snapshot recorded below.
+
+- Integration branch: `codex/m8-1-distribution-playtest-integration`
+- Audited HEAD: `cd1ce8d136d37357ce06720f9e0f7bc75c4c807c`
+- PR #77: open, Draft, base `main`, head `codex/m8-1-distribution-playtest-integration`; no main merge is authorized by this Worker.
+- Full Pack contract run `36326945111`: PASS.
+- Pages release gate run `36326945088`: PASS.
+- M8E Cloudflare Pages static smoke run `36326945151`: PASS.
+- Web and parser validation run `36326945153`: FAIL in Chromium integration/offline tests with **103 passed / 11 skipped / 4 failed**.
+- Parser tests, locked dependencies, repository typecheck, unit tests, production build, standalone synthetic preview, and private-pack-builder publication steps all passed before the Chromium failure.
+- Current four failures are:
+  1. `e2e/lab.spec.ts` — `offline HTML opens without external requests`.
+  2. `e2e/m8-1-distribution-runtime.spec.ts` — Pages preview without public content closes/loses the local Full Pack import surface.
+  3. `e2e/s14-m4-manual-acceptance.spec.ts` — swordsman playable quest path reaches `lost` instead of remaining `active`.
+  4. `e2e/s33-training-recovery-debug.spec.ts` — a mobile control touch target resolves to height `0` instead of at least `44px`.
+
+Ownership / dependency routing:
+
+- Worker 1 owns the Distribution Runtime failure. PR #83 (`codex/m8-1f-first-run-import-regression`) is open against the integration branch at `be787a6754ae993ea3d717a861878041d9e8da95`. Its one-file change narrows synthetic auto-boot so explicit preview/production metadata with `content:null` keeps the local Full Pack import gate open. Worker 3 does not copy or rewrite this product fix.
+- Worker 2 owns the legacy/offline/S14/S33 failures. At this audit point, `codex/m8-1g-legacy-e2e-regression` has not yet produced a GitHub commit/PR, so Worker 3 records the dependency rather than entering that scope.
+- Worker 3 branch `codex/m8-1h-ci-acceptance-closeout` was created from the audited integration HEAD. Until W1/W2 fixes are integrated and the full repository gate is rerun on the resulting Integration HEAD, the authoritative status is:
+
+`ENGINEERING_GATE: FAIL`
+
+A dedicated green Full Pack/Pages/static-smoke result is not sufficient to override a failed repository-wide Web and parser validation run. Final PASS requires a new complete run on the latest Integration HEAD with the closeout regressions resolved without skip/meaningless assertion relaxation.
+
 ## Current dependency snapshot
 
 At Worker 5 start, all four dependency branches existed but were still identical to the baseline:
