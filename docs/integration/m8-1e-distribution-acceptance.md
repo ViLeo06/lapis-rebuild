@@ -9,6 +9,38 @@
 
 Worker 5 owns acceptance fixtures, E2E/validation coverage, final acceptance evidence, and the Android human-playtest checklist. It does **not** replace Worker 1–4 production implementations.
 
+## M8.1 final engineering closeout — 2026-10-01
+
+`ENGINEERING_GATE: PASS`
+
+Authoritative integration evidence after the closeout fixes were merged:
+
+- Integration HEAD: `a78402da29919604611bbd28db6c86d1777e6118`.
+- Worker 1 closeout PR #83 merged as `17ec5eb7b1bbc34fb65e8b762a2d9d097ba03d8d`.
+- Worker 2 closeout PR #86 merged as `f38f3ddf22aa33d19361d2c2e812e7c94b05b991`.
+- Worker 4 closeout PR #85 merged as `a78402da29919604611bbd28db6c86d1777e6118`.
+- Web and parser validation run `36831841132`: **SUCCESS**.
+  - Chromium integration/offline: **107 passed / 11 skipped / 0 failed**.
+  - parser: PASS.
+  - locked dependencies / typecheck / unit / production build: PASS.
+  - standalone synthetic preview: PASS.
+- M8.1 Full Pack contract run `36831841127`: **SUCCESS**.
+- M8.1 Pages release gate run `36831841113`: **SUCCESS**.
+- M8E Cloudflare Pages static smoke run `36831841123`: **SUCCESS**.
+
+The four regressions recorded in the earlier audit are resolved without deleting tests, adding skip-based suppression, or weakening product assertions.
+
+Release and human gates remain intentionally separate from the engineering gate:
+
+- Distribution model: **Cloudflare Pages Web/PWA shell + local Full Pack import**.
+- Cloudflare R2 / paid object storage: **abandoned**.
+- Release status: `RELEASE_AUTHORIZED / PAGES_ACCOUNT_CONNECTION_PENDING`.
+- Real Pages URL: not yet verified in repository evidence.
+- Android human gate: `ANDROID_HUMAN_GATE: NOT-YET-ACCEPTED`.
+- PR #77 remains Draft and must not be merged to `main` until the remaining external gates are satisfied and the user gives final merge approval.
+
+The historical failed audit below is retained as the root-cause record; it is superseded for current engineering status by this final PASS section.
+
 ## M8.1 closeout engineering audit — 2026-10-01
 
 Worker 3 re-opened Engineering Acceptance against the current integration truth rather than the historical green snapshot recorded below.
