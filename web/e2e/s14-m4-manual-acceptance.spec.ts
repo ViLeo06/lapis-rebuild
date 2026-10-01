@@ -118,15 +118,12 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
 
     if(state.target!==target.id)await selectLiveTarget(page,target.id);
 
-    // Keep CI bookkeeping out of the combat clock. Enemy turns still run while
-    // the player's action gauge recovers; only the test's target/path planning
-    // is frozen so runner speed cannot change the battle outcome.
-    await legacyPause(page);
+    // Full-page evidence capture is paused separately. Keep path planning on
+    // the live battle state so reachable[] reflects the player-visible state.
     const current=await snap(page);
     const live=current.enemies.find(enemy=>enemy.id===target.id&&enemy.hp>0)!;
     const distance=Math.max(Math.abs(live.cell[0]-current.battleCell[0]),Math.abs(live.cell[1]-current.battleCell[1]));
     if(distance<=1){
-      await legacyPause(page);
       await m4Action(page,'attack');
       if(!capturedAttack){
         await page.waitForTimeout(120);
@@ -144,7 +141,6 @@ test('S14 M4 swordsman completes the playable quest, rewards and SaveV2 path',as
     expect(options.length).toBeGreaterThan(0);
     const from=JSON.stringify(current.battleCell);
     const cell=options[0];
-    await legacyPause(page);
     await clickWorld(page,(cell[0]+1)*32,(cell[1]+1)*16);
     await expect.poll(async()=>JSON.stringify((await snap(page)).battleCell),{timeout:10000}).not.toBe(from);
     if(!capturedMove){
