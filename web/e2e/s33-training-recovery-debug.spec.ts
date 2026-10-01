@@ -29,6 +29,10 @@ async function openMenu(page:Page){
   await expect(page.locator('[data-ui="game-menu"]')).toBeVisible();
 }
 
+async function legacyPause(page:Page){
+  await page.evaluate(()=>document.querySelector<HTMLButtonElement>('#battle-pause')?.click());
+}
+
 test('S33 developer preset resolves M7 stage boundaries and cannot pollute normal SaveV2',async({page})=>{
   await ready(page);
   await openMenu(page);
@@ -56,18 +60,21 @@ test.describe('S33 mobile controls',()=>{
     await ready(page);
     await acceptanceStartTraining(page,8);
 
+    // Freeze combat while measuring the mobile HUD. The battle HUD can rerender
+    // between visibility and geometry reads as readiness changes; the contract
+    // is the rendered touch target itself, not a transient DOM instance.
+    await legacyPause(page);
     for(const action of ['recovery-hp','recovery-mp','battle-exit-request']){
       const button=page.locator('[data-action="'+action+'"]:visible').first();
       await expect(button).toBeVisible();
-      const box=await button.boundingBox();
-      expect(box?.height??0).toBeGreaterThanOrEqual(44);
+      await expect.poll(async()=>(await button.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);
     }
 
     await page.locator('[data-action="battle-exit-request"]:visible').first().tap();
     await expect(page.locator('[data-ui="battle-exit-confirm"]')).toBeVisible();
     const confirm=page.locator('[data-action="battle-exit-confirm"]:visible');
-    const confirmBox=await confirm.boundingBox();
-    expect(confirmBox?.height??0).toBeGreaterThanOrEqual(44);
+    await expect(confirm).toBeVisible();
+    await expect.poll(async()=>(await confirm.boundingBox())?.height??0,{timeout:5000}).toBeGreaterThanOrEqual(44);
     await confirm.tap();
     await expect.poll(async()=>(await runtime(page)).m7Training.activeBattleId).toBeNull();
     expect((await scene(page)).inBattleView).toBe(false);
